@@ -1,0 +1,53 @@
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+Everyone is permitted to copy and distribute verbatim copies
+of this license document, but changing it is not allowed.
+
+This is the license for PAML (Phylogenetic Analysis by Maximum Likelihood)
+which is included in the bin/ directory of this project.
+
+PAML is maintained by Ziheng Yang (http://abacus.gene.ucl.ac.uk/)
+Source code: https://github.com/abacus-gene/paml
+
+For the full GPL-3.0 license text, please visit:
+https://www.gnu.org/licenses/gpl-3.0.html
+
+---
+
+SUMMARY OF GPL-3.0 TERMS (not legal advice):
+
+✅ YOU CAN:
+- Use the software commercially
+- Distribute the software
+- Modify the software
+- Use the software privately
+- Include binaries in your project
+
+❌ YOU MUST:
+- Include the original license and copyright notice
+- State changes if you modify the code
+- Disclose source code (available at https://github.com/abacus-gene/paml)
+- Use the same GPL-3.0 license for derivatives of PAML code
+
+❌ YOU CANNOT:
+- Hold the author liable
+- Sublicense under different terms
+
+---
+
+IMPORTANT NOTE ABOUT THIS PROJECT:
+
+The EasyPAML interface code (Python files in src/) is licensed under MIT License.
+The PAML/CODEML binaries (in bin/) are licensed under GPL-3.0.
+
+This is a valid combination because:
+- EasyPAML acts as a separate interface/wrapper
+- We distribute PAML as-is without modifications
+- Both licenses allow redistribution
+- Users receive both licenses clearly documented
+
+For legal questions, consult the full license texts:
+- GPL-3.0: https://www.gnu.org/licenses/gpl-3.0.html
+- MIT: See LICENSE file in this repository

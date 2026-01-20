@@ -1,0 +1,145 @@
+================================================================================
+                         🚀 COMECE AQUI! 🚀
+                    INSTALAÇÃO RÁPIDA - EasyPAML
+================================================================================
+
+PRIMEIRA VEZ USANDO?
+───────────────────────────────────────────────────────────────────────────────
+Siga este guia passo a passo para instalar tudo em minutos!
+
+
+PASSO 1: VERIFICAR PRÉ-REQUISITOS
+───────────────────────────────────────────────────────────────────────────────
+✓ Você tem Python 3.8+ instalado?
+
+Se SIM: Vá para PASSO 2
+Se NÃO: 
+   1. Acesse: https://www.python.org/downloads/
+   2. Clique em "Download Python"
+   3. Abra o instalador
+   4. MARQUE: ✓ Add Python to PATH
+   5. Clique "Install Now"
+   6. Feche todos os terminais abertos
+   7. Volte para PASSO 2
+
+
+PASSO 2: EXECUTAR INSTALADOR
+───────────────────────────────────────────────────────────────────────────────
+
+⭐ OPÇÃO 1 (RECOMENDADA - Mais simples):
+   
+   Duplo-clique em: SETUP.bat
+   
+   ✓ Verifica Python
+   ✓ Adiciona CODEML ao PATH
+   ✓ Instala dependências
+   ✓ Configura tudo automaticamente
+   ✓ Cria atalho no Desktop
+   
+   Tempo: ~2-5 minutos
+   
+   ⚠ IMPORTANTE: Depois execute NOVAMENTE:
+     Feche todos os terminais abertos
+     Abra um novo terminal para atualizar PATH
+
+
+PASSO 3: AGUARDAR CONCLUSÃO
+───────────────────────────────────────────────────────────────────────────────
+Deixe o instalador funcionando. Você verá:
+
+   ✓ Python detectado
+   ✓ CODEML adicionado ao PATH
+   ✓ pip atualizado
+   ✓ Dependências instaladas
+   ✓ Variáveis de ambiente configuradas
+   ✓ Atalho criado no Desktop
+   
+   ✓ INSTALAÇÃO COMPLETA COM SUCESSO!
+
+
+PASSO 4: INICIAR EASYPML
+───────────────────────────────────────────────────────────────────────────────
+
+Escolha UMA das opções:
+
+   OPÇÃO A (MAIS FÁCIL):
+   • Duplo-clique em "EasyPAML" no Desktop
+
+   OPÇÃO B:
+   • Duplo-clique em: RUN_EASYPAML.bat
+
+   OPÇÃO C (TERMINAL):
+   • Execute: python main.py
+
+
+PRONTO! 🎉
+───────────────────────────────────────────────────────────────────────────────
+A interface do EasyPML deve abrir automaticamente.
+
+
+
+PROBLEMAS NA INSTALAÇÃO?
+───────────────────────────────────────────────────────────────────────────────
+
+❌ "Python não é reconhecido"
+   → Instale Python com PATH configurado (veja PASSO 1)
+
+❌ "CODEML não encontrado" ou "Erro ao executar CODEML"
+   → Execute SETUP.bat NOVAMENTE como Administrador
+   → Feche todos os terminais e abra um novo
+   → Tente novamente
+
+❌ "Erro de permissão / Access Denied"
+   → Clique com BOTÃO DIREITO em SETUP.bat → "Executar como Administrador"
+
+❌ "Erro de conexão"
+   → Verifique sua internet e tente novamente
+
+❌ Nada funciona?
+   → Consulte INSTALACAO.txt para soluções detalhadas
+
+
+ESTRUTURA DE ARQUIVOS
+───────────────────────────────────────────────────────────────────────────────
+
+ARQUIVOS DE INSTALAÇÃO:
+  ✓ SETUP.bat              ← Use este primeiro
+  ✓ RUN_EASYPML.bat        ← Inicie daqui depois
+  ✓ INSTALACAO.txt         ← Guia detalhado
+  ✓ COMECE_AQUI.txt        ← Este arquivo!
+
+DOCUMENTAÇÃO:
+  ✓ GUIA_USUARIO.txt       ← Como usar o programa
+  ✓ README.md              ← Documentação técnica
+
+PASTA DE TESTES:
+  ✓ exemplos_teste/        ← Dados para testar
+
+CÓDIGO DO PROGRAMA:
+  ✓ main.py                ← Arquivo principal
+  ✓ src/                   ← Código-fonte
+  ✓ bin/                   ← CODEML/PAML
+
+
+INSTALAÇÃO COMPLETADA? 🎉
+───────────────────────────────────────────────────────────────────────────────
+
+Próximo: Abra GUIA_USUARIO.txt para aprender a usar o EasyPAML!
+
+
+RESUMO RÁPIDO
+───────────────────────────────────────────────────────────────────────────────
+
+  1. Execute SETUP.bat
+  2. Aguarde mensagem de sucesso
+  3. Feche e abra novo terminal (IMPORTANTE!)
+  3. Duplo-clique em "EasyPAML" no Desktop
+  4. Teste com exemplos em exemplos_teste/
+  5. Análise seus dados!
+
+Simples assim! 🧬
+
+
+================================================================================
+Boa análise! 🧬✨
+================================================================================

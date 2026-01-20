@@ -1,0 +1,168 @@
+================================================================================
+                    INSTALAÇÃO RÁPIDA - EasyPAML
+================================================================================
+
+ANTES DE COMEÇAR
+───────────────────────────────────────────────────────────────────────────────
+Você precisa ter Python 3.8 ou superior instalado.
+Se não tem, baixe em: https://www.python.org/downloads/
+
+
+INSTALAÇÃO EM 3 CLIQUES
+───────────────────────────────────────────────────────────────────────────────
+
+1. DUPLO-CLIQUE EM "SETUP.bat"
+   
+   Este arquivo vai:
+   • Verificar se Python está instalado
+   • Adicionar CODEML ao PATH do Windows
+   • Instalar todas as dependências automaticamente
+   • Configurar variáveis de ambiente
+   • Criar atalho no Desktop
+   
+   ⏱ Tempo: ~2-5 minutos (depende da internet)
+
+2. FECHE TODOS OS TERMINAIS E ABRA UM NOVO
+   
+   IMPORTANTE: Após SETUP.bat terminar, feche completamente
+   todos os terminais/PowerShells abertos e abra um novo.
+   Isso garante que o PATH com CODEML seja atualizado.
+   
+3. AGUARDE APARECER A MENSAGEM DE SUCESSO
+   
+   Quando terminar, você verá:
+   ✓ Instalação Completa!
+   ✓ Atalho criado no Desktop
+   ✓ CODEML adicionado ao PATH
+
+
+PASSO 4: PRONTO!
+   
+   Agora você pode:
+   • Duplo-clique em "EasyPAML" no Desktop
+   • OU execute RUN_EASYPAML.bat
+   • OU execute: python main.py
+
+
+POSSÍVEIS PROBLEMAS
+───────────────────────────────────────────────────────────────────────────────
+
+❌ "Python não é reconhecido"
+   
+   Solução:
+   1. Baixe Python: https://www.python.org/downloads/
+   2. Clique em "Custom Installation"
+   3. MARQUE: ✓ Add Python to PATH
+   4. Termine a instalação
+   5. Feche TODOS os terminais
+   6. Execute SETUP.bat novamente
+
+❌ "CODEML não encontrado" ou "Erro de CODEML"
+   
+   Solução:
+   1. Clique com BOTÃO DIREITO em SETUP.bat
+   2. Selecione "Executar como Administrador"
+   3. Deixe terminar completamente
+   4. FECHE todos os terminais abertos
+   5. ABRA um novo terminal
+   6. Tente executar o programa novamente
+
+❌ "Erro ao instalar dependências" ou "Permission denied"
+   
+   Solução:
+   1. Clique com BOTÃO DIREITO em SETUP.bat
+   2. Selecione "Executar como Administrador"
+
+❌ "Erro de conexão / Timeout"
+   
+   Solução:
+   1. Verifique sua internet
+   2. Se usar VPN/Proxy, desative temporariamente
+   3. Execute SETUP.bat novamente
+
+
+USANDO EASYPML
+───────────────────────────────────────────────────────────────────────────────
+
+Após instalação, inicie com um dos métodos:
+
+  MÉTODO 1 (RECOMENDADO):
+  • Duplo-clique no atalho "EasyPML" no Desktop
+
+  MÉTODO 2:
+  • Duplo-clique em RUN_EASYPML.bat
+
+  MÉTODO 3 (AVANÇADO):
+  • Abra terminal na pasta
+  • Execute: python EasyPAML.py
+
+
+PRÓXIMAS ETAPAS
+───────────────────────────────────────────────────────────────────────────────
+
+1. LEIA o arquivo GUIA_USUARIO.txt (instruções completas)
+
+2. TESTE com exemplos na pasta "exemplos_teste/"
+
+3. PREPARE seus dados (arquivos FASTA)
+
+4. EXECUTE uma análise
+
+
+ESTRUTURA DE PASTAS
+───────────────────────────────────────────────────────────────────────────────
+
+EasyPAML/
+  ├── SETUP.bat              ← Execute primeiro
+  ├── RUN_EASYPML.bat        ← Use para iniciar
+  ├── main.py                ← Programa principal
+  ├── GUIA_USUARIO.txt       ← Instruções de uso
+  ├── requirements.txt       ← Dependências
+  ├── INSTALACAO.txt         ← Este arquivo
+  │
+  ├── src/                   ← Código-fonte
+  ├── bin/                   ← CODEML/PAML
+  ├── exemplos_teste/        ← Dados de teste
+  └── resultados/            ← Resultados (criado automaticamente)
+
+
+DEPOIS DE INSTALAR
+───────────────────────────────────────────────────────────────────────────────
+
+✓ Linguagem: Português (padrão)
+✓ Tema: Escuro (padrão)
+✓ CODEML: Adicionado ao PATH
+✓ Tudo configurado automaticamente
+✓ Pronto para usar
+
+
+SUPORTE
+───────────────────────────────────────────────────────────────────────────────
+
+Se tiver problemas:
+
+1. Verifique se Python está instalado com PATH configurado:
+   • Abra terminal
+   • Execute: python --version
+   
+2. Verifique se CODEML está no PATH:
+   • Abra terminal
+   • Execute: codeml.exe --help
+   
+   Se não funcionar, execute SETUP.bat como Administrador novamente
+
+3. Se ainda não funcionar, instale Python corretamente e repita
+
+
+VERSÃO RÁPIDA SEM INTERFACE
+───────────────────────────────────────────────────────────────────────────────
+
+Se preferir executar via terminal:
+
+  python -m pip install -r requirements.txt
+  python EasyPAML.py
+
+
+Boa análise! 🧬
+
+================================================================================
