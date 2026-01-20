@@ -1,0 +1,353 @@
+     18    216
+
+Cereus_jamacaru_S180V2          TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAT ATT ACT GCG TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereushexagonus_S155A2          TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAT ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGT GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cipocereuslaniflorus_S174A6     TGC CGG GCA TTG GCC TTC ACC TTC TTC TCA CAT CAT ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereussaddianus_S103D4          TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAT ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereus_trigonodendron_S184A4    TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAT ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereusphatnospermus_S149V10     TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAT ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cipocereusminensis_S153A1       TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAT ATT ACT GCT TTT AGC CGG CAT GCC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereusalbicaulis_S143F5         TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAT ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCC CCG GTC AAT CGT 
+Cereus_mirabella_S162A26        TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAT ATT ACT GCT TTT AGC GGG CAT GGC ATT CCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG CGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereus_spegazzini_S180A14       TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAT ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereusspegazzinii_S77A31        TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAT ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereus_vargasianus_S184A5       TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAT ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC AGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereusfernambucensis_S80F9      TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAC ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA CGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereus_bicolor_S102A10          TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAC ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereus_mortensenii_S184A3       TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAC ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereusrepandus_S162VA22         TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAC ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereussp.Nov_S169A2             TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAC ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT GCA ACC TAT CAA CCG ACC GAC AGA CGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGT 
+Cereusfernambucensissericifer_S88F2  TGC CGG GCA TTG GCC TTC ATC TTC TTC TCA CAT CAC ATT ACT GCT TTT AGC CGG CAT GGC ATT TCT CTG CCG ACT CTG ACT ACA ACC TAT CAA CCG ACC GAC AGA AGG TCC AGC TTC GAG GTC GAT CTC GCA TGG CTC CGG CAT AGG AGA CGG CGC CAT GAG AGG TGC GGC ATC CGC ATG GTC CAC CAT GGA TTC ACC TTC TCA CCG GTC AAT CGC 
+
+
+
+Printing out site pattern counts
+
+
+        18        135  P
+
+Cereus_jamacaru_S180V2          AAT ACC ACT AGA AGC AGG AGG ATC ATC ATG ATT CAA CAC CAT CAT CCG CGC CGC CGG CGG CGT CTC CTG GAC GAG GAT GCA GCA GCC GCG GGA GGC GGC GTC TAT TCA TCA TCC TCT TGC TGC TGG TTC TTG TTT 
+Cereushexagonus_S155A2          ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... 
+Cipocereuslaniflorus_S174A6     ... ... ... ... ... ... ... .C. ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereussaddianus_S103D4          ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereus_trigonodendron_S184A4    ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereusphatnospermus_S149V10     ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cipocereusminensis_S153A1       ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... .C. ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereusalbicaulis_S143F5         ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ..C ... ... ... ... ... ... ... ... 
+Cereus_mirabella_S162A26        ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... G.. ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... C.. ... C.. ... ... ... ... 
+Cereus_spegazzini_S180A14       ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereusspegazzinii_S77A31        ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereus_vargasianus_S184A5       ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... A.. ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereusfernambucensis_S80F9      ... ... ... ... ... ... C.. ... ... ... ... ... ... ..C ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereus_bicolor_S102A10          ... ... ... ... ... ... ... ... ... ... ... ... ... ..C ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereus_mortensenii_S184A3       ... ... ... ... ... ... ... ... ... ... ... ... ... ..C ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereusrepandus_S162VA22         ... ... ... ... ... ... ... ... ... ... ... ... ... ..C ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereussp.Nov_S169A2             ... ... ... ... ... ... C.. ... ... ... ... ... ... ..C ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+Cereusfernambucensissericifer_S88F2  ... ... ... ... ... ... ... ... ... ... ... ... ... ..C ... ... ... ... ... ... ..C ... ... ... ... ... A.. ... ... ..T ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... 
+
+    1    3    3    2    2    2    1    1    1    1    2    1    1    1    5
+    3    1    1    3    1    1    2    2    1    2    1    1    2    1    1
+    1    1    1    3    1    1    1    1    1    1    1    1    6    1    1
+
+
+CODONML (in paml version 4.9j, February 2020)  C:\Users\User\Desktop\EasyPAML\exemplos_teste\amostras\OG0075476.onlyexons.fas
+Model: One dN/dS ratio, 
+Codon frequency model: F3x4
+Site-class models:  beta (4 categories)
+ns =  18  ls =  72
+
+Codon usage in sequences
+--------------------------------------------------------------------------------------------------------------------------------------
+Phe TTT   1   1   1   1   1   1 | Ser TCT   1   1   1   1   1   1 | Tyr TAT   1   1   1   1   1   1 | Cys TGT   0   1   0   0   0   0
+    TTC   6   6   6   6   6   6 |     TCC   1   1   1   1   1   1 |     TAC   0   0   0   0   0   0 |     TGC   2   1   2   2   2   2
+Leu TTA   0   0   0   0   0   0 |     TCA   2   2   2   2   2   2 | *** TAA   0   0   0   0   0   0 | *** TGA   0   0   0   0   0   0
+    TTG   1   1   1   1   1   1 |     TCG   0   0   0   0   0   0 |     TAG   0   0   0   0   0   0 | Trp TGG   1   1   1   1   1   1
+--------------------------------------------------------------------------------------------------------------------------------------
+Leu CTT   0   0   0   0   0   0 | Pro CCT   0   0   0   0   0   0 | His CAT   6   6   6   6   6   6 | Arg CGT   1   1   1   1   1   1
+    CTC   2   2   2   2   2   2 |     CCC   0   0   0   0   0   0 |     CAC   1   1   1   1   1   1 |     CGC   2   2   2   2   2   2
+    CTA   0   0   0   0   0   0 |     CCA   0   0   0   0   0   0 | Gln CAA   1   1   1   1   1   1 |     CGA   0   0   0   0   0   0
+    CTG   2   2   2   2   2   2 |     CCG   3   3   3   3   3   3 |     CAG   0   0   0   0   0   0 |     CGG   4   4   4   4   4   4
+--------------------------------------------------------------------------------------------------------------------------------------
+Ile ATT   2   2   2   2   2   2 | Thr ACT   3   3   3   3   3   3 | Asn AAT   1   1   1   1   1   1 | Ser AGT   0   0   0   0   0   0
+    ATC   2   2   1   2   2   2 |     ACC   3   3   4   3   3   3 |     AAC   0   0   0   0   0   0 |     AGC   2   2   2   2   2   2
+    ATA   0   0   0   0   0   0 |     ACA   0   0   0   0   0   0 | Lys AAA   0   0   0   0   0   0 | Arg AGA   2   2   2   2   2   2
+Met ATG   1   1   1   1   1   1 |     ACG   0   0   0   0   0   0 |     AAG   0   0   0   0   0   0 |     AGG   3   3   3   3   3   3
+--------------------------------------------------------------------------------------------------------------------------------------
+Val GTT   0   0   0   0   0   0 | Ala GCT   0   1   1   1   1   1 | Asp GAT   1   1   1   1   1   1 | Gly GGT   0   0   0   0   0   0
+    GTC   3   3   3   3   3   3 |     GCC   1   1   1   1   1   1 |     GAC   1   1   1   1   1   1 |     GGC   2   2   2   2   2   2
+    GTA   0   0   0   0   0   0 |     GCA   3   3   3   3   3   3 | Glu GAA   0   0   0   0   0   0 |     GGA   1   1   1   1   1   1
+    GTG   0   0   0   0   0   0 |     GCG   1   0   0   0   0   0 |     GAG   2   2   2   2   2   2 |     GGG   0   0   0   0   0   0
+--------------------------------------------------------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------------------------------------------------------
+Phe TTT   1   1   1   1   1   1 | Ser TCT   1   1   0   1   1   1 | Tyr TAT   1   1   1   1   1   1 | Cys TGT   0   0   0   0   0   0
+    TTC   6   6   6   6   6   6 |     TCC   1   2   1   1   1   1 |     TAC   0   0   0   0   0   0 |     TGC   2   2   1   2   2   2
+Leu TTA   0   0   0   0   0   0 |     TCA   2   1   2   2   2   2 | *** TAA   0   0   0   0   0   0 | *** TGA   0   0   0   0   0   0
+    TTG   1   1   1   1   1   1 |     TCG   0   0   0   0   0   0 |     TAG   0   0   0   0   0   0 | Trp TGG   1   1   1   1   1   1
+--------------------------------------------------------------------------------------------------------------------------------------
+Leu CTT   0   0   0   0   0   0 | Pro CCT   0   0   1   0   0   0 | His CAT   6   6   6   6   6   6 | Arg CGT   1   1   1   1   1   1
+    CTC   2   2   2   2   2   2 |     CCC   0   0   0   0   0   0 |     CAC   1   1   1   1   1   1 |     CGC   2   2   3   2   2   1
+    CTA   0   0   0   0   0   0 |     CCA   0   0   0   0   0   0 | Gln CAA   1   1   1   1   1   1 |     CGA   0   0   0   0   0   0
+    CTG   2   2   2   2   2   2 |     CCG   3   3   3   3   3   3 |     CAG   0   0   0   0   0   0 |     CGG   4   4   3   4   4   4
+--------------------------------------------------------------------------------------------------------------------------------------
+Ile ATT   2   2   2   2   2   2 | Thr ACT   3   3   3   3   3   3 | Asn AAT   1   1   1   1   1   1 | Ser AGT   0   0   0   0   0   0
+    ATC   2   2   2   2   2   2 |     ACC   3   3   3   3   3   3 |     AAC   0   0   0   0   0   0 |     AGC   2   2   2   2   2   3
+    ATA   0   0   0   0   0   0 |     ACA   0   0   0   0   0   0 | Lys AAA   0   0   0   0   0   0 | Arg AGA   2   2   2   2   2   2
+Met ATG   1   1   1   1   1   1 |     ACG   0   0   0   0   0   0 |     AAG   0   0   0   0   0   0 |     AGG   3   3   3   3   3   3
+--------------------------------------------------------------------------------------------------------------------------------------
+Val GTT   0   0   0   0   0   0 | Ala GCT   1   1   1   1   1   1 | Asp GAT   1   1   1   1   1   1 | Gly GGT   0   0   0   0   0   0
+    GTC   3   3   3   3   3   3 |     GCC   2   1   1   1   1   1 |     GAC   1   1   1   1   1   1 |     GGC   1   2   2   2   2   2
+    GTA   0   0   0   0   0   0 |     GCA   3   3   3   3   3   3 | Glu GAA   0   0   0   0   0   0 |     GGA   1   1   1   1   1   1
+    GTG   0   0   0   0   0   0 |     GCG   0   0   0   0   0   0 |     GAG   2   2   2   2   2   2 |     GGG   0   0   1   0   0   0
+--------------------------------------------------------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------------------------------------------------------
+Phe TTT   1   1   1   1   1   1 | Ser TCT   1   1   1   1   1   1 | Tyr TAT   1   1   1   1   1   1 | Cys TGT   0   0   0   0   0   0
+    TTC   6   6   6   6   6   6 |     TCC   1   1   1   1   1   1 |     TAC   0   0   0   0   0   0 |     TGC   2   2   2   2   2   2
+Leu TTA   0   0   0   0   0   0 |     TCA   2   2   2   2   2   2 | *** TAA   0   0   0   0   0   0 | *** TGA   0   0   0   0   0   0
+    TTG   1   1   1   1   1   1 |     TCG   0   0   0   0   0   0 |     TAG   0   0   0   0   0   0 | Trp TGG   1   1   1   1   1   1
+--------------------------------------------------------------------------------------------------------------------------------------
+Leu CTT   0   0   0   0   0   0 | Pro CCT   0   0   0   0   0   0 | His CAT   5   5   5   5   5   5 | Arg CGT   1   1   1   1   1   0
+    CTC   2   2   2   2   2   2 |     CCC   0   0   0   0   0   0 |     CAC   2   2   2   2   2   2 |     CGC   2   2   2   2   2   3
+    CTA   0   0   0   0   0   0 |     CCA   0   0   0   0   0   0 | Gln CAA   1   1   1   1   1   1 |     CGA   0   0   0   0   0   0
+    CTG   2   2   2   2   2   2 |     CCG   3   3   3   3   3   3 |     CAG   0   0   0   0   0   0 |     CGG   5   4   4   4   5   4
+--------------------------------------------------------------------------------------------------------------------------------------
+Ile ATT   2   2   2   2   2   2 | Thr ACT   3   3   3   3   3   3 | Asn AAT   1   1   1   1   1   1 | Ser AGT   0   0   0   0   0   0
+    ATC   2   2   2   2   2   2 |     ACC   3   3   3   3   3   3 |     AAC   0   0   0   0   0   0 |     AGC   2   2   2   2   2   2
+    ATA   0   0   0   0   0   0 |     ACA   0   0   0   0   0   1 | Lys AAA   0   0   0   0   0   0 | Arg AGA   2   2   2   2   2   2
+Met ATG   1   1   1   1   1   1 |     ACG   0   0   0   0   0   0 |     AAG   0   0   0   0   0   0 |     AGG   2   3   3   3   2   3
+--------------------------------------------------------------------------------------------------------------------------------------
+Val GTT   0   0   0   0   0   0 | Ala GCT   1   1   1   1   1   1 | Asp GAT   1   1   1   1   1   1 | Gly GGT   0   0   0   0   0   0
+    GTC   3   3   3   3   3   3 |     GCC   1   1   1   1   1   1 |     GAC   1   1   1   1   1   1 |     GGC   2   2   2   2   2   2
+    GTA   0   0   0   0   0   0 |     GCA   3   3   3   3   3   2 | Glu GAA   0   0   0   0   0   0 |     GGA   1   1   1   1   1   1
+    GTG   0   0   0   0   0   0 |     GCG   0   0   0   0   0   0 |     GAG   2   2   2   2   2   2 |     GGG   0   0   0   0   0   0
+--------------------------------------------------------------------------------------------------------------------------------------
+
+Codon position x base (3x4) table for each sequence.
+
+#1: Cereus_jamacaru_S180V2
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.23611    C:0.38889    A:0.12500    G:0.25000
+Average         T:0.24537    C:0.31481    A:0.19444    G:0.24537
+
+#2: Cereushexagonus_S155A2
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.26389    C:0.37500    A:0.12500    G:0.23611
+Average         T:0.25463    C:0.31019    A:0.19444    G:0.24074
+
+#3: Cipocereuslaniflorus_S174A6
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.26389    C:0.26389    A:0.19444    G:0.27778
+position  3:    T:0.25000    C:0.38889    A:0.12500    G:0.23611
+Average         T:0.24537    C:0.31944    A:0.19444    G:0.24074
+
+#4: Cereussaddianus_S103D4
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.25000    C:0.38889    A:0.12500    G:0.23611
+Average         T:0.25000    C:0.31481    A:0.19444    G:0.24074
+
+#5: Cereus_trigonodendron_S184A4
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.25000    C:0.38889    A:0.12500    G:0.23611
+Average         T:0.25000    C:0.31481    A:0.19444    G:0.24074
+
+#6: Cereusphatnospermus_S149V10
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.25000    C:0.38889    A:0.12500    G:0.23611
+Average         T:0.25000    C:0.31481    A:0.19444    G:0.24074
+
+#7: Cipocereusminensis_S153A1
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.26389    A:0.19444    G:0.26389
+position  3:    T:0.25000    C:0.38889    A:0.12500    G:0.23611
+Average         T:0.25000    C:0.31944    A:0.19444    G:0.23611
+
+#8: Cereusalbicaulis_S143F5
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.25000    C:0.40278    A:0.11111    G:0.23611
+Average         T:0.25000    C:0.31944    A:0.18981    G:0.24074
+
+#9: Cereus_mirabella_S162A26
+position  1:    T:0.19444    C:0.31944    A:0.26389    G:0.22222
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.25000    C:0.38889    A:0.12500    G:0.23611
+Average         T:0.24074    C:0.31944    A:0.19444    G:0.24537
+
+#10: Cereus_spegazzini_S180A14
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.25000    C:0.38889    A:0.12500    G:0.23611
+Average         T:0.25000    C:0.31481    A:0.19444    G:0.24074
+
+#11: Cereusspegazzinii_S77A31
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.25000    C:0.38889    A:0.12500    G:0.23611
+Average         T:0.25000    C:0.31481    A:0.19444    G:0.24074
+
+#12: Cereus_vargasianus_S184A5
+position  1:    T:0.22222    C:0.29167    A:0.27778    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.25000    C:0.38889    A:0.12500    G:0.23611
+Average         T:0.25000    C:0.31019    A:0.19907    G:0.24074
+
+#13: Cereusfernambucensis_S80F9
+position  1:    T:0.22222    C:0.31944    A:0.25000    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.23611    C:0.40278    A:0.12500    G:0.23611
+Average         T:0.24537    C:0.32407    A:0.18981    G:0.24074
+
+#14: Cereus_bicolor_S102A10
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.23611    C:0.40278    A:0.12500    G:0.23611
+Average         T:0.24537    C:0.31944    A:0.19444    G:0.24074
+
+#15: Cereus_mortensenii_S184A3
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.23611    C:0.40278    A:0.12500    G:0.23611
+Average         T:0.24537    C:0.31944    A:0.19444    G:0.24074
+
+#16: Cereusrepandus_S162VA22
+position  1:    T:0.22222    C:0.30556    A:0.26389    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.23611    C:0.40278    A:0.12500    G:0.23611
+Average         T:0.24537    C:0.31944    A:0.19444    G:0.24074
+
+#17: Cereussp.Nov_S169A2
+position  1:    T:0.22222    C:0.31944    A:0.25000    G:0.20833
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.23611    C:0.40278    A:0.12500    G:0.23611
+Average         T:0.24537    C:0.32407    A:0.18981    G:0.24074
+
+#18: Cereusfernambucensissericifer_S88F2
+position  1:    T:0.22222    C:0.30556    A:0.27778    G:0.19444
+position  2:    T:0.27778    C:0.25000    A:0.19444    G:0.27778
+position  3:    T:0.22222    C:0.41667    A:0.12500    G:0.23611
+Average         T:0.24074    C:0.32407    A:0.19907    G:0.23611
+
+Sums of codon usage counts
+------------------------------------------------------------------------------
+Phe F TTT      18 | Ser S TCT      17 | Tyr Y TAT      18 | Cys C TGT       1
+      TTC     108 |       TCC      19 |       TAC       0 |       TGC      34
+Leu L TTA       0 |       TCA      35 | *** * TAA       0 | *** * TGA       0
+      TTG      18 |       TCG       0 |       TAG       0 | Trp W TGG      18
+------------------------------------------------------------------------------
+Leu L CTT       0 | Pro P CCT       1 | His H CAT     102 | Arg R CGT      17
+      CTC      36 |       CCC       0 |       CAC      24 |       CGC      37
+      CTA       0 |       CCA       0 | Gln Q CAA      18 |       CGA       0
+      CTG      36 |       CCG      54 |       CAG       0 |       CGG      73
+------------------------------------------------------------------------------
+Ile I ATT      36 | Thr T ACT      54 | Asn N AAT      18 | Ser S AGT       0
+      ATC      35 |       ACC      55 |       AAC       0 |       AGC      37
+      ATA       0 |       ACA       1 | Lys K AAA       0 | Arg R AGA      36
+Met M ATG      18 |       ACG       0 |       AAG       0 |       AGG      52
+------------------------------------------------------------------------------
+Val V GTT       0 | Ala A GCT      17 | Asp D GAT      18 | Gly G GGT       0
+      GTC      54 |       GCC      19 |       GAC      18 |       GGC      35
+      GTA       0 |       GCA      53 | Glu E GAA       0 |       GGA      18
+      GTG       0 |       GCG       1 |       GAG      36 |       GGG       1
+------------------------------------------------------------------------------
+
+
+Codon position x base (3x4) table, overall
+
+position  1:    T:0.22068    C:0.30710    A:0.26389    G:0.20833
+position  2:    T:0.27701    C:0.25154    A:0.19444    G:0.27701
+position  3:    T:0.24460    C:0.39429    A:0.12423    G:0.23688
+Average         T:0.24743    C:0.31764    A:0.19419    G:0.24074
+
+Codon frequencies under model, for use in evolver (TTT TTC TTA TTG ... GGG):
+  0.01530558  0.02467240  0.00777350  0.01482276
+  0.01389866  0.02240447  0.00705894  0.01346022
+  0.01074375  0.01731879  0.00000000  0.00000000
+  0.01530558  0.02467240  0.00000000  0.01482276
+  0.02129938  0.03433433  0.01081766  0.02062747
+  0.01934149  0.03117825  0.00982328  0.01873135
+  0.01495109  0.02410097  0.00759346  0.01447945
+  0.02129938  0.03433433  0.01081766  0.02062747
+  0.01830248  0.02950336  0.00929558  0.01772511
+  0.01662008  0.02679136  0.00844111  0.01609579
+  0.01284742  0.02070988  0.00652503  0.01244214
+  0.01830248  0.02950336  0.00929558  0.01772511
+  0.01444933  0.02329213  0.00733862  0.01399351
+  0.01312111  0.02115107  0.00666404  0.01270720
+  0.01014270  0.01634991  0.00515134  0.00982274
+  0.01444933  0.02329213  0.00733862  0.01399351
+
+
+TREE #  1:  ((7, 3), (((4, 6), (8, 9)), ((16, 15), ((12, (11, 10)), ((17, (18, 13)), (5, (14, (2, 1))))))));   MP score: 16
+This is a rooted tree.  Please check!
+lnL(ntime: 34  np: 37):   -394.985772      +0.000000
+  19..20   20..7    20..3    19..21   21..22   22..23   23..4    23..6    22..24   24..8    24..9    21..25   25..26   26..16   26..15   25..27   27..28   28..12   28..29   29..11   29..10   27..30   30..31   31..17   31..32   32..18   32..13   30..33   33..5    33..34   34..14   34..35   35..2    35..1  
+ 0.000004 0.014205 0.014177 0.000004 0.000004 0.000004 0.000004 0.000004 0.000004 0.014209 0.042892 0.000004 0.014176 0.000004 0.000004 0.000004 0.000004 0.014239 0.000004 0.000004 0.000004 0.000004 0.028355 0.000004 0.000004 0.042681 0.000004 0.000004 0.000004 0.000004 0.014175 0.000004 0.014179 0.014252 2.038574 35.201769 99.000000
+
+Note: Branch length is defined as number of nucleotide substitutions per codon (not per neucleotide site).
+
+tree length =  0.227634
+
+((7: 0.014205, 3: 0.014177): 0.000004, (((4: 0.000004, 6: 0.000004): 0.000004, (8: 0.014209, 9: 0.042892): 0.000004): 0.000004, ((16: 0.000004, 15: 0.000004): 0.014176, ((12: 0.014239, (11: 0.000004, 10: 0.000004): 0.000004): 0.000004, ((17: 0.000004, (18: 0.042681, 13: 0.000004): 0.000004): 0.028355, (5: 0.000004, (14: 0.014175, (2: 0.014179, 1: 0.014252): 0.000004): 0.000004): 0.000004): 0.000004): 0.000004): 0.000004): 0.000004);
+
+((Cipocereusminensis_S153A1: 0.014205, Cipocereuslaniflorus_S174A6: 0.014177): 0.000004, (((Cereussaddianus_S103D4: 0.000004, Cereusphatnospermus_S149V10: 0.000004): 0.000004, (Cereusalbicaulis_S143F5: 0.014209, Cereus_mirabella_S162A26: 0.042892): 0.000004): 0.000004, ((Cereusrepandus_S162VA22: 0.000004, Cereus_mortensenii_S184A3: 0.000004): 0.014176, ((Cereus_vargasianus_S184A5: 0.014239, (Cereusspegazzinii_S77A31: 0.000004, Cereus_spegazzini_S180A14: 0.000004): 0.000004): 0.000004, ((Cereussp.Nov_S169A2: 0.000004, (Cereusfernambucensissericifer_S88F2: 0.042681, Cereusfernambucensis_S80F9: 0.000004): 0.000004): 0.028355, (Cereus_trigonodendron_S184A4: 0.000004, (Cereus_bicolor_S102A10: 0.014175, (Cereushexagonus_S155A2: 0.014179, Cereus_jamacaru_S180V2: 0.014252): 0.000004): 0.000004): 0.000004): 0.000004): 0.000004): 0.000004): 0.000004);
+
+Detailed output identifying parameters
+
+kappa (ts/tv) =  2.03857
+
+Parameters in M7 (beta):
+ p =  35.20177  q =  99.00000
+
+
+MLEs of dN/dS (w) for site classes (K=4)
+
+p:   0.25000  0.25000  0.25000  0.25000
+w:   0.21910  0.24914  0.27334  0.30629
+
+dN & dS for each branch
+
+ branch          t       N       S   dN/dS      dN      dS  N*dN  S*dS
+
+  19..20      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  20..7       0.014    160.4     55.6   0.2620   0.0027   0.0105    0.4    0.6
+  20..3       0.014    160.4     55.6   0.2620   0.0027   0.0105    0.4    0.6
+  19..21      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  21..22      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  22..23      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  23..4       0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  23..6       0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  22..24      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  24..8       0.014    160.4     55.6   0.2620   0.0027   0.0105    0.4    0.6
+  24..9       0.043    160.4     55.6   0.2620   0.0083   0.0316    1.3    1.8
+  21..25      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  25..26      0.014    160.4     55.6   0.2620   0.0027   0.0105    0.4    0.6
+  26..16      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  26..15      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  25..27      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  27..28      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  28..12      0.014    160.4     55.6   0.2620   0.0028   0.0105    0.4    0.6
+  28..29      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  29..11      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  29..10      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  27..30      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  30..31      0.028    160.4     55.6   0.2620   0.0055   0.0209    0.9    1.2
+  31..17      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  31..32      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  32..18      0.043    160.4     55.6   0.2620   0.0082   0.0315    1.3    1.8
+  32..13      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  30..33      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  33..5       0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  33..34      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  34..14      0.014    160.4     55.6   0.2620   0.0027   0.0105    0.4    0.6
+  34..35      0.000    160.4     55.6   0.2620   0.0000   0.0000    0.0    0.0
+  35..2       0.014    160.4     55.6   0.2620   0.0027   0.0105    0.4    0.6
+  35..1       0.014    160.4     55.6   0.2620   0.0028   0.0105    0.4    0.6
+
+
+Time used:  0:21
