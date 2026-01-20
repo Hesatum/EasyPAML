@@ -1,0 +1,218 @@
+================================================================================
+LIKELIHOOD RATIO TEST (LRT) RESULTS (REGENERATED)
+================================================================================
+
+
+================================================================================
+COMPARISON: M0 (null) vs M1a (alternative)
+Description: Tests if ω varies among sites
+================================================================================
+
+Gene: OG0075476.onlyexons
+  lnL M0: -398.363344
+  lnL M1a: -394.981033
+  2Δl = 6.764622
+  df = 1
+  p-value = 9.298262e-03
+  Result: [OK][OK] M1a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: OG0075668.onlyexons
+  lnL M0: -2502.028387
+  lnL M1a: -2501.740630
+  2Δl = 0.575514
+  df = 1
+  p-value = 4.480761e-01
+  Result: [ERROR] No significant difference
+
+------------------------------------------------------------
+
+Gene: OG0075966.onlyexons
+  lnL M0: -421.560671
+  lnL M1a: -409.499488
+  2Δl = 24.122366
+  df = 1
+  p-value = 9.040417e-07
+  Result: [OK][OK] M1a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: OG0076119.onlyexons
+  lnL M0: -3402.954427
+  lnL M1a: -3355.315279
+  2Δl = 95.278296
+  df = 1
+  p-value = 0.000000e+00
+  Result: [OK][OK] M1a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+
+SUMMARY:
+  Total genes analyzed: 4
+  Significant at p < 0.05: 3 (75.0%)
+  Significant at p < 0.01: 3 (75.0%)
+
+
+================================================================================
+COMPARISON: M1a (null) vs M2a (alternative)
+Description: Tests for positive selection
+================================================================================
+
+Gene: OG0075476.onlyexons
+  lnL M1a: -394.981033
+  lnL M2a: -394.981012
+  2Δl = 0.000042
+  df = 1
+  p-value = 9.948292e-01
+  Result: [ERROR] No significant difference
+
+------------------------------------------------------------
+
+Gene: OG0075668.onlyexons
+  lnL M1a: -2501.740630
+  lnL M2a: -2483.693818
+  2Δl = 36.093624
+  df = 1
+  p-value = 1.880612e-09
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: OG0075966.onlyexons
+  lnL M1a: -409.499488
+  lnL M2a: -409.499385
+  2Δl = 0.000206
+  df = 1
+  p-value = 9.885486e-01
+  Result: [ERROR] No significant difference
+
+------------------------------------------------------------
+
+Gene: OG0076119.onlyexons
+  lnL M1a: -3355.315279
+  lnL M2a: -3334.727217
+  2Δl = 41.176124
+  df = 1
+  p-value = 1.391115e-10
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+
+SUMMARY:
+  Total genes analyzed: 4
+  Significant at p < 0.05: 2 (50.0%)
+  Significant at p < 0.01: 2 (50.0%)
+
+
+================================================================================
+COMPARISON: M7 (null) vs M8 (alternative)
+Description: Tests for positive selection (alternative)
+================================================================================
+
+Gene: OG0075476.onlyexons
+  lnL M7: -394.985772
+  lnL M8: -394.985807
+  2Δl = -0.000070
+  df = 1
+  p-value = 1.000000e+00
+  Result: [ERROR] No significant difference
+
+------------------------------------------------------------
+
+Gene: OG0075668.onlyexons
+  lnL M7: -2502.028386
+  lnL M8: -2483.693819
+  2Δl = 36.669134
+  df = 1
+  p-value = 1.399783e-09
+  Result: [OK][OK] M8 significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: OG0075966.onlyexons
+  lnL M7: -409.427362
+  lnL M8: -409.505324
+  2Δl = -0.155924
+  df = 1
+  p-value = 1.000000e+00
+  Result: [ERROR] No significant difference
+
+------------------------------------------------------------
+
+Gene: OG0076119.onlyexons
+  lnL M7: -3355.614170
+  lnL M8: -3334.721247
+  2Δl = 41.785846
+  df = 1
+  p-value = 1.018380e-10
+  Result: [OK][OK] M8 significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+
+SUMMARY:
+  Total genes analyzed: 4
+  Significant at p < 0.05: 2 (50.0%)
+  Significant at p < 0.01: 2 (50.0%)
+
+
+================================================================================
+COMPARISON: M0 (null) vs Branch (alternative)
+Description: Tests branch model (independent evolution rates)
+================================================================================
+
+Gene: OG0075476.onlyexons
+  lnL M0: -398.363344
+  lnL Branch: -392.882882
+  2Δl = 10.960924
+  df = 1
+  p-value = 9.305340e-04
+  Result: [OK][OK] Branch significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: OG0075668.onlyexons
+  lnL M0: -2502.028387
+  lnL Branch: -2496.901610
+  2Δl = 10.253554
+  df = 1
+  p-value = 1.364215e-03
+  Result: [OK][OK] Branch significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: OG0075966.onlyexons
+  lnL M0: -421.560671
+  lnL Branch: -409.109877
+  2Δl = 24.901588
+  df = 1
+  p-value = 6.033271e-07
+  Result: [OK][OK] Branch significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: OG0076119.onlyexons
+  lnL M0: -3402.954427
+  lnL Branch: -3381.913499
+  2Δl = 42.081856
+  df = 1
+  p-value = 8.753154e-11
+  Result: [OK][OK] Branch significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+
+SUMMARY:
+  Total genes analyzed: 4
+  Significant at p < 0.05: 4 (100.0%)
+  Significant at p < 0.01: 4 (100.0%)
+
+
+================================================================================
+COMPARISON: Branch-site_null (null) vs Branch-site (alternative)
+Description: Tests branch-site model
+================================================================================
+
