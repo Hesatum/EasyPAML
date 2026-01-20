@@ -55,7 +55,7 @@ Se você usar o EasyPAML em seu trabalho acadêmico, cite:
 
 **Formato ABNT:**
 ```
-SILVA, M. V. EasyPAML: Interface gráfica intuitiva para análise de seleção positiva usando PAML/CODEML. Versão 0.1.0. 2026. Disponível em: https://github.com/[seu-usuario]/EasyPAML. Acesso em: [data].
+SILVA, M. V. EasyPAML: Interface gráfica para análise de seleção positiva usando PAML/CODEML. Versão 0.1.0. 2026. Disponível em: https://github.com/Hesatum/EasyPAML. Acesso em: [data].
 ```
 
 **Formato BibTeX:**
@@ -66,13 +66,13 @@ SILVA, M. V. EasyPAML: Interface gráfica intuitiva para análise de seleção p
   year = {2026},
   version = {0.1.0},
   date = {2026-01-20},
-  url = {https://github.com/[seu-usuario]/EasyPAML}
+  url = {https://github.com/Hesatum/EasyPAML}
 }
 ```
 
 **Formato APA:**
 ```
-Silva, M. V. (2026). EasyPAML: Interface gráfica intuitiva para análise de seleção positiva usando PAML/CODEML (Versão 0.1.0) [Software]. GitHub. https://github.com/[seu-usuario]/EasyPAML
+Silva, M. V. (2026). EasyPAML: Interface gráfica intuitiva para análise de seleção positiva usando PAML/CODEML (Versão 0.1.0) [Software]. GitHub. https://github.com/Hesatum/EasyPAML
 ```
 
 ### PAML (obrigatório)
@@ -97,8 +97,7 @@ Yang, Z. (2007). PAML 4: Phylogenetic Analysis by Maximum Likelihood. Molecular 
 }
 ```
 
-> **Nota:** Esta é uma citação provisória para a versão inicial do software. Uma publicação científica formal está em desenvolvimento e esta seção será atualizada quando disponível.
-
+> **Nota:** Esta é uma citação provisória para a versão inicial do software.
 ---
 
 ## �📦 Sobre o PAML/CODEML Incluído
@@ -108,7 +107,7 @@ Yang, Z. (2007). PAML 4: Phylogenetic Analysis by Maximum Likelihood. Molecular 
 - **O que é PAML?** Pacote de programas para análises filogenéticas desenvolvido por Ziheng Yang
 - **Licença:** GPL-3.0 (permite redistribuição)
 - **Código-fonte:** https://github.com/abacus-gene/paml
-- **Versão incluída:** [Adicione a versão aqui]
+
 
 **Citação obrigatória para PAML:**
 - Yang, Z. (2007). PAML 4: Phylogenetic Analysis by Maximum Likelihood. Molecular Biology and Evolution, 24(8), 1586-1591.
@@ -125,7 +124,7 @@ Se preferir usar sua própria versão do PAML, basta substituir o executável na
 2. Navegue até a pasta contendo seus arquivos FASTA
 
 **Formatos esperados:**
-- `.fasta` ou `.fa` - Sequências de DNA
+- `.fasta` ou `.fas` - Sequências de DNA
 - Arquivos podem conter múltiplos genes
 
 ### Passo 2: Escolher Modelos de Análise
@@ -138,12 +137,11 @@ A aplicação oferece **9 modelos evolutivos diferentes**:
 - **M2a**: 0 ≤ ω₀ < 1, ω₁ = 1, ω₂ ≥ 1 (detecta seleção positiva)
 - **M7**: Distribuição beta de ω (0,1)
 - **M8**: M7 + categoria com ω > 1
-- **M8a**: M7 + ω = 1
 
 #### Branch Models (Seleção em Linhagens)
 - **Branch**: ω diferente entre linhagens
-- **BranchSite_A**: Detecta seleção em ramos específicos
-- **BranchSite_A_null**: Versão nula para comparação
+- **Branch-Site**: Detecta seleção em ramos específicos
+- **Branch-Site null**: Versão nula para comparação
 
 #### 🆕 Nova Feature: Auto-Seleção de Modelos Nulos!
 
@@ -156,7 +154,7 @@ Selecionado → Auto-Adiciona → Compara
 ────────────────────────────────────────
 M2a         → M1a           → M1a vs M2a (p-value automático!)
 M8          → M7            → M7 vs M8
-BranchSite_A → BranchSite_A_null → null vs A
+BranchSite → BranchSite null → null vs BranchSite
 Branch      → M0            → M0 vs Branch
 ```
 
@@ -168,15 +166,13 @@ Branch      → M0            → M0 vs Branch
 
 **Dica:** Para máxima confiança, selecione **M2a E M8** - o sistema rodará ambos os testes (M1a vs M2a e M7 vs M8) e você terá confirmação dupla!
 
-📖 **Para mais detalhes, veja:** [QUICK_START_AUTO_MODELS.md](QUICK_START_AUTO_MODELS.md) (2 min) ou [AUTO_LRT_GUIDE.md](AUTO_LRT_GUIDE.md) (completo)
-
-### Passo 3: Marcar Ramos no Árvore (Opcional)
+### Passo 3: Marcar Ramos no Árvore 
 
 Para modelos **Branch** e **BranchSite**:
 
 1. O programa exibirá a **árvore filogenética dos seus genes**
 2. **Clique** nos ramos que deseja marcar como "foreground" (sob possível seleção)
-3. Os ramos selecionados aparecem em **vermelho**
+3. Os ramos selecionados aparecem coloridos
 4. Clique novamente para desmarcar
 
 ### Passo 4: Executar Análise
@@ -191,7 +187,7 @@ A aplicação:
 
 ### Passo 5: Visualizar Resultados
 
-Clique em **"📊 Ver Resultados"** para abrir o visualizador com:
+Clique em **"📊 Ver Resultados"** (ainda em desenvolvimento) para abrir o visualizador com:
 
 **📊 Gráficos**
 - Barras de ω por gene
@@ -348,3 +344,4 @@ Após completar uma análise:
 - Resultados antigos são preservados automaticamente
 
 **Boa análise!** 🧬✨
+
