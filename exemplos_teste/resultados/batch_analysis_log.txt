@@ -1,0 +1,63 @@
+================================================================================
+CODEML BATCH ANALYSIS LOG (REGENERATED)
+================================================================================
+Regenerated at: 2026-03-07 15:07:28
+Results folder: C:\Users\Matheus\Desktop\EasyPAML\exemplos_teste\resultados
+================================================================================
+
+ANALYSIS SUMMARY:
+--------------------------------------------------------------------------------
+Models found: Branch, Branch-site, Branch-site_null, M0, M1a, M2a, M7, M8
+Genes found: 4 genes
+  OG0075476.onlyexons, OG0075668.onlyexons, OG0075966.onlyexons, OG0076119.onlyexons
+
+DETAILED RESULTS:
+--------------------------------------------------------------------------------
+
+Gene: OG0075476.onlyexons
+----------------------------------------
+  Branch               | lnL =  -392.882882 | np = 38
+  Branch-site          | lnL =   -356.32719 | np = 42
+  Branch-site_null     | Not found
+  M0                   | lnL =  -398.363344 | np = 35
+  M1a                  | lnL =  -394.981033 | np = 37
+  M2a                  | lnL =  -394.981012 | np = 39
+  M7                   | lnL =  -394.985754 | np = 37
+  M8                   | lnL =  -394.985775 | np = 39
+
+Gene: OG0075668.onlyexons
+----------------------------------------
+  Branch               | lnL = -2496.913516 | np = 38
+  Branch-site          | Not found
+  Branch-site_null     | Not found
+  M0                   | lnL = -2502.028386 | np = 35
+  M1a                  | lnL = -2502.028394 | np = 37
+  M2a                  | lnL = -2483.693818 | np = 39
+  M7                   | lnL = -2502.028387 | np = 37
+  M8                   | lnL = -2483.693818 | np = 39
+
+Gene: OG0075966.onlyexons
+----------------------------------------
+  Branch               | lnL =  -409.188203 | np = 38
+  Branch-site          | Not found
+  Branch-site_null     | Not found
+  M0                   | lnL =  -421.780913 | np = 35
+  M1a                  | lnL =   -409.27925 | np = 37
+  M2a                  | lnL =  -409.499385 | np = 39
+  M7                   | lnL =  -409.284984 | np = 37
+  M8                   | lnL =  -410.137849 | np = 39
+
+Gene: OG0076119.onlyexons
+----------------------------------------
+  Branch               | lnL = -3381.913498 | np = 38
+  Branch-site          | Not found
+  Branch-site_null     | Not found
+  M0                   | lnL = -3402.954427 | np = 35
+  M1a                  | lnL = -3355.315279 | np = 37
+  M2a                  | lnL = -3334.727217 | np = 39
+  M7                   | lnL = -3355.614173 | np = 37
+  M8                   | lnL = -3334.721246 | np = 39
+
+================================================================================
+END OF LOG
+================================================================================
