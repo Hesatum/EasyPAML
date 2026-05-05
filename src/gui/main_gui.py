@@ -1170,18 +1170,22 @@ class App(ctk.CTk):
 
                 # ── Outer card ────────────────────────────────────────────────
                 card = ctk.CTkFrame(scroll_frame, fg_color=self.COLORS['bg_feed'],
-                                    corner_radius=10, border_width=1,
+                                    corner_radius=8, border_width=1,
                                     border_color=self.COLORS['border'])
                 card.pack(fill="x", pady=2, padx=4)
 
                 # Left accent bar (slim, 4px)
                 accent_bar = ctk.CTkFrame(card, fg_color=accent, width=4, corner_radius=2)
-                accent_bar.pack(side="left", fill="y", padx=(5, 8), pady=4)
+                accent_bar.pack(side="left", fill="y", padx=(5, 8), pady=3)
                 accent_bar.pack_propagate(False)
 
-                # Text block
+                # Right controls (pack before text_block so text_block gets remaining space)
+                controls = ctk.CTkFrame(card, fg_color='transparent')
+                controls.pack(side="right", padx=8, pady=3)
+
+                # Text block (fill remaining width after controls)
                 text_block = ctk.CTkFrame(card, fg_color='transparent')
-                text_block.pack(side="left", fill="both", expand=True, pady=4)
+                text_block.pack(side="left", fill="both", expand=True, pady=3)
 
                 display_name = self.codeml_backend.MODEL_CONFIGS[code].get('display_name', code)
                 var = ctk.BooleanVar(value=False)
@@ -1201,7 +1205,7 @@ class App(ctk.CTk):
                     text_color=self.COLORS['text_primary'],
                     font=("Roboto", 11, "bold")
                 )
-                cb.pack(side='left', anchor='w', pady=(2, 0))
+                cb.pack(side='left', anchor='w', pady=(1, 0))
 
                 if desc:
                     ctk.CTkLabel(
@@ -1210,12 +1214,8 @@ class App(ctk.CTk):
                         text_color=self.COLORS['text_secondary'],
                         anchor='w',
                         justify='left',
-                        wraplength=310
-                    ).pack(anchor="w", pady=(1, 2), fill='x')
-
-                # Right controls
-                controls = ctk.CTkFrame(card, fg_color='transparent')
-                controls.pack(side="right", padx=8, pady=4)
+                        wraplength=700
+                    ).pack(anchor="w", pady=(0, 2), fill='x')
 
                 lbl = ctk.CTkLabel(controls, text="padrão", font=("Roboto", 9),
                                    text_color=self.COLORS['text_tertiary'])
