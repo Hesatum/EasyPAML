@@ -805,7 +805,7 @@ class App(ctk.CTk):
             hdr.pack(fill='x', padx=12, pady=(8, 0))
             ctk.CTkLabel(hdr,
                          text=f"{icon}  {title}" if icon else title,
-                         font=("Roboto", 8, "bold"),
+                         font=("Roboto", 9, "bold"),
                          text_color=self.COLORS['text_tertiary']).pack(anchor='w')
             ctk.CTkFrame(card, fg_color=self.COLORS['border'],
                          height=1, corner_radius=0).pack(fill='x', padx=12, pady=(5, 0))
@@ -832,7 +832,7 @@ class App(ctk.CTk):
                                font=("Roboto", 10, "bold"), height=32)
         self.btn_input.pack(fill='x', pady=(0, 2))
         self.label_input = ctk.CTkLabel(fi, text="Não selecionado",
-                                        font=("Roboto", 8),
+                                        font=("Roboto", 9),
                                         wraplength=230,
                                         text_color=self.COLORS['text_muted'])
         self.label_input.pack(anchor='w', padx=4, pady=(0, 6))
@@ -843,7 +843,7 @@ class App(ctk.CTk):
                               font=("Roboto", 10, "bold"), height=32)
         self.btn_tree.pack(fill='x', pady=(0, 2))
         self.label_tree = ctk.CTkLabel(fi, text="Não selecionado",
-                                       font=("Roboto", 8),
+                                       font=("Roboto", 9),
                                        wraplength=230,
                                        text_color=self.COLORS['text_muted'])
         self.label_tree.pack(anchor='w', padx=4, pady=(0, 6))
@@ -854,7 +854,7 @@ class App(ctk.CTk):
                                 font=("Roboto", 10, "bold"), height=32)
         self.btn_output.pack(fill='x', pady=(0, 2))
         self.label_output = ctk.CTkLabel(fi, text="Não selecionado",
-                                         font=("Roboto", 8),
+                                         font=("Roboto", 9),
                                          wraplength=230,
                                          text_color=self.COLORS['text_muted'])
         self.label_output.pack(anchor='w', padx=4)
@@ -876,7 +876,7 @@ class App(ctk.CTk):
         self.btn_update_results.pack(fill='x', pady=(0, 2))
         self.label_update_results = ctk.CTkLabel(ri,
                                                   text="Atualizar arquivos de análise",
-                                                  font=("Roboto", 8, "italic"),
+                                                  font=("Roboto", 9, "italic"),
                                                   wraplength=230,
                                                   text_color=self.COLORS['text_muted'])
         self.label_update_results.pack(anchor='w', padx=4)
@@ -936,7 +936,7 @@ class App(ctk.CTk):
             width=32)
         self.cores_disp.pack(side='right', padx=(6, 0))
         ctk.CTkLabel(ci, text=f"(detectado: {_max} núcleos)",
-                     font=("Roboto", 8),
+                     font=("Roboto", 9),
                      text_color=self.COLORS['text_muted']).pack(anchor='w')
 
         # Modo WGS toggle
@@ -1070,7 +1070,7 @@ class App(ctk.CTk):
         ctk.CTkLabel(log_header, text="Feedback em tempo real da análise",
                     font=("Roboto", 9), text_color=self.COLORS['text_tertiary']).pack(side="left", padx=10)
 
-        self.log = ctk.CTkTextbox(log_container, font=("Cascadia Code", 9),
+        self.log = ctk.CTkTextbox(log_container, font=("Cascadia Code", 10),
                                   fg_color=self.COLORS['bg_dark'],
                                   text_color=self.COLORS['text_secondary'],
                                   border_color=self.COLORS['border'],
@@ -1105,14 +1105,46 @@ class App(ctk.CTk):
 
     def _setup_model_list(self):
         MODEL_META = {
-            'M0':               {'color': '#3b82f6', 'desc': 'ω único para todos os sítios  ·  modelo baseline'},
-            'M1a':              {'color': '#06b6d4', 'desc': 'Dois sítios: purificação (0<ω<1) e neutro (ω=1)'},
-            'M2a':              {'color': '#10b981', 'desc': 'Três sítios: adiciona classe com ω > 1  ·  BEB/NEB'},
-            'M7':               {'color': '#8b5cf6', 'desc': 'Distribuição Beta de ω contida em (0, 1)'},
-            'M8':               {'color': '#ec4899', 'desc': 'Beta + sítios sob seleção positiva (ω > 1)  ·  BEB/NEB'},
-            'Branch':           {'color': '#f59e0b', 'desc': 'ω livre por ramo  ·  requer árvore etiquetada'},
-            'Branch-site':      {'color': '#ef4444', 'desc': 'Seleção positiva episódica no ramo alvo'},
-            'Branch-site_null': {'color': '#6d6d6d', 'desc': 'Modelo nulo para o teste LRT Branch-site'},
+            'M0': {
+                'color': '#3b82f6',
+                'desc': 'Um único ω para todo o gene. Não detecta variação entre sítios. '
+                        'Usado como baseline e como modelo nulo para o Branch Model.'
+            },
+            'M1a': {
+                'color': '#06b6d4',
+                'desc': 'Permite purificação (0 < ω < 1) e neutralidade (ω = 1) — sem seleção positiva. '
+                        'Modelo nulo (null) para M2a no teste LRT.'
+            },
+            'M2a': {
+                'color': '#10b981',
+                'desc': 'Acrescenta classe com ω > 1 ao M1a. LRT M2a vs M1a indica seleção positiva por sítio. '
+                        'BEB/NEB identificam os sítios sob seleção.'
+            },
+            'M7': {
+                'color': '#8b5cf6',
+                'desc': 'ω segue distribuição Beta contínua — todos os sítios têm ω ≤ 1. '
+                        'Modelo nulo mais flexível para comparar com M8.'
+            },
+            'M8': {
+                'color': '#ec4899',
+                'desc': 'Beta(p,q) + classe discreta com ω > 1. LRT M8 vs M7 é o teste mais '
+                        'robusto para seleção positiva por sítio. Requer comparação com M7.'
+            },
+            'Branch': {
+                'color': '#f59e0b',
+                'desc': 'Estima ω independente por ramo etiquetado. LRT com M0 testa se há '
+                        'pressão seletiva diferente nas linhagens marcadas.'
+            },
+            'Branch-site': {
+                'color': '#ef4444',
+                'desc': 'Detecta seleção positiva em sítios específicos do ramo foreground (#1). '
+                        'Combina variação por sítio e por linhagem — o teste mais poderoso.'
+            },
+            'Branch-site_null': {
+                'color': '#6d6d6d',
+                'desc': 'Versão restrita do Branch-site com ω₂=1 fixado. '
+                        'Adicionado automaticamente como null para o LRT do Branch-site.'
+            },
         }
 
         models = {
@@ -1140,16 +1172,16 @@ class App(ctk.CTk):
                 card = ctk.CTkFrame(scroll_frame, fg_color=self.COLORS['bg_feed'],
                                     corner_radius=10, border_width=1,
                                     border_color=self.COLORS['border'])
-                card.pack(fill="x", pady=3, padx=4)
+                card.pack(fill="x", pady=2, padx=4)
 
                 # Left accent bar (slim, 4px)
                 accent_bar = ctk.CTkFrame(card, fg_color=accent, width=4, corner_radius=2)
-                accent_bar.pack(side="left", fill="y", padx=(5, 8), pady=6)
+                accent_bar.pack(side="left", fill="y", padx=(5, 8), pady=4)
                 accent_bar.pack_propagate(False)
 
                 # Text block
                 text_block = ctk.CTkFrame(card, fg_color='transparent')
-                text_block.pack(side="left", fill="both", expand=True, pady=7)
+                text_block.pack(side="left", fill="both", expand=True, pady=4)
 
                 display_name = self.codeml_backend.MODEL_CONFIGS[code].get('display_name', code)
                 var = ctk.BooleanVar(value=False)
@@ -1174,18 +1206,18 @@ class App(ctk.CTk):
                 if desc:
                     ctk.CTkLabel(
                         text_block, text=f"   {desc}",
-                        font=("Roboto", 9),
-                        text_color=self.COLORS['text_tertiary'],
+                        font=("Roboto", 10),
+                        text_color=self.COLORS['text_secondary'],
                         anchor='w',
                         justify='left',
-                        wraplength=260
-                    ).pack(anchor="w", pady=(1, 4), fill='x')
+                        wraplength=310
+                    ).pack(anchor="w", pady=(1, 2), fill='x')
 
                 # Right controls
                 controls = ctk.CTkFrame(card, fg_color='transparent')
-                controls.pack(side="right", padx=8, pady=7)
+                controls.pack(side="right", padx=8, pady=4)
 
-                lbl = ctk.CTkLabel(controls, text="padrão", font=("Roboto", 8),
+                lbl = ctk.CTkLabel(controls, text="padrão", font=("Roboto", 9),
                                    text_color=self.COLORS['text_tertiary'])
                 lbl.pack(side="left", padx=(0, 8))
 
@@ -1290,69 +1322,140 @@ class App(ctk.CTk):
             self._update_models_state()
 
     def _show_neutral_models_info(self):
-        """Mostra informações sobre modelos nulos e suas configurações"""
-        # Criar janela de informações
+        """Mostra informações sobre todos os pares de modelos nulos/alternativos para o LRT"""
         info_window = ctk.CTkToplevel(self)
-        info_window.title("Configuração de Modelos Nulos")
-        info_window.geometry("700x500")
+        info_window.title("Modelos Nulos – Comparações LRT")
+        info_window.geometry("740x640")
         info_window.attributes("-topmost", True)
         info_window.grab_set()
-        
-        # Header
-        header = ctk.CTkLabel(info_window, text="📊 Modelos Nulos - Configuração Automática",
-                             font=("Roboto", 12, "bold"),
-                             text_color=self.COLORS['accent_blue'])
-        header.pack(padx=15, pady=15)
-        
-        # Scrollable frame
-        scroll_frame = ctk.CTkScrollableFrame(info_window, fg_color=self.COLORS['bg_feed'],
-                                             corner_radius=8)
-        scroll_frame.pack(fill="both", expand=True, padx=12, pady=(0, 12))
-        
-        # Informações sobre cada modelo nulo
-        for null_model, config in self.codeml_backend.NEUTRAL_MODELS.items():
-            alt_model = config.get('corresponding_alternative', 'N/A')
-            reason = config.get('reason', '')
-            
-            # Card para cada modelo
-            card = ctk.CTkFrame(scroll_frame, fg_color=self.COLORS['bg_card'],
-                               corner_radius=8, border_width=1,
-                               border_color=self.COLORS['bg_card_hover'])
-            card.pack(fill="x", padx=8, pady=6)
-            
-            # Título do modelo
-            title = ctk.CTkLabel(card, text=f"🔗 {null_model}", font=("Roboto", 11, "bold"),
-                                text_color=self.COLORS['accent_blue'])
-            title.pack(anchor="w", padx=12, pady=(8, 4))
-            
-            # Alternativa correspondente
-            alt_text = ctk.CTkLabel(card, 
-                                   text=f"▶ Usado como nulo para: {alt_model}",
-                                   font=("Roboto", 10),
-                                   text_color=self.COLORS['text_secondary'])
-            alt_text.pack(anchor="w", padx=20, pady=2)
-            
-            # Configuração
-            config_text = ctk.CTkLabel(card,
-                                      text=f"⚙️ Configuração: fix_omega=1, omega=1.0 (FIXADO)",
-                                      font=("Roboto", 10),
-                                      text_color=self.COLORS['success'])
-            config_text.pack(anchor="w", padx=20, pady=2)
-            
-            # Motivo/Citação
-            reason_text = ctk.CTkLabel(card, text=f"📚 {reason}",
-                                      font=("Roboto", 9),
-                                      text_color=self.COLORS['text_tertiary'],
-                                      wraplength=600, justify="left")
-            reason_text.pack(anchor="w", padx=20, pady=(2, 8))
-        
-        # Footer com instrução
-        footer = ctk.CTkLabel(info_window, 
-                             text="✅ Quando a opção está ATIVADA, estes modelos nulos são adicionados automaticamente",
-                             font=("Roboto", 9),
-                             text_color=self.COLORS['text_tertiary'],
-                             wraplength=650, justify="center")
-        footer.pack(padx=12, pady=12)
+        info_window.configure(fg_color=self.COLORS['bg_dark'])
+
+        # ── Header ──────────────────────────────────────────────────────────
+        hdr = ctk.CTkFrame(info_window, fg_color='transparent')
+        hdr.pack(fill='x', padx=18, pady=(16, 4))
+        ctk.CTkLabel(hdr, text="⚗️  Modelos Nulos e Comparações LRT",
+                     font=("Roboto", 14, "bold"),
+                     text_color=self.COLORS['accent_blue']).pack(anchor='w')
+        ctk.CTkLabel(hdr,
+                     text="Quando ativado, o EasyPAML adiciona automaticamente o modelo nulo de cada par LRT "
+                          "— sem precisar marcá-lo manualmente. Cada comparação usa o Teste da Razão de "
+                          "Verossimilhança (LRT): 2ΔlnL comparado ao χ² com os graus de liberdade corretos.",
+                     font=("Roboto", 10),
+                     wraplength=690, justify='left',
+                     text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(4, 0))
+
+        ctk.CTkFrame(info_window, fg_color=self.COLORS['border'], height=1
+                     ).pack(fill='x', padx=18, pady=(10, 0))
+
+        # ── Scrollable content ───────────────────────────────────────────────
+        scroll = ctk.CTkScrollableFrame(info_window, fg_color='transparent')
+        scroll.pack(fill='both', expand=True, padx=14, pady=6)
+
+        LRT_PAIRS = [
+            {
+                'null': 'M1a', 'alt': 'M2a', 'color': '#10b981',
+                'title': 'M2a  vs  M1a',
+                'test': 'Testa seleção positiva por sítio — Site Models',
+                'detail': (
+                    '2 graus de liberdade (χ²). M1a permite apenas purificação (ω < 1) e '
+                    'neutralidade (ω = 1). M2a acrescenta uma classe com ω > 1 (seleção '
+                    'positiva). Se 2ΔlnL > 5.99 (α=0.05), há evidência de seleção positiva; '
+                    'os sítios são identificados por BEB/NEB.'
+                ),
+                'note': 'M1a não precisa de fix_omega=1 — o CODEML restringe ω₁=1 internamente via NSsites=1.',
+            },
+            {
+                'null': 'M7', 'alt': 'M8', 'color': '#ec4899',
+                'title': 'M8  vs  M7',
+                'test': 'Testa seleção positiva com distribuição Beta — teste mais robusto',
+                'detail': (
+                    '2 graus de liberdade (χ²). M7 restringe toda a distribuição de ω ao '
+                    'intervalo (0, 1) via Beta(p, q). M8 acrescenta uma classe discreta com '
+                    'ω > 1. Este par é o mais recomendado para identificar seleção positiva '
+                    'por sítio, pois a distribuição Beta é mais biológica que classes discretas.'
+                ),
+                'note': 'M7 não precisa de fix_omega=1.',
+            },
+            {
+                'null': 'M0', 'alt': 'Branch', 'color': '#f59e0b',
+                'title': 'Branch  vs  M0',
+                'test': 'Testa variação de ω entre linhagens — Branch Model',
+                'detail': (
+                    'Os graus de liberdade dependem do número de ramos etiquetados. '
+                    'M0 usa um único ω global para todos os ramos e sítios. O Branch Model '
+                    'estima ω independente para cada ramo ou grupo marcado. Rejeitar M0 indica '
+                    'que a pressão seletiva varia entre as linhagens analisadas.'
+                ),
+                'note': 'M0 não precisa de fix_omega=1 — ω é estimado livremente como baseline.',
+            },
+            {
+                'null': 'Branch-site_null', 'alt': 'Branch-site', 'color': '#ef4444',
+                'title': 'Branch-site  vs  Branch-site_null',
+                'test': 'Testa seleção episódica em sítios do ramo foreground (#1)',
+                'detail': (
+                    'Distribuição MISTA 50:50 (χ²₀ + χ²₁) — não o χ² convencional! '
+                    'Valor crítico: 2.706 (α=0.05) e 5.412 (α=0.01). '
+                    'Branch-site_null fixa ω₂=1 no foreground (Yang et al. 2005, Zhang et al. 2005). '
+                    'Este é o teste mais poderoso para detectar seleção positiva episódica em '
+                    'linhagens específicas, combinando variação por sítio e por ramo.'
+                ),
+                'note': 'Branch-site_null requer fix_omega=1 e omega=1.0 no .ctl — configurado automaticamente.',
+            },
+        ]
+
+        for info in LRT_PAIRS:
+            card = ctk.CTkFrame(scroll, fg_color=self.COLORS['bg_card'],
+                                corner_radius=10, border_width=1,
+                                border_color=self.COLORS['border'])
+            card.pack(fill='x', padx=6, pady=5)
+
+            # Color bar
+            ctk.CTkFrame(card, fg_color=info['color'], width=5,
+                         corner_radius=2).pack(side='left', fill='y', padx=(6, 10), pady=8)
+
+            content = ctk.CTkFrame(card, fg_color='transparent')
+            content.pack(side='left', fill='both', expand=True, pady=10, padx=(0, 10))
+
+            # Title row
+            title_row = ctk.CTkFrame(content, fg_color='transparent')
+            title_row.pack(fill='x', anchor='w')
+            ctk.CTkLabel(title_row, text=info['title'],
+                         font=("Roboto", 12, "bold"),
+                         text_color=info['color']).pack(side='left')
+            ctk.CTkLabel(title_row,
+                         text=f"   null: {info['null']}  →  alternativo: {info['alt']}",
+                         font=("Roboto", 10),
+                         text_color=self.COLORS['text_secondary']).pack(side='left')
+
+            # Test label
+            ctk.CTkLabel(content, text=f"🎯  {info['test']}",
+                         font=("Roboto", 10, "bold"),
+                         text_color=self.COLORS['text_primary'],
+                         anchor='w').pack(anchor='w', pady=(4, 2))
+
+            # Detail
+            ctk.CTkLabel(content, text=info['detail'],
+                         font=("Roboto", 10),
+                         text_color=self.COLORS['text_secondary'],
+                         wraplength=590, justify='left',
+                         anchor='w').pack(anchor='w', pady=(0, 3))
+
+            # Implementation note
+            ctk.CTkLabel(content, text=f"ℹ️  {info['note']}",
+                         font=("Roboto", 9, "italic"),
+                         text_color=self.COLORS['text_tertiary'],
+                         wraplength=590, justify='left',
+                         anchor='w').pack(anchor='w')
+
+        # ── Footer ───────────────────────────────────────────────────────────
+        ctk.CTkFrame(info_window, fg_color=self.COLORS['border'], height=1
+                     ).pack(fill='x', padx=18)
+        ctk.CTkLabel(info_window,
+                     text="✅  Com a opção ATIVADA, o modelo nulo de cada par selecionado é "
+                          "adicionado automaticamente — você não precisa marcá-lo.",
+                     font=("Roboto", 10),
+                     text_color=self.COLORS['success'],
+                     wraplength=690).pack(padx=18, pady=12)
 
     def _show_model_info(self, model_code: str):
         """Mostra informações detalhadas sobre um modelo específico"""
