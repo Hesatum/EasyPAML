@@ -6,15 +6,24 @@ Requer apenas arquivos .fas e .tree
 """
 
 import os
+import platform
 import subprocess
 import time
 import shutil
 import re
+import threading
+import concurrent.futures
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from threading import Thread
 from .sites_parser import SitesParser
+
+# Absolute path to the bundled codeml binary — works regardless of CWD.
+_APP_ROOT   = Path(__file__).resolve().parent.parent.parent
+_CODEML_BIN = (_APP_ROOT / 'bin' / 'codeml.exe'
+               if platform.system() == 'Windows'
+               else _APP_ROOT / 'bin' / 'codeml')
 
 
 class CodemlBatchAnalysis:
@@ -28,7 +37,7 @@ class CodemlBatchAnalysis:
             'NSsites': 0,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 2
+            'CodonFreq': 7
         },
         'M1a': {
             'description': 'Nearly Neutral - ω < 1 or = 1',
@@ -36,7 +45,7 @@ class CodemlBatchAnalysis:
             'NSsites': 1,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 2
+            'CodonFreq': 7
         },
         'M2a': {
             'description': 'Positive Selection - adds ω > 1 class',
@@ -44,7 +53,7 @@ class CodemlBatchAnalysis:
             'NSsites': 2,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 2
+            'CodonFreq': 7
         },
         'M7': {
             'description': 'Beta distribution - ω < 1',
@@ -52,7 +61,7 @@ class CodemlBatchAnalysis:
             'NSsites': 7,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 2
+            'CodonFreq': 7
         },
         'M8': {
             'description': 'Beta + ω - adds ω > 1 class',
@@ -60,7 +69,7 @@ class CodemlBatchAnalysis:
             'NSsites': 8,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 2
+            'CodonFreq': 7
         },
         'Branch': {
             'description': 'Branch model - different ω for foreground',
@@ -68,7 +77,7 @@ class CodemlBatchAnalysis:
             'NSsites': 0,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 2
+            'CodonFreq': 7
         },
         'Branch-site': {
             'display_name': 'Branch-site',
@@ -179,35 +188,40 @@ class CodemlBatchAnalysis:
         'Branch-site': 'Branch-site_null'  # Branch-site -> Branch-site_null
     }
     
-    # Modelos neutros (ω=1 FIXADO conforme PAML oficial)
-    # Wong et al. 2004, Swanson et al. 2003, Yang et al. 2005
+    # Modelos neutros: apenas Branch-site_null requer fix_omega=1 no .ctl
+    # (ω₂=1 fixado conforme Yang et al. 2005, Zhang et al. 2005)
+    # M0 e M1a NÃO precisam de fix_omega=1:
+    #   - M0 estima ω livremente (null para Branch model)
+    #   - M1a (NSsites=1): ω₁=1 é restringido INTERNAMENTE pelo CODEML via NSsites=1;
+    #     fix_omega=1 no .ctl fixaria TODOS os ω=1, corrompendo o modelo
     NEUTRAL_MODELS = {
-        'M0': {
+        'Branch-site_null': {
             'fix_omega': 1,
             'omega': 1.0,
-            'corresponding_alternative': 'Branch',
-            'reason': 'M0: ω=1 fixado (modelo nulo para Branch site models)'
-        },
-        'M1a': {
-            'fix_omega': 1,
-            'omega': 1.0,
-            'corresponding_alternative': 'M2a',
-            'reason': 'M1a: ω₁=1 fixado (Wong et al. 2004)'
-        },
-        'BranchSite_A_null': {
-            'fix_omega': 1,
-            'omega': 1.0,
-            'corresponding_alternative': 'BranchSite_A',
-            'reason': 'BranchSite_A_null: ω₂=1 fixado (Yang et al. 2005)'
+            'corresponding_alternative': 'Branch-site',
+            'reason': 'Branch-site_null: ω₂=1 fixado (Yang et al. 2005, Zhang et al. 2005)'
         }
     }
+
+    # LRT do Branch-site usa distribuição 50:50 de χ²₀ + χ²₁ (não χ² padrão)
+    # Valor crítico a α=0.05: 2.706 (qchisq(0.90, df=1))
+    # Valor crítico a α=0.01: 5.412 (qchisq(0.98, df=1))
+    BRANCHSITE_MIXTURE_CRITICAL = {0.05: 2.706, 0.01: 5.412}
     
+    @staticmethod
+    def available_cores() -> int:
+        """Retorna o número de cores lógicos disponíveis no sistema."""
+        return os.cpu_count() or 1
+
     def __init__(self):
         self.results = {}
         self.config = {}
         # current stop codon count updated during runs (for GUI polling)
         self.current_stop_count = 0
         self.current_stop_details = []
+        self.current_total_genes = 0
+        self.current_processed_genes = 0
+        self._results_lock = threading.Lock()
     
     @staticmethod
     def auto_complete_null_models(selected_models: List[str], include_neutral: bool = True) -> List[str]:
@@ -259,16 +273,19 @@ class CodemlBatchAnalysis:
         - cleandata: 0/1 whether to remove ambiguous sites
         - model_name: name of the model (to check if it's a neutral model)
         
-        For neutral models (M1a, Branch-site_null), omega is forced to 1.0
-        with fix_omega=1, per PAML specifications (Wong et al. 2004, Swanson et al. 2003, Yang et al. 2005)
+        Branch-site_null: fix_omega=1, omega=1.0 (ω₂=1 fixado, Yang et al. 2005)
+        Todos os outros modelos usam os valores de model_config diretamente.
         """
-        # Enforce omega=1 for neutral models
+        # Para Branch-site_null, garantir fix_omega=1 mesmo se o usuário tiver editado
         fix_omega = model_config['fix_omega']
         final_omega = omega
-        
+
         if model_name in self.NEUTRAL_MODELS:
             fix_omega = 1
             final_omega = 1.0
+        elif fix_omega == 0:
+            # Para modelos não-neutros, usar omega inicial do usuário
+            final_omega = omega
         
         ctl_template = f"""      seqfile = {seqfile}
      treefile = {treefile}
@@ -435,76 +452,76 @@ class CodemlBatchAnalysis:
         
         # Obter arquivos .fas
         fas_files = sorted(self.config['input_folder'].glob("*.fas"))
-        # expose total/processed counters for GUI
-        try:
-            self.current_total_genes = len(fas_files)
-            self.current_processed_genes = 0
-        except Exception:
-            self.current_total_genes = 0
-            self.current_processed_genes = 0
-        
+        self.current_total_genes = len(fas_files)
+        self.current_processed_genes = 0
+
+        n_workers = max(1, int(self.config.get('n_workers', 1)))
+
         print("\n" + "="*80)
         print("STARTING BATCH ANALYSIS")
         print("="*80)
-        print(f"Processing {len(fas_files)} genes with {len(self.config['models'])} models each\n")
-        
+        print(f"Processing {len(fas_files)} genes × {len(self.config['models'])} models  |  workers: {n_workers}\n")
+
         start_time = time.time()
-        
-        # Processar cada arquivo
-        for idx, fas_file in enumerate(fas_files, 1):
-            # Pause support: wait here if pause_event is provided and cleared
+
+        def _process_gene(args):
+            idx, fas_file = args
             pause_event = self.config.get('pause_event')
+            stop_event = self.config.get('stop_event')
+
+            if stop_event is not None and stop_event.is_set():
+                return fas_file.stem, {}
+
             if pause_event is not None:
                 pause_event.wait()
 
-            # Reset the 'manual all' flag at the start of each new gene (exon)
-            try:
-                manual_all_ev = self.config.get('manual_continue_all_event')
-                if manual_all_ev is not None:
-                    try:
-                        manual_all_ev.clear()
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+            # Resetar flag manual-all para cada gene
+            manual_all_ev = self.config.get('manual_continue_all_event')
+            if manual_all_ev is not None:
+                try:
+                    manual_all_ev.clear()
+                except Exception:
+                    pass
 
-            print(f"\n{'='*80}")
+            print(f"\n{'='*60}")
             print(f"[{idx}/{len(fas_files)}] Gene: {fas_file.stem}")
-            print(f"{'='*80}")
-            
+            print(f"{'='*60}")
+
             gene_results = {}
-            
-            # Executar cada modelo
             for model_name in self.config['models']:
-                # Pause support before starting each model
-                pause_event = self.config.get('pause_event')
+                if stop_event is not None and stop_event.is_set():
+                    break
                 if pause_event is not None:
                     pause_event.wait()
 
-                print(f"\n  - Running {model_name}...", end=" ", flush=True)
-                
+                print(f"  - Running {model_name}...", end=" ", flush=True)
                 result = self._run_single_analysis(
                     fas_file=fas_file,
                     model_name=model_name,
                     log_file=log_file
                 )
-                
                 if result:
                     gene_results[model_name] = result
                     lnL = result.get('lnL')
-                    exec_time = result.get('execution_time')
-                    lnL_str = f"{lnL:.2f}" if lnL is not None else 'NA'
-                    time_str = f"{exec_time:.1f}s" if exec_time is not None else 'NA'
-                    print(f"[OK] [lnL: {lnL_str}, time: {time_str}]")
+                    t = result.get('execution_time')
+                    print(f"[OK]  lnL={lnL:.2f}  t={t:.1f}s" if lnL is not None and t is not None else "[OK]")
                 else:
-                    print("[ERROR] Failed")
-            
-            self.results[fas_file.stem] = gene_results
-            # update processed genes counter for GUI
-            try:
-                self.current_processed_genes = idx
-            except Exception:
-                pass
+                    print("[ERROR]")
+
+            with self._results_lock:
+                self.results[fas_file.stem] = gene_results
+                self.current_processed_genes += 1
+
+            return fas_file.stem, gene_results
+
+        indexed = list(enumerate(fas_files, 1))
+
+        if n_workers > 1:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+                list(executor.map(_process_gene, indexed))
+        else:
+            for item in indexed:
+                _process_gene(item)
         
         total_time = time.time() - start_time
         
@@ -685,11 +702,9 @@ class CodemlBatchAnalysis:
 
             exec_start = time.time()
 
-            # Executar CODEML
-            # Prefer explicit bin/codeml.exe if present, otherwise try 'codeml' on PATH
-            codeml_bin = Path('bin') / 'codeml.exe'
-            if codeml_bin.exists():
-                cmd = [str(codeml_bin), ctl_filename]
+            # Executar CODEML — use absolute bundled binary, fall back to system PATH
+            if _CODEML_BIN.exists():
+                cmd = [str(_CODEML_BIN), ctl_filename]
             else:
                 cmd = ["codeml", ctl_filename]
 
@@ -1131,9 +1146,9 @@ class CodemlBatchAnalysis:
                 comparisons.append(('M0', 'Branch', 'Tests if ω differs in foreground'))
             
             # Branch-site models
-            if 'BranchSite_A_null' in selected_models and 'BranchSite_A' in selected_models:
-                comparisons.append(('BranchSite_A_null', 'BranchSite_A', 
-                                  'Tests for positive selection in foreground sites'))
+            if 'Branch-site_null' in selected_models and 'Branch-site' in selected_models:
+                comparisons.append(('Branch-site_null', 'Branch-site',
+                                  'Tests for positive selection in foreground sites (50:50 mixture χ²)'))
             
             if not comparisons:
                 f.write("No valid model comparisons found.\n")
@@ -1180,15 +1195,30 @@ class CodemlBatchAnalysis:
                     # Calcular LRT
                     lrt_stat = 2 * (lnL_alt - lnL_null)
                     df = abs(np_alt - np_null)
-                    
-                    if df == 0 or lrt_stat < 0:
+
+                    if df == 0:
                         continue
-                    
+                    if lrt_stat < 0:
+                        lrt_stat = 0.0
+
                     # Calcular p-value
                     from scipy import stats
-                    
-                    p_value = 1 - stats.chi2.cdf(lrt_stat, df)
-                    df_display = str(df)
+
+                    is_branchsite = (null_model == 'Branch-site_null' and alt_model == 'Branch-site')
+
+                    if is_branchsite:
+                        # Distribuição nula: mistura 50:50 de χ²(0) e χ²(1)
+                        # P(2Δl > x) = 0.5 * P(χ²(1) > x)  para x > 0
+                        # Valor crítico α=0.05: 2.706  (qchisq(0.90, df=1))
+                        # Valor crítico α=0.01: 5.412  (qchisq(0.98, df=1))
+                        if lrt_stat <= 0:
+                            p_value = 1.0
+                        else:
+                            p_value = 0.5 * stats.chi2.sf(lrt_stat, df=1)
+                        df_display = "mixture(0,1)"
+                    else:
+                        p_value = 1 - stats.chi2.cdf(lrt_stat, df)
+                        df_display = str(df)
                     
                     total_valid += 1
                     
@@ -1222,7 +1252,216 @@ class CodemlBatchAnalysis:
                 f.write("\n")
         
         print(f"\n  [OK] LRT results saved: {lrt_file}")
-    
+
+    # ══════════════════════════════════════════════════════════════════
+    # WGS / ndata MODE  (genome-scale multi-gene analysis)
+    # ══════════════════════════════════════════════════════════════════
+
+    @staticmethod
+    def _fasta_to_phylip_block(fas_path: Path) -> Optional[str]:
+        """Converte um arquivo FASTA para um bloco no formato PHYLIP do CODEML.
+
+        Retorna None se o arquivo já estiver em formato PHYLIP (primeira linha
+        com '<ntaxa> <nsite>').
+        """
+        text = fas_path.read_text(encoding='utf-8', errors='ignore').strip()
+        lines = text.splitlines()
+        if not lines:
+            return None
+
+        # Detectar se já é PHYLIP (primeira linha = dois inteiros)
+        first = lines[0].strip().split()
+        if len(first) == 2 and first[0].isdigit() and first[1].isdigit():
+            return text + '\n'
+
+        # Parsear FASTA
+        seqs: Dict[str, List[str]] = {}
+        order: List[str] = []
+        current = None
+        for line in lines:
+            if line.startswith('>'):
+                current = line[1:].split()[0]
+                order.append(current)
+                seqs[current] = []
+            elif current is not None:
+                seqs[current].append(line.strip())
+
+        if not seqs:
+            return None
+
+        sequences = {k: ''.join(v) for k, v in seqs.items()}
+        n_taxa = len(order)
+        lengths = {len(s) for s in sequences.values()}
+        if len(lengths) != 1:
+            print(f"  [WARN] {fas_path.name}: sequências com tamanhos diferentes — pulando")
+            return None
+        n_sites = lengths.pop()
+
+        # Montar bloco PHYLIP
+        block_lines = [f" {n_taxa} {n_sites}"]
+        for name in order:
+            # PHYLIP: nome com 10 chars (padded/truncated)
+            padded = name[:10].ljust(10)
+            block_lines.append(f"{padded}  {sequences[name]}")
+        return '\n'.join(block_lines) + '\n'
+
+    def run_wgs_analysis(self) -> None:
+        """Modo WGS: combina todos os .fas em um único arquivo PHYLIP e executa
+        CODEML com  ndata = N maintree 1  para analisar todos os genes de uma vez.
+
+        Suporta apenas modelos de sítios (site models) sem marcação de ramos.
+        Para modelos de ramo use o modo batch padrão.
+
+        Configuração esperada em self.config (além das chaves padrão):
+          - 'wgs_nsites': lista/string de NSsites, ex: [0, 1, 2, 7, 8]
+          - 'wgs_model' : valor de model=, default 0 (site models)
+        """
+        output_folder = Path(self.config['output_folder'])
+        output_folder.mkdir(parents=True, exist_ok=True)
+        log_file = output_folder / "wgs_analysis_log.txt"
+
+        fas_files = sorted(Path(self.config['input_folder']).glob("*.fas"))
+        if not fas_files:
+            print("[WGS] Nenhum arquivo .fas encontrado.")
+            return
+
+        print(f"\n[WGS] Convertendo {len(fas_files)} genes para PHYLIP combinado...")
+
+        # Combinar todos em um único arquivo
+        combined_phy = output_folder / "wgs_combined.phy"
+        gene_names = []
+        n_valid = 0
+        with open(combined_phy, 'w', encoding='utf-8') as out:
+            for fas in fas_files:
+                block = self._fasta_to_phylip_block(fas)
+                if block is None:
+                    print(f"  [SKIP] {fas.name}")
+                    continue
+                out.write(block)
+                out.write('\n')
+                gene_names.append(fas.stem)
+                n_valid += 1
+
+        if n_valid == 0:
+            print("[WGS] Nenhum arquivo válido para converter.")
+            return
+        print(f"[WGS] {n_valid} genes combinados → {combined_phy.name}")
+
+        # Salvar lista de genes na ordem
+        (output_folder / "wgs_gene_order.txt").write_text('\n'.join(gene_names), encoding='utf-8')
+
+        # Construir NSsites
+        nsites_raw = self.config.get('wgs_nsites', [0, 1, 2, 7, 8])
+        if isinstance(nsites_raw, (list, tuple)):
+            nsites_str = ' '.join(str(n) for n in nsites_raw)
+        else:
+            nsites_str = str(nsites_raw)
+
+        model_val = int(self.config.get('wgs_model', 0))
+        omega_val = float(self.config.get('omega', 0.5))
+        cleandata_val = int(self.config.get('cleandata', 0))
+        codon_freq = int(self.config.get('wgs_codonfreq', 7))
+
+        tree_path = Path(self.config['tree_file'])
+        outfile_name = "wgs_results.txt"
+
+        ctl_content = (
+            f"      seqfile = {combined_phy.name}\n"
+            f"     treefile = {tree_path.name}\n"
+            f"      outfile = {outfile_name}\n\n"
+            f"        noisy = 3\n"
+            f"      verbose = 1\n"
+            f"      seqtype = 1\n"
+            f"        ndata = {n_valid} maintree 1\n"
+            f"        icode = 0\n"
+            f"    cleandata = {cleandata_val}\n\n"
+            f"        model = {model_val}\n"
+            f"      NSsites = {nsites_str}\n"
+            f"    CodonFreq = {codon_freq}\n"
+            f"      estFreq = 0\n"
+            f"        clock = 0\n"
+            f"    fix_omega = 0\n"
+            f"        omega = {omega_val}\n"
+        )
+
+        ctl_path = output_folder / "wgs_analysis.ctl"
+        ctl_path.write_text(ctl_content, encoding='utf-8')
+        print(f"[WGS] .ctl gerado: {ctl_path.name}")
+        print(f"[WGS] ndata = {n_valid} maintree 1  |  NSsites = {nsites_str}")
+
+        # Copiar arquivos para temp_dir e executar
+        temp_dir = output_folder / "wgs_temp"
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        temp_dir.mkdir()
+
+        shutil.copy(combined_phy, temp_dir)
+        shutil.copy(tree_path, temp_dir)
+        shutil.copy(ctl_path, temp_dir)
+
+        cmd = [str(_CODEML_BIN), ctl_path.name] if _CODEML_BIN.exists() else ['codeml', ctl_path.name]
+
+        print(f"\n[WGS] Executando: {' '.join(cmd)}")
+        print(f"[WGS] Isso pode demorar muito para grandes datasets WGS...\n")
+
+        stop_event = self.config.get('stop_event')
+        with open(log_file, 'w', encoding='utf-8') as log:
+            log.write(f"WGS Analysis started: {datetime.now()}\n")
+            log.write(f"ndata = {n_valid}  NSsites = {nsites_str}\n")
+            log.write(f"Genes: {', '.join(gene_names)}\n\n")
+
+        try:
+            process = subprocess.Popen(
+                cmd, cwd=temp_dir,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True, encoding='utf-8', bufsize=1
+            )
+            self.current_process = process
+
+            with open(log_file, 'a', encoding='utf-8') as log:
+                for line in iter(process.stdout.readline, ''):
+                    if stop_event and stop_event.is_set():
+                        process.terminate()
+                        break
+                    stripped = line.rstrip()
+                    log.write(stripped + '\n')
+                    if stripped:
+                        print(f"  {stripped}")
+                    # Auto-responder stop codons
+                    if 'stop' in stripped.lower() and 'codon' in stripped.lower():
+                        try:
+                            process.stdin.write('\n')
+                            process.stdin.flush()
+                        except Exception:
+                            pass
+
+            process.wait(timeout=7200)
+
+        except subprocess.TimeoutExpired:
+            process.kill()
+            print("[WGS] TIMEOUT após 2h — processo encerrado.")
+        except Exception as e:
+            print(f"[WGS] ERRO: {e}")
+        finally:
+            self.current_process = None
+
+        # Mover resultados
+        results_file = temp_dir / outfile_name
+        if results_file.exists():
+            dest = output_folder / outfile_name
+            shutil.copy(results_file, dest)
+            print(f"\n[WGS] Resultado salvo: {dest}")
+        else:
+            print("[WGS] Arquivo de resultado não encontrado.")
+
+        # Limpeza
+        try:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        except Exception:
+            pass
+
     @staticmethod
     def regenerate_summary_files(results_folder: Path) -> Dict[str, str]:
         """

@@ -1,280 +1,127 @@
-# 🧬 EasyPAML - Interface Intuitiva para Análise de Seleção Positiva
+# EasyPAML
 
-**EasyPAML** é uma aplicação de fácil uso que permite a análise de seleção positiva em sequências genômicas usando o motor **PAML/CODEML**, sem necessidade de conhecimentos técnicos avançados.
-
----
-
-## 📋 O que é Seleção Positiva?
-
-Seleção positiva ocorre quando genes evoluem mais rapidamente do que esperado sob neutralidade evolutiva. É medida pela razão **ω (ômega) = dN/dS**, onde:
-- **dN** = substituições não-sinônimas (alteram aminoácido)
-- **dS** = substituições sinônimas (não alteram aminoácido)
-
-Interpretação:
-- **ω < 1**: Seleção purificadora (mantém sequência)
-- **ω ≈ 1**: Evolução neutra
-- **ω > 1**: **Seleção positiva** (aceita mudanças)
+Interface gráfica para análise de seleção positiva com **PAML/CODEML** — sem linha de comando, sem configuração manual.
 
 ---
 
-## 🚀 Instalação Rápida (3 passos)
+## Instalação rápida
 
-### 1️⃣ Baixar Python
+### Windows
 
-Acesse https://www.python.org/downloads/ e baixe **Python 3.8 ou superior** (Windows).
+> Pré-requisito: **Python 3.8+**  
+> Baixe em [python.org/downloads](https://www.python.org/downloads/) e marque **"Add Python to PATH"** durante a instalação.
 
-Durante a instalação, **marque a opção "Add Python to PATH"**.
+1. [Baixe o EasyPAML](https://github.com/LAGEVOL/EasyPAML/archive/refs/heads/main.zip) e extraia a pasta
+2. Dentro da pasta, dê **duplo-clique em `install.bat`**
+3. Aguarde a instalação terminar (1–3 minutos)
+4. Use o atalho **EasyPAML** que aparecerá na Área de Trabalho
 
-### 2️⃣ Instalar Dependências
+> Próximas vezes: use o atalho da Área de Trabalho ou dê duplo-clique em `EasyPAML.bat`.
 
-Abra o terminal (cmd ou PowerShell) e execute:
+---
+
+### Linux / macOS
 
 ```bash
-pip install -r requirements.txt
+# Clonar o repositório
+git clone https://github.com/LAGEVOL/EasyPAML.git
+cd EasyPAML
+
+# Tornar o instalador executável e rodar
+chmod +x install.sh
+./install.sh
+
+# Iniciar
+./EasyPAML.sh
 ```
 
-Este comando instalará automaticamente todas as bibliotecas necessárias.
-
-### 3️⃣ Executar EasyPAML
-
-Duplo-clique em `main.py` ou execute no terminal:
-
-```bash
-python main.py
-```
-
-A janela da aplicação abrirá automaticamente.
+O instalador tenta instalar o CODEML automaticamente via `apt`, `dnf` ou `brew`.  
+Se não funcionar automaticamente: `sudo apt-get install paml`
 
 ---
 
-## 💻 Usando a Aplicação
+## Como usar
 
-### Passo 1: Selecionar Arquivos de Entrada
+1. **Pasta .fas** → selecione a pasta com os alinhamentos FASTA (`.fas`)
+2. **Árvore (.nwk)** → selecione o arquivo de árvore filogenética (Newick)
+3. **Pasta Saída** → escolha onde salvar os resultados
+4. Marque os **modelos** que deseja rodar
+5. Clique em **▶ INICIAR** e aguarde
 
-1. Clique em **"📂 Selecionar Pasta de Dados"**
-2. Navegue até a pasta contendo seus arquivos FASTA
-
-**Formatos esperados:**
-- `.fasta` ou `.fa` - Sequências de DNA
-- Arquivos podem conter múltiplos genes
-
-### Passo 2: Escolher Modelos de Análise
-
-A aplicação oferece **9 modelos evolutivos diferentes**:
-
-#### Site Models (Seleção de Codon)
-- **M0**: Modelo nulo (ω constante)
-- **M1a**: 0 ≤ ω₀ < 1, ω₁ = 1
-- **M2a**: 0 ≤ ω₀ < 1, ω₁ = 1, ω₂ ≥ 1 (detecta seleção positiva)
-- **M7**: Distribuição beta de ω (0,1)
-- **M8**: M7 + categoria com ω > 1
-- **M8a**: M7 + ω = 1
-
-#### Branch Models (Seleção em Linhagens)
-- **Branch**: ω diferente entre linhagens
-- **BranchSite_A**: Detecta seleção em ramos específicos
-- **BranchSite_A_null**: Versão nula para comparação
-
-#### 🆕 Nova Feature: Auto-Seleção de Modelos Nulos!
-
-**A partir de agora, você não precisa se preocupar com qual modelo nulo usar!**
-
-Quando você seleciona um modelo alternativo, EasyPAML **automaticamente executa o modelo nulo correspondente** e calcula a **comparação LRT com p-value automático**:
-
-```
-Selecionado → Auto-Adiciona → Compara
-────────────────────────────────────────
-M2a         → M1a           → M1a vs M2a (p-value automático!)
-M8          → M7            → M7 vs M8
-BranchSite_A → BranchSite_A_null → null vs A
-Branch      → M0            → M0 vs Branch
-```
-
-**Exemplo:** Selecione apenas **M2a** e o sistema automaticamente:
-1. ✅ Executa M2a
-2. ✅ Executa M1a (nulo correspondente)  
-3. ✅ Calcula p-value para comparação
-4. ✅ Salva em `LRT_results.txt` com interpretação automática!
-
-**Dica:** Para máxima confiança, selecione **M2a E M8** - o sistema rodará ambos os testes (M1a vs M2a e M7 vs M8) e você terá confirmação dupla!
-
-📖 **Para mais detalhes, veja:** [QUICK_START_AUTO_MODELS.md](QUICK_START_AUTO_MODELS.md) (2 min) ou [AUTO_LRT_GUIDE.md](AUTO_LRT_GUIDE.md) (completo)
-
-### Passo 3: Marcar Ramos no Árvore (Opcional)
-
-Para modelos **Branch** e **BranchSite**:
-
-1. O programa exibirá a **árvore filogenética dos seus genes**
-2. **Clique** nos ramos que deseja marcar como "foreground" (sob possível seleção)
-3. Os ramos selecionados aparecem em **vermelho**
-4. Clique novamente para desmarcar
-
-### Passo 4: Executar Análise
-
-Clique em **"▶️ Iniciar Análise"**
-
-A aplicação:
-- ✅ Gerará arquivos de controle CODEML automaticamente
-- ✅ Executará análises em **paralelo** para velocidade
-- ✅ Analisará resultados estatisticamente
-- ✅ Salvará tudo em `resultados/`
-
-### Passo 5: Visualizar Resultados
-
-Clique em **"📊 Ver Resultados"** para abrir o visualizador com:
-
-**📊 Gráficos**
-- Barras de ω por gene
-- Heatmap de log-likelihood
-- Boxplot de distribuição de ω
-
-**📋 Tabela Interativa**
-- Filtre genes por nome
-- Veja todos os valores calculados
-
-**🔬 Seleção Positiva**
-- Lista de genes com ω > 1
-- Automaticamente destacados
-
-**💾 Exportar**
-- Excel (.xlsx) com todos os dados
-- CSV para análise externa
-- Gráficos como PNG
+Os resultados aparecem automaticamente ao final em **Ver Resultados**.
 
 ---
 
-## 📁 Estrutura de Arquivos do Projeto
+## Modelos disponíveis
+
+| Modelo | Para que serve |
+|--------|----------------|
+| **M0** | dN/dS único (baseline) |
+| **M1a** | Modelo neutro (referência para LRT) |
+| **M2a** | Detecta seleção positiva global |
+| **M7** | Distribuição Beta de ω |
+| **M8** | Beta + seleção positiva — **recomendado** |
+| **Branch** | ω livre por ramo etiquetado |
+| **Branch-site** | Seleção episódica em ramo específico |
+
+---
+
+## Dados de exemplo
+
+A pasta `exemplos_teste/` tem 4 genes e uma árvore prontos para teste:
+
+1. Selecione `exemplos_teste/amostras/` como **Pasta .fas**
+2. Selecione `exemplos_teste/final-tree.txt` como **Árvore**
+3. Crie uma pasta de saída qualquer
+4. Marque **M8** e clique em **▶ INICIAR**
+
+---
+
+## Requisitos
+
+- Python 3.8 ou superior
+- Windows 10/11, Ubuntu 20.04+, Fedora 36+, macOS 12+
+- CODEML (incluído no Windows; instalado automaticamente no Linux)
+- Internet apenas durante a instalação
+
+---
+
+## Solução de problemas
+
+**"Python não encontrado" no install.bat**  
+→ Baixe o Python em [python.org/downloads](https://www.python.org/downloads/) e marque **"Add Python to PATH"** durante a instalação.
+
+**A janela abre e fecha rápido**  
+→ Abra o `install.bat` primeiro. Se persistir, abra `cmd.exe` na pasta e rode:
+```
+python EasyPAML.py
+```
+
+**"CODEML não encontrado" durante a análise**  
+→ Windows: reinstale com `install.bat`. Linux: `sudo apt-get install paml`.
+
+**Erro no pip install**  
+→ Tente: `python -m pip install -r requirements.txt --user`
+
+---
+
+## Estrutura
 
 ```
 EasyPAML/
-├── main.py                    ← Clique aqui para iniciar!
-├── requirements.txt           ← Dependências (pip install -r)
-├── README.md                  ← Este arquivo
-│
-├── src/
-│   ├── backend/
-│   │   ├── __init__.py
-│   │   └── codeml_backend.py  ← Motor de análise (não editar)
-│   │
-│   └── gui/
-│       ├── __init__.py
-│       ├── main_gui.py        ← Interface gráfica (não editar)
-│       └── results_viewer.py  ← Visualizador de resultados (não editar)
-│
-├── bin/
-│   └── codeml.exe            ← Executável PAML (incluído)
-│
-└── resultados/               ← Criado automaticamente
-    └── [dados de análises anteriores]
+├── EasyPAML.py       ← ponto de entrada
+├── install.bat       ← instalador Windows  (duplo-clique aqui)
+├── install.sh        ← instalador Linux/macOS
+├── EasyPAML.bat      ← launcher Windows
+├── requirements.txt
+├── bin/codeml.exe    ← CODEML para Windows (incluído)
+├── src/              ← código fonte
+└── exemplos_teste/   ← dados de exemplo
 ```
 
 ---
 
-## 🔧 Troubleshooting (Solução de Problemas)
+## Licença
 
-### ❌ "Python não é reconhecido"
-
-**Solução:** Reinstale Python marcando "Add Python to PATH"
-
-### ❌ "Erro ao instalar dependências"
-
-Tente:
-```bash
-python -m pip install --upgrade pip
-pip install -r requirements.txt --upgrade
-```
-
-### ❌ "CODEML não encontrado"
-
-Verifique se a pasta `bin/` existe com `codeml.exe` incluído.
-
-### ❌ "Arquivo analysis_summary.tsv não encontrado"
-
-Isso significa que a análise anterior não completou. Verifique:
-- A pasta de dados tem arquivos FASTA válidos?
-- Há espaço em disco suficiente?
-- Nenhum CODEML ainda está rodando?
-
-### ❌ "Erro de importação (ModuleNotFoundError)"
-
-Execute novamente:
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## 📊 Interpretação de Resultados
-
-### Valores Retornados
-
-| Campo | Significado |
-|-------|------------|
-| `lnL` | Log-likelihood - quanto melhor o ajuste do modelo |
-| `np` | Número de parâmetros (modelos com mais parâmetros ajustam melhor) |
-| `ω` | dN/dS - razão de substituição |
-| `p-value` | Significância estatística (< 0.05 é significativo) |
-
-### Teste de Razão de Verossimilhança (LRT)
-
-EasyPAML calcula automaticamente:
-
-```
-2 × (ln L_modelo_complexo - ln L_modelo_nulo)
-```
-
-Este valor segue distribuição chi-quadrado. Se **p < 0.05**, há evidência de seleção positiva.
-
-### Exemplo de Interpretação
-
-**Gene X com M2a vs M1a:**
-- M1a (nulo): lnL = -2000, ω = 0.8
-- M2a (seleção): lnL = -1950, ω₂ = 1.3
-- LRT: 2 × ((-1950) - (-2000)) = 100
-- **p-value = 0.001** ✅ Evidência de seleção positiva!
-
----
-
-## 🎓 Recursos de Aprendizado
-
-- **Manual PAML**: http://abacus.gene.ucl.ac.uk/software/pamlDOC.pdf
-- **Papers sobre ω**: Busque "dN/dS positive selection"
-- **Tutoriais em vídeo**: YouTube "CODEML tutorial"
-
----
-
-## 👨‍💻 Para Desenvolvedores
-
-Para expandir ou modificar a aplicação:
-
-1. **Backend** (`src/backend/codeml_backend.py`): Lógica de análise e PAML
-2. **Frontend** (`src/gui/main_gui.py`): Interface gráfica CustomTkinter
-3. **Visualização** (`src/gui/results_viewer.py`): Gráficos e exportação
-
-Todas as modificações devem preservar as assinaturas de funções públicas.
-
----
-
-## 📄 Licença
-
-EasyPAML é distribuído como ferramenta educacional.
-
----
-
-## 🙏 Suporte
-
-Em caso de dúvidas:
-1. Verifique este README
-2. Procure a seção "Troubleshooting"
-3. Verifique se seus arquivos FASTA estão válidos
-
----
-
-## ✨ Próximas Análises
-
-Após completar uma análise:
-- Resultados são salvos em `resultados/`
-- Você pode carregar uma **nova pasta de dados** e refazer
-- Resultados antigos são preservados automaticamente
-
-**Boa análise!** 🧬✨
+MIT. Cite o PAML original:  
+Yang Z (2007) *PAML 4: Phylogenetic Analysis by Maximum Likelihood.* Mol Biol Evol 24:1586–1591.

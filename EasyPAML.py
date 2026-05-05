@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
 """
 EasyPAML - Interface intuitiva para análise de seleção positiva com PAML/CODEML
-Ponto de entrada único para usuários finais
-
-Uso:
-    python main.py
 """
-
 import sys
+import os
 from pathlib import Path
 
-# Adicionar src ao path para imports relativos
-sys.path.insert(0, str(Path(__file__).parent))
+# Always run from the directory where this file lives, so relative paths work
+# regardless of how the user launched the app (double-click, shortcut, terminal).
+_HERE = Path(__file__).resolve().parent
+os.chdir(_HERE)
+sys.path.insert(0, str(_HERE))
 
 from src.gui.main_gui import App
 
 
 def main():
-    """Função principal - inicia a aplicação"""
     app = App()
     app.mainloop()
 

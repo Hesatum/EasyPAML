@@ -41,15 +41,15 @@ class ModelConfigWindow(ctk.CTkToplevel):
     """Janela para editar os parâmetros do .ctl em memória - Estilo Premium"""
     
     COLORS = {
-        'bg_dark': '#0f0f0f',
-        'bg_card': '#1e1e1e',
-        'text_primary': '#ffffff',
-        'text_secondary': '#e0e0e0',
-        'accent_blue': '#3b82f6',
-        'accent_blue_hover': '#2563eb',
-        'success': '#10b981',
-        'success_hover': '#059669',
-        'danger': '#ef4444',
+        'bg_dark':        '#0c0c0e',
+        'bg_card':        '#16161a',
+        'text_primary':   '#ededef',
+        'text_secondary': '#9898a6',
+        'accent_blue':    '#6366f1',
+        'accent_blue_hover': '#4f46e5',
+        'success':        '#22c55e',
+        'success_hover':  '#16a34a',
+        'danger':         '#f87171',
     }
     
     def __init__(self, parent, model_code: str, initial: dict):
@@ -149,17 +149,17 @@ class TreeLabelWindow(ctk.CTkToplevel):
     """Janela para marcar ramos com cladograma retangular biologicamente correto - Premium Styling"""
     
     # Cores para consistent styling
-    BG_DARK = '#0f0f0f'
-    BG_SIDEBAR = '#161616'
-    BG_CARD = '#1e1e1e'
-    TEXT_PRIMARY = '#ffffff'
-    TEXT_SECONDARY = '#e0e0e0'
-    ACCENT_BLUE = '#3b82f6'
-    ACCENT_PINK = '#ec4899'
-    SUCCESS = '#10b981'
-    SUCCESS_HOVER = '#059669'
-    DANGER = '#ef4444'
-    DANGER_HOVER = '#dc2626'
+    BG_DARK    = '#0c0c0e'
+    BG_SIDEBAR = '#111115'
+    BG_CARD    = '#16161a'
+    TEXT_PRIMARY   = '#ededef'
+    TEXT_SECONDARY = '#9898a6'
+    ACCENT_BLUE  = '#6366f1'
+    ACCENT_PINK  = '#f472b6'
+    SUCCESS      = '#22c55e'
+    SUCCESS_HOVER = '#16a34a'
+    DANGER       = '#f87171'
+    DANGER_HOVER = '#ef4444'
     
     def __init__(self, parent, tree_path: Path | None, mode: str = 'branchsite'):
         super().__init__(parent)
@@ -689,53 +689,48 @@ class App(ctk.CTk):
     # PALETA DE CORES PREMIUM - Estilo YouTube/Instagram Dark
     # ═══════════════════════════════════════════════════════════════════════
     COLORS = {
-        # Backgrounds - Tons profundos e elegantes
-        'bg_darkest': '#0a0a0a',        # Quase preto (fundo extremo)
-        'bg_dark': '#0f0f0f',           # Fundo principal
-        'bg_sidebar': '#161616',        # Sidebar (YouTube-like)
-        'bg_card': '#1e1e1e',           # Cards principais
-        'bg_card_hover': '#2a2a2a',     # Cards on hover
-        'bg_feed': '#1a1a1a',           # Feed container
-        'bg_input': '#2d2d2d',          # Inputs
-        
-        # Textos - Hierarquias claras
-        'text_primary': '#ffffff',      # Branco puro (títulos)
-        'text_secondary': '#e0e0e0',    # Cinza claro (corpo)
-        'text_tertiary': '#a8a8a8',     # Cinza médio (secundário)
-        'text_muted': '#6d6d6d',        # Cinza escuro (disabled)
-        
-        # Accents Premium - Vibrantes mas não gritantes
-        'accent_blue': '#3b82f6',       # Azul principal
-        'accent_blue_hover': '#2563eb',
-        'accent_blue_light': '#60a5fa',
-        
-        'accent_cyan': '#06b6d4',       # Cyan/Turquesa
-        'accent_cyan_hover': '#0891b2',
-        
-        'accent_purple': '#8b5cf6',     # Roxo elegante
-        'accent_purple_hover': '#7c3aed',
-        
-        'accent_pink': '#ec4899',       # Rosa vibrante
-        'accent_pink_hover': '#db2777',
-        
-        # Status colors - Suaves
-        'success': '#10b981',           # Verde suave
-        'success_hover': '#059669',
-        'success_light': '#6ee7b7',
-        
-        'warning': '#f59e0b',           # Âmbar suave
-        'warning_hover': '#d97706',
-        
-        'danger': '#ef4444',            # Vermelho suave
-        'danger_hover': '#dc2626',
-        
-        'info': '#06b6d4',              # Azul claro
-        'info_hover': '#0891b2',
-        
-        # Gradients e efeitos
-        'gradient_blue': ['#3b82f6', '#1e3a8a'],
-        'gradient_purple': ['#8b5cf6', '#5b21b6'],
-        'gradient_pink': ['#ec4899', '#831843'],
+        # Backgrounds — near-black, Linear/Discord inspired
+        'bg_darkest':     '#080808',
+        'bg_dark':        '#0c0c0e',
+        'bg_sidebar':     '#111115',
+        'bg_card':        '#16161a',
+        'bg_card_hover':  '#1e1e24',
+        'bg_feed':        '#111115',
+        'bg_input':       '#1e1e24',
+
+        # Text hierarchy
+        'text_primary':   '#ededef',
+        'text_secondary': '#9898a6',
+        'text_tertiary':  '#5e5e6e',
+        'text_muted':     '#3a3a48',
+
+        # Primary accent — indigo (Linear-inspired)
+        'accent_blue':        '#6366f1',
+        'accent_blue_hover':  '#4f46e5',
+        'accent_blue_light':  '#818cf8',
+
+        # Secondary accents
+        'accent_cyan':        '#22d3ee',
+        'accent_cyan_hover':  '#06b6d4',
+        'accent_purple':      '#a78bfa',
+        'accent_purple_hover':'#7c3aed',
+        'accent_pink':        '#f472b6',
+        'accent_pink_hover':  '#db2777',
+
+        # Status
+        'success':        '#22c55e',
+        'success_hover':  '#16a34a',
+        'success_light':  '#86efac',
+        'warning':        '#f59e0b',
+        'warning_hover':  '#d97706',
+        'danger':         '#f87171',
+        'danger_hover':   '#ef4444',
+        'info':           '#22d3ee',
+        'info_hover':     '#06b6d4',
+
+        # Borders
+        'border':         '#222228',
+        'border_hover':   '#32323e',
     }
     
     def __init__(self):
@@ -749,6 +744,7 @@ class App(ctk.CTk):
         
         # Configure janela principal
         self.configure(fg_color=self.COLORS['bg_dark'])
+        self.attributes("-alpha", 0.93)
 
         # Inicializar backend
         self.codeml_backend = CodemlBatchAnalysis()
@@ -766,100 +762,199 @@ class App(ctk.CTk):
         
         # Opção para incluir modelos neutros automaticamente
         self.include_neutral_models = ctk.BooleanVar(value=True)
-        
+
+        # Auto-detect CPU cores; user can adjust via slider
+        _max_cores = CodemlBatchAnalysis.available_cores()
+        self.cores_var = ctk.IntVar(value=_max_cores)
+        self.wgs_mode_var = ctk.BooleanVar(value=False)
+
         self.tree_branch_labeled = None
         self.tree_branchsite_labeled = None
 
-        # ═══ SIDEBAR ELEGANTE ═══
-        self.sidebar = ctk.CTkFrame(self, width=300, corner_radius=0, 
+        # ═══ SIDEBAR ═══
+        self.sidebar = ctk.CTkFrame(self, width=290, corner_radius=0,
                                     fg_color=self.COLORS['bg_sidebar'],
                                     border_width=1, border_color=self.COLORS['bg_card_hover'])
         self.sidebar.pack(side="left", fill="y", padx=0, pady=0)
         self.sidebar.pack_propagate(False)
 
-        # Logo com estilo YouTube
+        # ── Logo ─────────────────────────────────────────────────────
         logo_frame = ctk.CTkFrame(self.sidebar, fg_color='transparent')
-        logo_frame.pack(fill="x", padx=0, pady=20)
-        
-        self.logo = ctk.CTkLabel(logo_frame, text="🧬", font=("Roboto", 40, "bold"))
-        self.logo.pack()
-        
-        self.app_name = ctk.CTkLabel(logo_frame, text="EasyPAML", 
-                                     font=("Roboto", 20, "bold"),
-                                     text_color=self.COLORS['text_primary'])
-        self.app_name.pack(pady=(8, 0))
-        
-        self.app_desc = ctk.CTkLabel(logo_frame, text="Seleção Positiva",
-                                     font=("Roboto", 11),
-                                     text_color=self.COLORS['accent_blue'])
-        self.app_desc.pack()
+        logo_frame.pack(fill="x", pady=(18, 12))
+        ctk.CTkLabel(logo_frame, text="🧬", font=("Roboto", 34, "bold")).pack()
+        ctk.CTkLabel(logo_frame, text="EasyPAML",
+                     font=("Roboto", 18, "bold"),
+                     text_color=self.COLORS['text_primary']).pack(pady=(4, 0))
+        ctk.CTkLabel(logo_frame, text="Seleção Positiva",
+                     font=("Roboto", 9),
+                     text_color=self.COLORS['accent_blue']).pack()
 
-        self.btn_input = ctk.CTkButton(self.sidebar, text="📁 Pasta .fas", command=self.select_input_folder,
-                                       fg_color=self.COLORS['accent_blue'], 
-                                       hover_color=self.COLORS['accent_blue_hover'],
-                                       text_color=self.COLORS['text_primary'], font=("Roboto", 11, "bold"), corner_radius=8)
-        self.btn_input.pack(fill="x", padx=16, pady=(15, 8))
-        self.label_input = ctk.CTkLabel(self.sidebar, text="Não selecionado", font=("Roboto", 9), 
-                                        wraplength=200, text_color=self.COLORS['text_muted'])
-        self.label_input.pack(padx=16, pady=(0, 12))
+        # ── Scrollable section container ─────────────────────────────
+        _sb = ctk.CTkScrollableFrame(self.sidebar, fg_color='transparent',
+                                     scrollbar_button_color=self.COLORS['border'],
+                                     scrollbar_button_hover_color=self.COLORS['border_hover'])
+        _sb.pack(fill='both', expand=True, padx=0, pady=(4, 4))
 
-        self.btn_tree = ctk.CTkButton(self.sidebar, text="🌳 Árvore (.nwk)", command=self.select_tree_file,
-                                      fg_color=self.COLORS['accent_cyan'],
-                                      hover_color=self.COLORS['accent_cyan_hover'],
-                                      text_color=self.COLORS['text_primary'], font=("Roboto", 11, "bold"), corner_radius=8)
-        self.btn_tree.pack(fill="x", padx=16, pady=(8, 8))
-        self.label_tree = ctk.CTkLabel(self.sidebar, text="Não selecionado", font=("Roboto", 9),
-                                       wraplength=200, text_color=self.COLORS['text_muted'])
-        self.label_tree.pack(padx=16, pady=(0, 12))
+        def _sec(parent, title, icon=""):
+            """Labeled card section with inner content frame."""
+            card = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'],
+                                corner_radius=10, border_width=1,
+                                border_color=self.COLORS['border'])
+            card.pack(fill='x', padx=10, pady=(0, 8))
+            hdr = ctk.CTkFrame(card, fg_color='transparent')
+            hdr.pack(fill='x', padx=12, pady=(8, 0))
+            ctk.CTkLabel(hdr,
+                         text=f"{icon}  {title}" if icon else title,
+                         font=("Roboto", 8, "bold"),
+                         text_color=self.COLORS['text_tertiary']).pack(anchor='w')
+            ctk.CTkFrame(card, fg_color=self.COLORS['border'],
+                         height=1, corner_radius=0).pack(fill='x', padx=12, pady=(5, 0))
+            inner = ctk.CTkFrame(card, fg_color='transparent')
+            inner.pack(fill='x', padx=10, pady=(8, 10))
+            return inner
 
-        self.btn_output = ctk.CTkButton(self.sidebar, text="💾 Pasta Saída", command=self.select_output_folder,
-                                        fg_color=self.COLORS['accent_purple'],
-                                        hover_color=self.COLORS['accent_purple_hover'],
-                                        text_color=self.COLORS['text_primary'], font=("Roboto", 11, "bold"), corner_radius=8)
-        self.btn_output.pack(fill="x", padx=16, pady=(8, 8))
-        self.label_output = ctk.CTkLabel(self.sidebar, text="Não selecionado", font=("Roboto", 9),
-                                         wraplength=200, text_color=self.COLORS['text_muted'])
-        self.label_output.pack(padx=16, pady=(0, 12))
+        def _obtn(parent, text, cmd, color, **kw):
+            """Outline-style button."""
+            return ctk.CTkButton(
+                parent, text=text, command=cmd,
+                fg_color=self.COLORS['bg_card_hover'],
+                hover_color=color,
+                text_color=color,
+                border_width=1, border_color=color,
+                corner_radius=8, **kw)
 
-        self.btn_results = ctk.CTkButton(self.sidebar, text="📊 Ver Resultados", command=self._open_results_viewer,
-                                         fg_color=self.COLORS['info'],
-                                         hover_color=self.COLORS['info_hover'],
-                                         text_color=self.COLORS['text_primary'], font=("Roboto", 11, "bold"))
-        self.btn_results.pack(fill="x", padx=16, pady=(8, 10))
+        # ── Arquivos ─────────────────────────────────────────────────
+        fi = _sec(_sb, "ARQUIVOS", "📁")
+
+        self.btn_input = _obtn(fi, "📁 Pasta .fas",
+                               self.select_input_folder,
+                               self.COLORS['accent_blue'],
+                               font=("Roboto", 10, "bold"), height=32)
+        self.btn_input.pack(fill='x', pady=(0, 2))
+        self.label_input = ctk.CTkLabel(fi, text="Não selecionado",
+                                        font=("Roboto", 8),
+                                        wraplength=230,
+                                        text_color=self.COLORS['text_muted'])
+        self.label_input.pack(anchor='w', padx=4, pady=(0, 6))
+
+        self.btn_tree = _obtn(fi, "🌳 Árvore (.nwk)",
+                              self.select_tree_file,
+                              self.COLORS['accent_cyan'],
+                              font=("Roboto", 10, "bold"), height=32)
+        self.btn_tree.pack(fill='x', pady=(0, 2))
+        self.label_tree = ctk.CTkLabel(fi, text="Não selecionado",
+                                       font=("Roboto", 8),
+                                       wraplength=230,
+                                       text_color=self.COLORS['text_muted'])
+        self.label_tree.pack(anchor='w', padx=4, pady=(0, 6))
+
+        self.btn_output = _obtn(fi, "💾 Pasta Saída",
+                                self.select_output_folder,
+                                self.COLORS['accent_purple'],
+                                font=("Roboto", 10, "bold"), height=32)
+        self.btn_output.pack(fill='x', pady=(0, 2))
+        self.label_output = ctk.CTkLabel(fi, text="Não selecionado",
+                                         font=("Roboto", 8),
+                                         wraplength=230,
+                                         text_color=self.COLORS['text_muted'])
+        self.label_output.pack(anchor='w', padx=4)
+
+        # ── Resultados ───────────────────────────────────────────────
+        ri = _sec(_sb, "RESULTADOS", "📊")
+
+        self.btn_results = _obtn(ri, "📊 Ver Resultados",
+                                  self._open_results_viewer,
+                                  self.COLORS['info'],
+                                  font=("Roboto", 10, "bold"), height=32)
+        self.btn_results.pack(fill='x', pady=(0, 6))
         self.btn_results.configure(state="disabled")
 
-        self.btn_update_results = ctk.CTkButton(self.sidebar, text="⚡ Atualizar Resultados", 
-                                           command=self._update_results_files,
-                                           fg_color="#10b981",
-                                           hover_color="#059669",
-                                           text_color=self.COLORS['text_primary'], font=("Roboto", 11, "bold"))
-        self.btn_update_results.pack(fill="x", padx=16, pady=(0, 10))
-        self.label_update_results = ctk.CTkLabel(self.sidebar, text="Atualizar 3 arquivos de análise", 
-                                            font=("Roboto", 9, "italic"),
-                                            wraplength=200, text_color=self.COLORS['text_muted'])
-        self.label_update_results.pack(padx=16, pady=(0, 12))
+        self.btn_update_results = _obtn(ri, "⚡ Atualizar Resultados",
+                                         self._update_results_files,
+                                         '#10b981',
+                                         font=("Roboto", 10, "bold"), height=32)
+        self.btn_update_results.pack(fill='x', pady=(0, 2))
+        self.label_update_results = ctk.CTkLabel(ri,
+                                                  text="Atualizar arquivos de análise",
+                                                  font=("Roboto", 8, "italic"),
+                                                  wraplength=230,
+                                                  text_color=self.COLORS['text_muted'])
+        self.label_update_results.pack(anchor='w', padx=4)
 
-        ctk.CTkLabel(self.sidebar, text="🧬 Configurações", 
-                    font=("Roboto", 12, "bold"), text_color=self.COLORS['accent_blue']).pack(pady=(25, 12))
-        
-        self.omega_label = ctk.CTkLabel(self.sidebar, text="dN/dS Inicial (ω):", 
-                                       font=("Roboto", 10, "bold"), anchor='w',
-                                       text_color=self.COLORS['text_secondary'])
-        self.omega_label.pack(fill="x", padx=16, pady=(8, 4))
-        
-        self.entry_omega = ctk.CTkEntry(self.sidebar, placeholder_text="Ex: 0.5",
-                                        fg_color=self.COLORS['bg_card'],
-                                        border_color=self.COLORS['accent_blue'],
-                                        text_color=self.COLORS['text_primary'])
+        # ── Configurações ────────────────────────────────────────────
+        ci = _sec(_sb, "CONFIGURAÇÕES", "⚙")
+
+        ctk.CTkLabel(ci, text="dN/dS Inicial (ω):",
+                     font=("Roboto", 9, "bold"), anchor='w',
+                     text_color=self.COLORS['text_secondary']).pack(anchor='w')
+        self.omega_label = ctk.CTkLabel(ci, text="")  # kept for compat, unused
+        self.entry_omega = ctk.CTkEntry(ci, placeholder_text="0.5",
+                                        fg_color=self.COLORS['bg_card_hover'],
+                                        border_color=self.COLORS['border_hover'],
+                                        text_color=self.COLORS['text_primary'],
+                                        height=32)
         self.entry_omega.insert(0, "0.5")
-        self.entry_omega.pack(fill="x", padx=16, pady=(0, 12))
+        self.entry_omega.pack(fill='x', pady=(4, 10))
 
+        # Remover gaps toggle
         self.cleandata_var = ctk.BooleanVar(value=True)
-        self.cb_cleandata = ctk.CTkCheckBox(self.sidebar, text="Remover gaps", 
-                                           variable=self.cleandata_var,
-                                           text_color=self.COLORS['text_secondary'],
-                                           checkmark_color=self.COLORS['success'])
-        self.cb_cleandata.pack(padx=16, pady=8, anchor="w")
+        row_g = ctk.CTkFrame(ci, fg_color='transparent')
+        row_g.pack(fill='x', pady=(0, 8))
+        ctk.CTkLabel(row_g, text="Remover gaps",
+                     font=("Roboto", 10),
+                     text_color=self.COLORS['text_secondary']).pack(side='left')
+        self.cb_cleandata = ctk.CTkSwitch(
+            row_g, text="",
+            variable=self.cleandata_var,
+            onvalue=True, offvalue=False,
+            switch_width=36, switch_height=18,
+            progress_color=self.COLORS['success'],
+            button_color='#f0fdf4',
+            button_hover_color='#dcfce7',
+            fg_color=self.COLORS['border'])
+        self.cb_cleandata.pack(side='right')
+
+        # CPU slider
+        ctk.CTkLabel(ci, text="⚡ CPUs (paralelismo):",
+                     font=("Roboto", 9, "bold"), anchor='w',
+                     text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(0, 4))
+        cores_row = ctk.CTkFrame(ci, fg_color='transparent')
+        cores_row.pack(fill='x', pady=(0, 2))
+        _max = CodemlBatchAnalysis.available_cores()
+        self.cores_slider = ctk.CTkSlider(
+            cores_row, from_=1, to=max(2, _max),
+            number_of_steps=max(1, _max - 1),
+            variable=self.cores_var,
+            command=self._update_cores_label,
+            button_color=self.COLORS['accent_blue'],
+            progress_color=self.COLORS['accent_blue'])
+        self.cores_slider.pack(fill='x', side='left', expand=True)
+        self.cores_disp = ctk.CTkLabel(
+            cores_row, text=f"{_max}×",
+            font=("Roboto", 10, "bold"),
+            text_color=self.COLORS['accent_blue'],
+            width=32)
+        self.cores_disp.pack(side='right', padx=(6, 0))
+        ctk.CTkLabel(ci, text=f"(detectado: {_max} núcleos)",
+                     font=("Roboto", 8),
+                     text_color=self.COLORS['text_muted']).pack(anchor='w')
+
+        # Modo WGS toggle
+        row_wgs = ctk.CTkFrame(ci, fg_color='transparent')
+        row_wgs.pack(fill='x', pady=(10, 0))
+        ctk.CTkLabel(row_wgs, text="Modo WGS (ndata)",
+                     font=("Roboto", 10),
+                     text_color=self.COLORS['text_secondary']).pack(side='left')
+        self.cb_wgs = ctk.CTkSwitch(
+            row_wgs, text="",
+            variable=self.wgs_mode_var,
+            onvalue=True, offvalue=False,
+            switch_width=36, switch_height=18,
+            progress_color=self.COLORS['accent_cyan'],
+            button_color='#f0fdff',
+            button_hover_color='#cffafe',
+            fg_color=self.COLORS['border'])
+        self.cb_wgs.pack(side='right')
 
         self.main_frame = ctk.CTkFrame(self, fg_color=self.COLORS['bg_dark'])
         self.main_frame.pack(side="right", fill="both", expand=True, padx=20, pady=20)
@@ -881,106 +976,86 @@ class App(ctk.CTk):
 
         self._setup_model_list()
 
-        self.ctrl_frame = ctk.CTkFrame(self.main_frame, fg_color=self.COLORS['bg_card'], corner_radius=10, border_width=1, border_color=self.COLORS['bg_card_hover'])
+        self.ctrl_frame = ctk.CTkFrame(self.main_frame, fg_color=self.COLORS['bg_card'],
+                                       corner_radius=10, border_width=1,
+                                       border_color=self.COLORS['border'])
         self.ctrl_frame.pack(fill="x", padx=0, pady=(0, 15))
 
-        # Status bar com ícone de análise
-        status_bar = ctk.CTkFrame(self.ctrl_frame, fg_color='transparent')
-        status_bar.pack(fill="x", padx=12, pady=10)
-        
-        self.status_indicator = ctk.CTkLabel(status_bar, text="⏸ Pronto", 
-                                            font=("Roboto", 11, "bold"),
-                                            text_color=self.COLORS['text_tertiary'])
-        self.status_indicator.pack(side="left", padx=(0, 20))
-        
-        self.stop_label = ctk.CTkLabel(status_bar, text="⚠️ Stops: 0", font=("Roboto", 11, "bold"),
-                                       text_color=self.COLORS['danger'])
+        # ── Status + neutral-models row ───────────────────────────────
+        status_bar = ctk.CTkFrame(self.ctrl_frame, fg_color=self.COLORS['bg_sidebar'], corner_radius=8)
+        status_bar.pack(fill="x", padx=12, pady=(10, 6))
+
+        self.status_indicator = ctk.CTkLabel(
+            status_bar, text="● Pronto",
+            font=("Roboto", 10, "bold"),
+            text_color=self.COLORS['text_muted']
+        )
+        self.status_indicator.pack(side="left", padx=(14, 20), pady=8)
+
+        self.stop_label = ctk.CTkLabel(
+            status_bar, text="◆ Stops: 0",
+            font=("Roboto", 10, "bold"),
+            text_color=self.COLORS['danger']
+        )
         self.stop_label.pack(side="left")
 
-        # ═══ CONFIGURAÇÕES: Modelos Neutros ═══
-        config_frame = ctk.CTkFrame(self.ctrl_frame, fg_color='transparent')
-        config_frame.pack(fill="x", padx=12, pady=(10, 8))
-        
-        neutral_checkbox = ctk.CTkCheckBox(
-            config_frame,
-            text="  Incluir Modelos Neutros Automáticos",
+        neutral_row = ctk.CTkFrame(status_bar, fg_color='transparent')
+        neutral_row.pack(side="right", padx=(0, 6))
+        ctk.CTkLabel(neutral_row, text="Modelos nulos automáticos",
+                     font=("Roboto", 9),
+                     text_color=self.COLORS['text_secondary']).pack(side='left', padx=(0, 8))
+        neutral_sw = ctk.CTkSwitch(
+            neutral_row, text="",
             variable=self.include_neutral_models,
-            checkmark_color=self.COLORS['accent_blue'],
-            text_color=self.COLORS['text_primary'],
-            font=("Roboto", 10, "bold")
-        )
-        neutral_checkbox.pack(side="left", padx=(0, 8))
-        
-        # Botão de ajuda (?) com informações sobre modelos nulos
+            onvalue=True, offvalue=False,
+            switch_width=34, switch_height=17,
+            progress_color=self.COLORS['accent_blue'],
+            button_color='#f0f0ff',
+            button_hover_color='#e0e0ff',
+            fg_color=self.COLORS['border'])
+        neutral_sw.pack(side='right')
+
         help_btn = ctk.CTkButton(
-            config_frame,
-            text="?",
-            width=32,
-            height=32,
-            font=("Roboto", 14, "bold"),
-            fg_color=self.COLORS['accent_blue'],
-            hover_color=self.COLORS['accent_blue_hover'],
-            text_color=self.COLORS['text_primary'],
+            status_bar, text="?", width=26, height=26,
+            font=("Roboto", 12, "bold"),
+            fg_color=self.COLORS['border'],
+            hover_color=self.COLORS['accent_blue'],
+            text_color=self.COLORS['accent_blue'],
+            border_width=1, border_color=self.COLORS['accent_blue'],
             command=self._show_neutral_models_info,
             corner_radius=6
         )
-        help_btn.pack(side="left", padx=(0, 0))
+        help_btn.pack(side="right", padx=(0, 12))
 
         # Botões de controle
         btn_frame = ctk.CTkFrame(self.ctrl_frame, fg_color='transparent')
         btn_frame.pack(fill="x", padx=0, pady=(0, 10))
 
-        self.btn_run = ctk.CTkButton(
-            btn_frame, 
-            text="▶ INICIAR ANÁLISE", 
-            fg_color=self.COLORS['success'],
-            hover_color=self.COLORS['success_hover'],
-            font=("Roboto", 12, "bold"), 
-            command=self.start_analysis, 
-            height=44,
-            text_color=self.COLORS['text_primary'],
-            corner_radius=8
-        )
-        self.btn_run.pack(side="left", fill="both", expand=True, padx=(12, 6), pady=10)
+        def _action_btn(parent, text, cmd, color):
+            return ctk.CTkButton(
+                parent, text=text, command=cmd,
+                fg_color=self.COLORS['bg_card'],
+                hover_color=color,
+                text_color=color,
+                border_width=1, border_color=color,
+                font=("Roboto", 11, "bold"),
+                height=42, corner_radius=8)
 
-        self.btn_pause = ctk.CTkButton(
-            btn_frame, 
-            text="⏸ PAUSAR", 
-            fg_color=self.COLORS['warning'],
-            hover_color=self.COLORS['warning_hover'],
-            command=self._toggle_pause, 
-            height=44,
-            font=("Roboto", 12, "bold"),
-            text_color=self.COLORS['text_primary'],
-            corner_radius=8
-        )
-        self.btn_pause.pack(side="left", fill="both", expand=True, padx=6, pady=10)
+        self.btn_run = _action_btn(btn_frame, "▶  INICIAR",
+                                   self.start_analysis, self.COLORS['success'])
+        self.btn_run.pack(side="left", fill="both", expand=True, padx=(12, 4), pady=10)
 
-        self.btn_stop = ctk.CTkButton(
-            btn_frame,
-            text="⏹ PARAR",
-            fg_color=self.COLORS['danger'],
-            hover_color=self.COLORS['danger_hover'],
-            command=self._stop_analysis,
-            height=44,
-            font=("Roboto", 12, "bold"),
-            text_color=self.COLORS['text_primary'],
-            corner_radius=8
-        )
-        self.btn_stop.pack(side="left", fill="both", expand=True, padx=6, pady=10)
+        self.btn_pause = _action_btn(btn_frame, "⏸  PAUSAR",
+                                     self._toggle_pause, self.COLORS['warning'])
+        self.btn_pause.pack(side="left", fill="both", expand=True, padx=4, pady=10)
 
-        self.btn_resolve_stops = ctk.CTkButton(
-            btn_frame, 
-            text="⏭️ IGNORAR STOPS", 
-            fg_color=self.COLORS['info'],
-            hover_color=self.COLORS['info_hover'],
-            command=self._continue_all_for_gene, 
-            height=44,
-            font=("Roboto", 12, "bold"),
-            text_color=self.COLORS['text_primary'],
-            corner_radius=8
-        )
-        self.btn_resolve_stops.pack(side="left", fill="both", expand=True, padx=(6, 12), pady=10)
+        self.btn_stop = _action_btn(btn_frame, "⏹  PARAR",
+                                    self._stop_analysis, self.COLORS['danger'])
+        self.btn_stop.pack(side="left", fill="both", expand=True, padx=4, pady=10)
+
+        self.btn_resolve_stops = _action_btn(btn_frame, "⏭  STOPS",
+                                              self._continue_all_for_gene, self.COLORS['info'])
+        self.btn_resolve_stops.pack(side="left", fill="both", expand=True, padx=(4, 12), pady=10)
 
         # ═══ LOG FRAME COM HEADER ═══
         log_container = ctk.CTkFrame(self.main_frame, fg_color='transparent')
@@ -996,100 +1071,166 @@ class App(ctk.CTk):
                     font=("Roboto", 9), text_color=self.COLORS['text_tertiary']).pack(side="left", padx=10)
 
         self.log = ctk.CTkTextbox(log_container, font=("Cascadia Code", 9),
-                                  fg_color=self.COLORS['bg_feed'],
+                                  fg_color=self.COLORS['bg_dark'],
                                   text_color=self.COLORS['text_secondary'],
-                                  border_color=self.COLORS['bg_card_hover'],
+                                  border_color=self.COLORS['border'],
                                   border_width=1,
                                   corner_radius=8)
         self.log.pack(fill="both", expand=True, padx=0, pady=(8, 0))
-        
-        # Tags customizadas para feedback visual elegante com melhor contraste
+
         self.log.tag_config("success", foreground=self.COLORS['success_light'])
         self.log.tag_config("error", foreground=self.COLORS['danger'])
         self.log.tag_config("warning", foreground=self.COLORS['warning'])
         self.log.tag_config("info", foreground=self.COLORS['accent_cyan'])
         self.log.tag_config("header", foreground=self.COLORS['accent_blue'])
 
+        # Welcome message
+        self.log.insert("end",
+            "  ╔══════════════════════════════════════════════╗\n"
+            "  ║   EasyPAML  ·  PAML / CODEML interface      ║\n"
+            "  ╚══════════════════════════════════════════════╝\n\n"
+            "  1. Selecione a pasta de alinhamentos (.fas)\n"
+            "  2. Escolha a árvore filogenética (.nwk)\n"
+            "  3. Defina a pasta de saída\n"
+            "  4. Marque os modelos e clique  ▶ INICIAR\n\n"
+            "  ─────────────────────────────────────────────────\n\n"
+        )
+
         self._update_models_state()
         self._poll_stop_count()
 
+    def _update_cores_label(self, value=None):
+        n = int(self.cores_var.get())
+        self.cores_disp.configure(text=f"{n}×")
+
     def _setup_model_list(self):
+        MODEL_META = {
+            'M0':               {'color': '#3b82f6', 'desc': 'ω único para todos os sítios  ·  modelo baseline'},
+            'M1a':              {'color': '#06b6d4', 'desc': 'Dois sítios: purificação (0<ω<1) e neutro (ω=1)'},
+            'M2a':              {'color': '#10b981', 'desc': 'Três sítios: adiciona classe com ω > 1  ·  BEB/NEB'},
+            'M7':               {'color': '#8b5cf6', 'desc': 'Distribuição Beta de ω contida em (0, 1)'},
+            'M8':               {'color': '#ec4899', 'desc': 'Beta + sítios sob seleção positiva (ω > 1)  ·  BEB/NEB'},
+            'Branch':           {'color': '#f59e0b', 'desc': 'ω livre por ramo  ·  requer árvore etiquetada'},
+            'Branch-site':      {'color': '#ef4444', 'desc': 'Seleção positiva episódica no ramo alvo'},
+            'Branch-site_null': {'color': '#6d6d6d', 'desc': 'Modelo nulo para o teste LRT Branch-site'},
+        }
+
         models = {
             "Site Models": ['M0', 'M1a', 'M2a', 'M7', 'M8'],
             "Branch Model": ['Branch'],
             "Branch-Site": ['Branch-site', 'Branch-site_null']
         }
-        
+
         for tab_name, codes in models.items():
-            # Criar scroll frame para cada tab
-            scroll_frame = ctk.CTkScrollableFrame(self.tabs.tab(tab_name),
-                                                   fg_color=self.COLORS['bg_card'],
-                                                   label_text="Modelos Disponíveis",
-                                                   label_font=("Roboto", 12, "bold"),
-                                                   label_text_color=self.COLORS['accent_blue'])
+            scroll_frame = ctk.CTkScrollableFrame(
+                self.tabs.tab(tab_name),
+                fg_color=self.COLORS['bg_card'],
+                label_text="",
+                label_font=("Roboto", 11, "bold"),
+                label_text_color=self.COLORS['accent_blue']
+            )
             scroll_frame.pack(fill="both", expand=True, padx=8, pady=8)
-            
+
             for code in codes:
-                # Card elegante para cada modelo
+                meta   = MODEL_META.get(code, {'color': self.COLORS['accent_blue'], 'desc': ''})
+                accent = meta['color']
+                desc   = meta['desc']
+
+                # ── Outer card ────────────────────────────────────────────────
                 card = ctk.CTkFrame(scroll_frame, fg_color=self.COLORS['bg_feed'],
-                                   corner_radius=8, border_width=1,
-                                   border_color=self.COLORS['bg_card_hover'])
-                card.pack(fill="x", pady=8, padx=4)
-                
-                # Esquerda: checkbox
-                var = ctk.BooleanVar(value=False)
-                # Obter display_name se existir, caso contrário usar code
+                                    corner_radius=10, border_width=1,
+                                    border_color=self.COLORS['border'])
+                card.pack(fill="x", pady=3, padx=4)
+
+                # Left accent bar (slim, 4px)
+                accent_bar = ctk.CTkFrame(card, fg_color=accent, width=4, corner_radius=2)
+                accent_bar.pack(side="left", fill="y", padx=(5, 8), pady=6)
+                accent_bar.pack_propagate(False)
+
+                # Text block
+                text_block = ctk.CTkFrame(card, fg_color='transparent')
+                text_block.pack(side="left", fill="both", expand=True, pady=7)
+
                 display_name = self.codeml_backend.MODEL_CONFIGS[code].get('display_name', code)
-                cb = ctk.CTkCheckBox(card, text=f"  {display_name}  ", variable=var,
-                                    command=self._update_models_state,
-                                    checkmark_color="white",
-                                    text_color=self.COLORS['text_primary'],
-                                    font=("Roboto", 11, "bold"))
-                cb.pack(side="left", padx=12, pady=10)
-                
-                # Direita: botão ? + botão gear + label
+                var = ctk.BooleanVar(value=False)
+                sw_row = ctk.CTkFrame(text_block, fg_color='transparent')
+                sw_row.pack(fill='x', anchor='w')
+                cb = ctk.CTkSwitch(
+                    sw_row,
+                    text=f"  {display_name}",
+                    variable=var,
+                    onvalue=True, offvalue=False,
+                    command=self._update_models_state,
+                    switch_width=36, switch_height=18,
+                    progress_color=accent,
+                    button_color='#f0f0ff',
+                    button_hover_color='white',
+                    fg_color=self.COLORS['border'],
+                    text_color=self.COLORS['text_primary'],
+                    font=("Roboto", 11, "bold")
+                )
+                cb.pack(side='left', anchor='w', pady=(2, 0))
+
+                if desc:
+                    ctk.CTkLabel(
+                        text_block, text=f"   {desc}",
+                        font=("Roboto", 9),
+                        text_color=self.COLORS['text_tertiary'],
+                        anchor='w',
+                        justify='left',
+                        wraplength=260
+                    ).pack(anchor="w", pady=(1, 4), fill='x')
+
+                # Right controls
                 controls = ctk.CTkFrame(card, fg_color='transparent')
-                controls.pack(side="right", padx=12, pady=10)
-                
-                lbl = ctk.CTkLabel(controls, text="Padrão", font=("Roboto", 9),
-                                  text_color=self.COLORS['accent_cyan'])
-                lbl.pack(side="left", padx=(0, 10))
-                
-                # Botão de informações (?)
-                info_btn = ctk.CTkButton(controls, text="?", width=32, height=32,
-                                        fg_color=self.COLORS['accent_blue'],
-                                        hover_color="#2E7D9E",
-                                        text_color="white",
-                                        corner_radius=6,
-                                        font=("Roboto", 14, "bold"),
-                                        command=lambda c=code: self._show_model_info(c))
-                info_btn.pack(side="left", padx=(0, 8))
-                
-                gear = ctk.CTkButton(controls, text="⚙️", width=32, height=32,
-                                    fg_color=self.COLORS['accent_purple'],
-                                    hover_color=self.COLORS['accent_purple_hover'],
-                                    text_color=self.COLORS['text_primary'],
-                                    corner_radius=6,
-                                    command=lambda c=code: self._open_config_window(c))
+                controls.pack(side="right", padx=8, pady=7)
+
+                lbl = ctk.CTkLabel(controls, text="padrão", font=("Roboto", 8),
+                                   text_color=self.COLORS['text_tertiary'])
+                lbl.pack(side="left", padx=(0, 8))
+
+                info_btn = ctk.CTkButton(
+                    controls, text="?", width=26, height=26,
+                    fg_color=self.COLORS['bg_card_hover'],
+                    hover_color=accent,
+                    text_color=accent,
+                    corner_radius=6,
+                    border_width=1, border_color=self.COLORS['border_hover'],
+                    font=("Roboto", 11, "bold"),
+                    command=lambda c=code: self._show_model_info(c)
+                )
+                info_btn.pack(side="left", padx=(0, 4))
+
+                gear = ctk.CTkButton(
+                    controls, text="⚙", width=26, height=26,
+                    fg_color=self.COLORS['bg_card'],
+                    hover_color=self.COLORS['accent_purple'],
+                    text_color=self.COLORS['text_secondary'],
+                    corner_radius=6,
+                    border_width=1, border_color=self.COLORS['border_hover'],
+                    font=("Roboto", 11),
+                    command=lambda c=code: self._open_config_window(c)
+                )
                 gear.pack(side="left")
-                
-                self.model_vars[code] = var
-                self.model_ctl_labels[code] = lbl
-                self.model_checkboxes[code] = cb
+
+                self.model_vars[code]         = var
+                self.model_ctl_labels[code]   = lbl
+                self.model_checkboxes[code]   = cb
                 self.model_gear_buttons[code] = gear
         
         # ═══ BRANCH: Botão de etiquetagem ═══
         branch_tab = self.tabs.tab("Branch Model")
         
         self.btn_label_branch = ctk.CTkButton(
-            branch_tab, 
+            branch_tab,
             text="🏷️ Marcar Ramos (Múltiplas Tags)",
-            fg_color=self.COLORS['accent_blue'],
-            hover_color=self.COLORS['accent_blue_hover'],
+            fg_color=self.COLORS['bg_card'],
+            hover_color=self.COLORS['accent_blue'],
             command=lambda: self._open_tree_labeler(mode='branch'),
             height=44,
             font=("Roboto", 12, "bold"),
-            text_color=self.COLORS['text_primary'],
+            text_color=self.COLORS['accent_blue'],
+            border_width=1, border_color=self.COLORS['accent_blue'],
             corner_radius=8
         )
         self.btn_label_branch.pack(fill='x', padx=12, pady=(20, 12))
@@ -1100,12 +1241,13 @@ class App(ctk.CTk):
         self.btn_label_branchsite = ctk.CTkButton(
             branchsite_tab,
             text="🏷️ Marcar Branch-site",
-            fg_color=self.COLORS['accent_pink'],
-            hover_color=self.COLORS['accent_pink_hover'],
+            fg_color=self.COLORS['bg_card'],
+            hover_color=self.COLORS['accent_pink'],
             command=lambda: self._open_tree_labeler(mode='branchsite'),
             height=44,
             font=("Roboto", 12, "bold"),
-            text_color=self.COLORS['text_primary'],
+            text_color=self.COLORS['accent_pink'],
+            border_width=1, border_color=self.COLORS['accent_pink'],
             corner_radius=8
         )
         self.btn_label_branchsite.pack(fill='x', padx=12, pady=(20, 12))
@@ -1480,12 +1622,12 @@ class App(ctk.CTk):
         if self.pause_event.is_set():
             self.pause_event.clear()
             self.btn_pause.configure(text="▶ RETOMAR", fg_color="#10b981")
-            self.status_indicator.configure(text="⏸ Pausada", text_color=self.COLORS['warning'])
+            self.status_indicator.configure(text="● Pausada", text_color=self.COLORS['warning'])
             self.append_log("⏸ Análise pausada.\n")
         else:
             self.pause_event.set()
             self.btn_pause.configure(text="⏸ PAUSAR", fg_color=self.COLORS['warning'])
-            self.status_indicator.configure(text="▶ Executando", text_color=self.COLORS['success'])
+            self.status_indicator.configure(text="● Executando", text_color=self.COLORS['success'])
             self.append_log("▶ Análise retomada.\n")
 
     def _stop_analysis(self):
@@ -1495,7 +1637,7 @@ class App(ctk.CTk):
         
         self.append_log("🛑 PARANDO ANÁLISE...\n")
         self.stop_event.set()
-        self.status_indicator.configure(text="⏹ Parada", text_color=self.COLORS['danger'])
+        self.status_indicator.configure(text="● Parada", text_color=self.COLORS['danger'])
         
         if self.analysis_instance:
             try:
@@ -1551,7 +1693,7 @@ class App(ctk.CTk):
         # Feedback visual: mudar cor do botão e status
         self.btn_run.configure(fg_color=self.COLORS['bg_card'],
                                text_color=self.COLORS['text_muted'])
-        self.status_indicator.configure(text="▶ Executando", text_color=self.COLORS['success'])
+        self.status_indicator.configure(text="● Executando", text_color=self.COLORS['success'])
 
         self.analysis_thread = threading.Thread(target=self._run_thread, args=(selected,), daemon=True)
         self.analysis_thread.start()
@@ -1562,7 +1704,7 @@ class App(ctk.CTk):
             analysis = CodemlBatchAnalysis()
             self.analysis_instance = analysis
             
-            needs_branchsite = any('BranchSite' in m for m in selected)
+            needs_branchsite = any('Branch-site' in m for m in selected)
             needs_branch = 'Branch' in selected
             
             # ═══ VALIDAÇÕES ═══
@@ -1605,6 +1747,8 @@ class App(ctk.CTk):
                 'cleandata': int(self.cleandata_var.get()),
                 'timeout': 1600,
                 'run_lrt': True,
+                'n_workers': int(self.cores_var.get()),
+                'wgs_mode': self.wgs_mode_var.get(),
                 'pause_event': self.pause_event,
                 'manual_continue_event': self.manual_event,
                 'manual_continue_all_event': self.manual_all_event,

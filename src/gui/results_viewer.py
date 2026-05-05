@@ -11,7 +11,11 @@ import customtkinter as ctk
 from pathlib import Path
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from scipy import stats
 from tkinter import filedialog, messagebox
 import re
@@ -22,25 +26,44 @@ class ResultsViewerWindow(ctk.CTkToplevel):
     """Janela de visualização profissional de resultados"""
     
     COLORS = {
-        'bg_dark': '#0f0f0f',
-        'bg_card': '#1e1e1e',
-        'bg_card_hover': '#2a2a2a',
-        'bg_feed': '#1a1a1a',
-        'text_primary': '#ffffff',
-        'text_secondary': '#e0e0e0',
-        'text_tertiary': '#a8a8a8',
-        'accent_blue': '#3b82f6',
-        'accent_blue_hover': '#2563eb',
-        'accent_cyan': '#06b6d4',
-        'accent_purple': '#8b5cf6',
-        'success': '#10b981',
-        'success_hover': '#059669',
-        'success_light': '#6ee7b7',
-        'warning': '#f59e0b',
-        'warning_hover': '#d97706',
-        'danger': '#ef4444',
-        'danger_hover': '#dc2626',
-        'info': '#06b6d4',
+        # Backgrounds — near-black, like Linear / Discord
+        'bg_dark':        '#0c0c0e',
+        'bg_card':        '#16161a',
+        'bg_card_hover':  '#1e1e24',
+        'bg_feed':        '#111115',
+        'bg_sidebar':     '#111115',
+        'bg_input':       '#1e1e24',
+
+        # Text hierarchy
+        'text_primary':   '#ededef',
+        'text_secondary': '#9898a6',
+        'text_tertiary':  '#5e5e6e',
+        'text_muted':     '#3a3a48',
+
+        # Accent — indigo (Linear-inspired)
+        'accent_blue':        '#6366f1',
+        'accent_blue_hover':  '#4f46e5',
+        'accent_blue_light':  '#818cf8',
+
+        # Secondary accents
+        'accent_cyan':    '#22d3ee',
+        'accent_cyan_hover': '#06b6d4',
+        'accent_purple':  '#a78bfa',
+        'accent_purple_hover': '#7c3aed',
+
+        # Status
+        'success':        '#22c55e',
+        'success_hover':  '#16a34a',
+        'success_light':  '#86efac',
+        'warning':        '#f59e0b',
+        'warning_hover':  '#d97706',
+        'danger':         '#f87171',
+        'danger_hover':   '#ef4444',
+        'info':           '#22d3ee',
+
+        # Borders
+        'border':         '#222228',
+        'border_hover':   '#32323e',
     }
     
     def __init__(self, parent, output_folder: Path):
@@ -218,6 +241,16 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         
         return "\n".join(lines)
     
+    @staticmethod
+    def _fmt_pval(p: float) -> str:
+        """Format p-value as human-readable decimal (no scientific notation)."""
+        if p <= 0:        return "0.00000000"
+        if p < 0.000001:  return f"{p:.8f}"
+        if p < 0.0001:    return f"{p:.7f}"
+        if p < 0.001:     return f"{p:.6f}"
+        if p < 0.01:      return f"{p:.5f}"
+        return f"{p:.4f}"
+
     def _show_error(self, message: str):
         """Exibe tela de erro"""
         error_frame = ctk.CTkFrame(self, fg_color=self.COLORS['bg_dark'])
@@ -233,82 +266,97 @@ class ResultsViewerWindow(ctk.CTkToplevel):
     
     def setup_ui(self):
         """Setup da interface premium"""
-        
-        # HEADER
-        header = ctk.CTkFrame(self, fg_color='transparent', height=60)
-        header.pack(fill='x', padx=20, pady=(20, 10))
+
+        # ── HEADER ──────────────────────────────────────────────────
+        header = ctk.CTkFrame(self, fg_color=self.COLORS['bg_sidebar'], corner_radius=0, height=64)
+        header.pack(fill='x', padx=0, pady=0)
         header.pack_propagate(False)
-        
-        ctk.CTkLabel(header, text="🧬 ANÁLISE BIOINFORMÁTICA", 
-                    font=("Roboto", 18, "bold"),
-                    text_color=self.COLORS['text_primary']).pack(side="left")
-        
-        ctk.CTkLabel(header, text=f"Genes: {len(self.df)}", 
-                    font=("Roboto", 12),
-                    text_color=self.COLORS['accent_blue']).pack(side="right", padx=(20, 0))
+
+        left = ctk.CTkFrame(header, fg_color='transparent')
+        left.pack(side="left", padx=24, pady=0, fill='y')
+
+        ctk.CTkLabel(left, text="🧬", font=("Roboto", 24)).pack(side="left", padx=(0, 12))
+        title_block = ctk.CTkFrame(left, fg_color='transparent')
+        title_block.pack(side="left", fill='y', pady=14)
+        ctk.CTkLabel(title_block, text="EasyPAML  —  Resultados",
+                     font=("Roboto", 16, "bold"),
+                     text_color=self.COLORS['text_primary']).pack(anchor="w")
+        ctk.CTkLabel(title_block, text="Análise de Seleção Positiva  ·  CODEML / PAML",
+                     font=("Roboto", 9),
+                     text_color=self.COLORS['text_muted']).pack(anchor="w")
+
+        right = ctk.CTkFrame(header, fg_color='transparent')
+        right.pack(side="right", padx=24, pady=16, fill='y')
+        ctk.CTkLabel(right, text=f"{len(self.df)} genes carregados",
+                     font=("Roboto", 10), text_color=self.COLORS['accent_blue']).pack()
         
         # PAINEL DE ESTATÍSTICAS
-        stats_frame = ctk.CTkFrame(self, fg_color=self.COLORS['bg_card'], 
-                                  corner_radius=10, border_width=1, 
-                                  border_color=self.COLORS['bg_card_hover'],
-                                  height=90)
-        stats_frame.pack(fill='x', padx=20, pady=10)
-        stats_frame.pack_propagate(False)
+        stats_frame = ctk.CTkFrame(self, fg_color='transparent')
+        stats_frame.pack(fill='x', padx=20, pady=(16, 4))
         self._create_stats_panel(stats_frame)
         
         # ABAS PRINCIPAIS
         tabs = ctk.CTkTabview(self, fg_color=self.COLORS['bg_card'],
-                             segmented_button_fg_color=self.COLORS['bg_card'],
-                             segmented_button_selected_color=self.COLORS['accent_blue'],
-                             text_color=self.COLORS['text_primary'],
-                             corner_radius=10)
-        tabs.pack(fill='both', expand=True, padx=20, pady=(0, 20))
+                              segmented_button_fg_color=self.COLORS['bg_sidebar'],
+                              segmented_button_selected_color=self.COLORS['accent_blue'],
+                              segmented_button_unselected_color=self.COLORS['bg_sidebar'],
+                              text_color=self.COLORS['text_tertiary'],
+                              segmented_button_selected_hover_color=self.COLORS['accent_blue_hover'],
+                              corner_radius=12,
+                              border_width=1,
+                              border_color=self.COLORS['border'])
+        tabs.pack(fill='both', expand=True, padx=20, pady=(8, 20))
         
         tabs.add("LRT & P-values")
-        tabs.add("Positive Selection")
+        tabs.add("Global ω > 1")
         tabs.add("Positive Sites")
-        
+
         # Verificar se há dados de Branch-site para adicionar aba especial
         branchsite_cols = [col for col in self.df.columns if 'Branch-site_class' in col]
         if branchsite_cols:
             tabs.add("Branch-site Classes")
-        
-        tabs.add("Phylogenetic Tree")
+
+        tabs.add("Branch Analysis")
         tabs.add("Export")
-        
+
         self._create_lrt_stats_tab(tabs.tab("LRT & P-values"))
-        self._create_positive_selection_tab(tabs.tab("Positive Selection"))
+        self._create_positive_selection_tab(tabs.tab("Global ω > 1"))
         self._create_sites_tab(tabs.tab("Positive Sites"))
-        
+
         if branchsite_cols:
             self._create_branchsite_class_tab(tabs.tab("Branch-site Classes"))
-        
-        self._create_tree_tab(tabs.tab("Phylogenetic Tree"))
+
+        self._create_tree_tab(tabs.tab("Branch Analysis"))
         self._create_export_tab(tabs.tab("Export"))
     
     def _create_stats_panel(self, parent):
-        """Painel com estatísticas gerais"""
+        """Painel com estatísticas gerais — cards premium"""
         positive_genes = self._detect_positive_selection()
-        
-        container = ctk.CTkFrame(parent, fg_color='transparent')
-        container.pack(fill='both', expand=True, padx=15, pady=15)
-        
+
         stats_data = [
-            ("🧬 Total de Genes", str(len(self.df)), self.COLORS['accent_blue']),
-            ("📊 Modelos", self._count_models(), self.COLORS['accent_cyan']),
-            ("✅ Seleção Positiva", str(len(positive_genes)), self.COLORS['success']),
-            ("📈 ω Médio", f"{self._calc_avg_omega():.3f}", self.COLORS['warning']),
+            ("Total de Genes",    str(len(self.df)),            self.COLORS['accent_blue'],  "🧬"),
+            ("Modelos Rodados",   self._count_models(),         self.COLORS['accent_cyan'],  "📊"),
+            ("Seleção Positiva",  str(len(positive_genes)),     self.COLORS['success'],      "✅"),
+            ("ω Médio",           f"{self._calc_avg_omega():.3f}", self.COLORS['warning'],   "📈"),
         ]
-        
-        for label, value, color in stats_data:
-            card = ctk.CTkFrame(container, fg_color=self.COLORS['bg_card_hover'],
-                               corner_radius=8, border_width=1, border_color=color)
+
+        for label, value, color, icon in stats_data:
+            card = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'],
+                                corner_radius=10, border_width=1,
+                                border_color=self.COLORS['border'])
             card.pack(side="left", fill="both", expand=True, padx=5)
-            
-            ctk.CTkLabel(card, text=label, font=("Roboto", 10),
-                        text_color=self.COLORS['text_tertiary']).pack(pady=(8, 2))
-            ctk.CTkLabel(card, text=value, font=("Roboto", 16, "bold"),
-                        text_color=color).pack(pady=(0, 8))
+
+            inner = ctk.CTkFrame(card, fg_color='transparent')
+            inner.pack(fill='both', expand=True, padx=16, pady=14)
+
+            ctk.CTkLabel(inner, text=f"{icon}  {label}",
+                         font=("Roboto", 10),
+                         text_color=self.COLORS['text_tertiary'],
+                         anchor='w').pack(anchor='w')
+            ctk.CTkLabel(inner, text=value,
+                         font=("Roboto", 28, "bold"),
+                         text_color=color,
+                         anchor='w').pack(anchor='w', pady=(4, 0))
     
     def _create_lrt_stats_tab(self, parent):
         """Aba de Tabela LRT com p-valores"""
@@ -347,38 +395,78 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         update_lrt_table()
     
     def _create_positive_selection_tab(self, parent):
-        """Aba de seleção positiva"""
+        """Genes com ω global > 1 (seleção positiva ao nível do gene inteiro)"""
+        # ── Info banner ────────────────────────────────────────────────
+        info = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=8)
+        info.pack(fill='x', padx=10, pady=(10, 2))
+
+        ctk.CTkLabel(info,
+                     text="🌐  Seleção Global — ω > 1 no gene inteiro",
+                     font=("Roboto", 11, "bold"),
+                     text_color=self.COLORS['accent_blue']).pack(side="left", padx=14, pady=(10, 2))
+
+        ctk.CTkLabel(info,
+                     text="Critério: ω médio do modelo M2a ou M8 > 1.0  AND  LRT p < 0.05  ·  "
+                          "Diferente de seleção em sítios específicos (aba Positive Sites)",
+                     font=("Roboto", 9),
+                     text_color=self.COLORS['text_tertiary'],
+                     wraplength=900,
+                     justify='left').pack(anchor='w', padx=14, pady=(0, 10))
+
         positive_data = self._detect_positive_selection()
-        
+
         if not positive_data:
-            ctk.CTkLabel(parent, text="❌ Nenhum sinal de seleção positiva detectado\n\n(ω > 1.0 AND p-valor < 0.05)",
-                        font=("Roboto", 12),
-                        text_color=self.COLORS['warning']).pack(pady=50)
+            empty = ctk.CTkFrame(parent, fg_color='transparent')
+            empty.pack(expand=True)
+            ctk.CTkLabel(empty, text="—", font=("Roboto", 32),
+                         text_color=self.COLORS['text_muted']).pack(pady=(60, 8))
+            ctk.CTkLabel(empty, text="Nenhum sinal de seleção positiva detectado",
+                         font=("Roboto", 13, "bold"),
+                         text_color=self.COLORS['text_tertiary']).pack()
+            ctk.CTkLabel(empty, text="Critério: ω > 1.0  AND  p-valor < 0.05",
+                         font=("Roboto", 10),
+                         text_color=self.COLORS['text_muted']).pack(pady=(4, 0))
             return
-        
-        scroll_frame = ctk.CTkScrollableFrame(parent, fg_color=self.COLORS['bg_feed'],
-                                            corner_radius=8)
+
+        scroll_frame = ctk.CTkScrollableFrame(parent, fg_color='transparent',
+                                              corner_radius=8)
         scroll_frame.pack(fill='both', expand=True, padx=10, pady=10)
-        
+
         for gene_name, signals in positive_data.items():
-            card = ctk.CTkFrame(scroll_frame, fg_color=self.COLORS['bg_card'],
-                               corner_radius=8, border_width=2,
-                               border_color=self.COLORS['success'])
-            card.pack(fill='x', pady=8, padx=5)
-            
-            header = ctk.CTkFrame(card, fg_color=self.COLORS['bg_card_hover'],
-                                 corner_radius=6)
-            header.pack(fill='x', padx=8, pady=(8, 4))
-            
-            ctk.CTkLabel(header, text=f"🧬 {gene_name}", 
-                        font=("Roboto", 12, "bold"),
-                        text_color=self.COLORS['success']).pack(pady=6)
-            
+            card = ctk.CTkFrame(scroll_frame, fg_color='#0b2016',
+                                corner_radius=12, border_width=1,
+                                border_color='#10b981')
+            card.pack(fill='x', pady=6, padx=4)
+
+            # Left accent
+            ctk.CTkFrame(card, fg_color='#10b981', width=5,
+                         corner_radius=2).pack(side="left", fill="y", padx=(6, 0), pady=8)
+
+            content = ctk.CTkFrame(card, fg_color='transparent')
+            content.pack(side="left", fill="both", expand=True, padx=14, pady=12)
+
+            ctk.CTkLabel(content, text=f"🧬  {gene_name}",
+                         font=("Roboto", 13, "bold"),
+                         text_color='#6ee7b7').pack(anchor='w')
+
             for signal_type, signal_data in signals.items():
-                signal_text = f"  {signal_type}: ω = {signal_data['omega']:.4f}, p = {signal_data['p_value']:.2e}"
-                ctk.CTkLabel(card, text=signal_text,
-                           font=("Roboto", 10),
-                           text_color=self.COLORS['text_secondary']).pack(anchor='w', padx=12, pady=2)
+                signal_text = (
+                    f"  {signal_type}  ·  "
+                    f"ω = {signal_data['omega']:.4f}  ·  "
+                    f"2Δℓ = {signal_data['lrt']:.3f}  ·  "
+                    f"p = {self._fmt_pval(signal_data['p_value'])}"
+                )
+                ctk.CTkLabel(content, text=signal_text,
+                             font=("Roboto", 10),
+                             text_color='#a7f3d0').pack(anchor='w', pady=(3, 0))
+
+            badge = ctk.CTkFrame(card, fg_color='#10b981',
+                                 corner_radius=8, width=70, height=36)
+            badge.pack(side="right", padx=14)
+            badge.pack_propagate(False)
+            ctk.CTkLabel(badge, text="★ Positivo",
+                         font=("Roboto", 9, "bold"),
+                         text_color="white").pack(expand=True)
     
     def _create_sites_tab(self, parent):
         """Aba de visualização de sítios sob seleção positiva"""
@@ -545,80 +633,106 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         text_color=self.COLORS['text_tertiary']).pack(pady=50)
             return
         
-        omega_text = f"ω (global) = {omega_global:.4f}" if omega_global else "ω (global) = N/A"
-        
-        # INFO HEADER
-        info_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card_hover'],
-                                 corner_radius=8)
-        info_frame.pack(fill='x', padx=8, pady=(8, 12))
-        
-        info_text = f"📊 {len(df_filtered)} sítio(s) | Gene: {gene_name} | Modelo: {model_name} ({method}) | {omega_text}"
-        ctk.CTkLabel(info_frame, text=info_text,
-                    font=("Roboto", 10, "bold"),
-                    text_color=self.COLORS['accent_cyan']).pack(pady=8)
-        
-        # HEADER DA TABELA
-        header_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card_hover'],
-                                   corner_radius=6)
-        header_frame.pack(fill='x', padx=8, pady=(0, 4))
-        
-        headers = [("Posição", 70), ("AA", 60), ("Pr(w>1)", 100), ("Sig", 70), 
-                   ("ω (média)", 110), ("ω - SE", 110), ("ω + SE", 110)]
-        
+        omega_text = f"ω = {omega_global:.4f}" if omega_global else "ω = N/A"
+
+        # ── Info banner ─────────────────────────────────────────────
+        banner = ctk.CTkFrame(parent, fg_color='#131326', corner_radius=8,
+                              border_width=1, border_color=self.COLORS['accent_blue'])
+        banner.pack(fill='x', padx=8, pady=(8, 10))
+
+        banner_left = ctk.CTkFrame(banner, fg_color='transparent')
+        banner_left.pack(side="left", padx=14, pady=10)
+
+        ctk.CTkLabel(banner_left,
+                     text=f"🧬  {gene_name}",
+                     font=("Roboto", 13, "bold"),
+                     text_color=self.COLORS['text_primary']).pack(anchor="w")
+        ctk.CTkLabel(banner_left,
+                     text=f"Modelo: {model_name}  ·  Análise: {method}  ·  {omega_text}",
+                     font=("Roboto", 9),
+                     text_color=self.COLORS['text_tertiary']).pack(anchor="w")
+
+        badge = ctk.CTkFrame(banner, fg_color=self.COLORS['accent_blue'],
+                             corner_radius=8, width=80)
+        badge.pack(side="right", padx=14, pady=10)
+        badge.pack_propagate(False)
+        ctk.CTkLabel(badge, text=f"{len(df_filtered)} sítios",
+                     font=("Roboto", 11, "bold"),
+                     text_color="white").pack(expand=True)
+
+        # ── Table header ─────────────────────────────────────────────
+        th = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=6)
+        th.pack(fill='x', padx=8, pady=(0, 2))
+
+        headers = [("Posição", 70), ("AA", 55), ("Pr(ω>1)", 100), ("Sig", 55),
+                   ("ω (média)", 105), ("ω − SE", 105), ("ω + SE", 105)]
+
         for h_text, width in headers:
-            ctk.CTkLabel(header_frame, text=h_text, 
-                        font=("Roboto", 9, "bold"),
-                        text_color=self.COLORS['accent_blue'],
-                        width=width).pack(side='left', padx=4, pady=6)
-        
-        # ROWS
-        for _, row in df_filtered.iterrows():
-            if row.get('is_significant_99', False):
-                bg_color, text_color, border_color, sig_text = (
-                    self.COLORS['success'], self.COLORS['text_primary'], 
-                    self.COLORS['success'], "**"
-                )
-            elif row.get('is_significant_95', False):
-                bg_color, text_color, border_color, sig_text = (
-                    self.COLORS['bg_card'], self.COLORS['success_light'], 
-                    self.COLORS['success'], "*"
-                )
+            ctk.CTkLabel(th, text=h_text,
+                         font=("Roboto", 9, "bold"),
+                         text_color=self.COLORS['accent_blue'],
+                         width=width).pack(side='left', padx=4, pady=7)
+
+        # ── Rows ─────────────────────────────────────────────────────
+        for i, (_, row) in enumerate(df_filtered.iterrows()):
+            is_99 = row.get('is_significant_99', False)
+            is_95 = row.get('is_significant_95', False)
+
+            if is_99:
+                bg_color    = '#0b2016'
+                text_color  = '#6ee7b7'
+                border_color = '#10b981'
+                sig_text    = "★★"
+                sig_color   = '#10b981'
+            elif is_95:
+                bg_color    = '#0d1a10'
+                text_color  = '#a7f3d0'
+                border_color = '#059669'
+                sig_text    = "★"
+                sig_color   = '#6ee7b7'
             else:
-                bg_color, text_color, border_color, sig_text = (
-                    self.COLORS['bg_card'], self.COLORS['text_secondary'], 
-                    self.COLORS['bg_card_hover'], ""
-                )
-            
-            row_frame = ctk.CTkFrame(parent, fg_color=bg_color, corner_radius=4, 
-                                    border_width=1, border_color=border_color)
-            row_frame.pack(fill='x', padx=8, pady=2)
-            
+                bg_color    = self.COLORS['bg_card'] if i % 2 == 0 else self.COLORS['bg_sidebar']
+                text_color  = self.COLORS['text_secondary']
+                border_color = self.COLORS['border']
+                sig_text    = "—"
+                sig_color   = self.COLORS['text_muted']
+
+            row_frame = ctk.CTkFrame(parent, fg_color=bg_color, corner_radius=4,
+                                     border_width=1, border_color=border_color)
+            row_frame.pack(fill='x', padx=8, pady=1)
+
             cells = [
-                (str(int(row['position'])), 70), (row.get('amino_acid', 'X'), 60),
-                (f"{row['pr_w_gt_1']:.4f}", 100), (sig_text, 70),
-                (f"{row['post_mean']:.3f}", 110), (f"{row.get('omega_lower', 0):.3f}", 110),
-                (f"{row.get('omega_upper', 0):.3f}", 110)
+                (str(int(row['position'])), 70,  text_color),
+                (row.get('amino_acid', 'X'), 55, text_color),
+                (f"{row['pr_w_gt_1']:.4f}",  100, text_color),
+                (sig_text,                   55,  sig_color),
+                (f"{row['post_mean']:.3f}",  105, text_color),
+                (f"{row.get('omega_lower',0):.3f}", 105, self.COLORS['text_tertiary']),
+                (f"{row.get('omega_upper',0):.3f}", 105, self.COLORS['text_tertiary']),
             ]
-            
-            for cell_text, width in cells:
-                ctk.CTkLabel(row_frame, text=cell_text, font=("Roboto", 9),
-                           text_color=text_color, width=width).pack(side='left', padx=4, pady=6)
-        
-        # RODAPÉ
-        footer_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card_hover'],
-                                   corner_radius=6)
-        footer_frame.pack(fill='x', padx=8, pady=(12, 8))
-        
-        stats_text = (
-            f"Estatísticas | ω médio: {df_filtered['post_mean'].mean():.3f} | "
-            f"ω min: {df_filtered['post_mean'].min():.3f} | "
-            f"ω max: {df_filtered['post_mean'].max():.3f} | "
-            f"Pr(w>1) médio: {df_filtered['pr_w_gt_1'].mean():.3f}"
-        )
-        
-        ctk.CTkLabel(footer_frame, text=stats_text,
-                    font=("Roboto", 9),
-                    text_color=self.COLORS['accent_cyan']).pack(pady=8)
+
+            for cell_text, width, clr in cells:
+                ctk.CTkLabel(row_frame, text=cell_text,
+                             font=("Roboto", 9),
+                             text_color=clr, width=width).pack(side='left', padx=4, pady=7)
+
+        # ── Footer stats ──────────────────────────────────────────────
+        footer = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_sidebar'], corner_radius=6)
+        footer.pack(fill='x', padx=8, pady=(10, 8))
+
+        sig99 = int(df_filtered.get('is_significant_99', False).sum()) if 'is_significant_99' in df_filtered else 0
+        sig95 = int(df_filtered.get('is_significant_95', False).sum()) if 'is_significant_95' in df_filtered else 0
+
+        stats_parts = [
+            f"ω médio: {df_filtered['post_mean'].mean():.3f}",
+            f"ω max: {df_filtered['post_mean'].max():.3f}",
+            f"Pr(ω>1) médio: {df_filtered['pr_w_gt_1'].mean():.3f}",
+            f"★★ (p≥0.99): {sig99}",
+            f"★ (p≥0.95): {sig95}",
+        ]
+        ctk.CTkLabel(footer, text="  ·  ".join(stats_parts),
+                     font=("Roboto", 9),
+                     text_color=self.COLORS['text_tertiary']).pack(pady=8, padx=12)
     
     def _parse_sites_manual(self, filepath: Path, method: str):
         """Parser manual básico caso SitesParser não esteja disponível"""
@@ -797,44 +911,167 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     wraplength=400).pack(pady=8, padx=8)
     
     def _create_tree_tab(self, parent):
-        """Aba de árvore filogenética"""
-        tree_files = list(self.output_folder.rglob("*.nwk")) + \
-                    list(self.output_folder.rglob("final-tree.txt"))
-        
-        if not tree_files:
-            ctk.CTkLabel(parent, text="❌ Nenhum arquivo de árvore (.nwk) encontrado",
-                        font=("Roboto", 12),
-                        text_color=self.COLORS['warning']).pack(pady=50)
+        """Branch Analysis — ω por ramo/tag do Branch model com visualização colorida"""
+        branch_data = self.tag_columns.get('Branch', {})
+        has_branch_data = bool(branch_data.get('omega'))
+
+        # ── Info banner ────────────────────────────────────────────────
+        info = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=8)
+        info.pack(fill='x', padx=10, pady=(10, 4))
+        ctk.CTkLabel(info,
+                     text="🌿  Branch Model — ω por Ramo/Tag",
+                     font=("Roboto", 11, "bold"),
+                     text_color=self.COLORS['accent_blue']).pack(side="left", padx=14, pady=(10, 2))
+        ctk.CTkLabel(info,
+                     text="Cada barra representa um ramo etiquetado na árvore  ·  "
+                          "ω > 1 indica seleção positiva naquele ramo específico",
+                     font=("Roboto", 9),
+                     text_color=self.COLORS['text_tertiary']).pack(side="left", padx=(0, 14), pady=(10, 2))
+
+        if not has_branch_data:
+            empty = ctk.CTkFrame(parent, fg_color='transparent')
+            empty.pack(expand=True)
+            ctk.CTkLabel(empty, text="🌿", font=("Roboto", 40),
+                         text_color=self.COLORS['text_muted']).pack(pady=(50, 8))
+            ctk.CTkLabel(empty, text="Sem dados do Branch Model",
+                         font=("Roboto", 14, "bold"),
+                         text_color=self.COLORS['text_tertiary']).pack()
+            ctk.CTkLabel(empty,
+                         text="Execute o modelo Branch com uma árvore etiquetada para visualizar ω por ramo.",
+                         font=("Roboto", 10),
+                         text_color=self.COLORS['text_muted'],
+                         wraplength=420).pack(pady=(6, 0))
             return
-        
-        ctrl_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'],
-                                 corner_radius=8, height=60)
-        ctrl_frame.pack(fill='x', padx=10, pady=10)
-        ctrl_frame.pack_propagate(False)
-        
-        ctk.CTkLabel(ctrl_frame, text="Selecione Gene:", 
-                    font=("Roboto", 11, "bold")).pack(side='left', padx=15, pady=10)
-        
-        gene_combo = ctk.CTkComboBox(ctrl_frame, values=self.df['Gene'].tolist(), width=300)
+
+        # ── Gene selector ──────────────────────────────────────────────
+        ctrl = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'],
+                            corner_radius=8, height=52)
+        ctrl.pack(fill='x', padx=10, pady=(0, 4))
+        ctrl.pack_propagate(False)
+
+        ctk.CTkLabel(ctrl, text="Gene:", font=("Roboto", 11, "bold")).pack(side='left', padx=15)
+        gene_list = self.df['Gene'].tolist()
+        gene_combo = ctk.CTkComboBox(ctrl, values=gene_list, width=280)
         gene_combo.pack(side='left', padx=(0, 15))
-        if len(self.df) > 0:
-            gene_combo.set(self.df['Gene'].iloc[0])
-        
-        tree_canvas = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_feed'])
-        tree_canvas.pack(fill='both', expand=True, padx=10, pady=10)
-        
-        def render_tree(*args):
-            for widget in tree_canvas.winfo_children():
-                widget.destroy()
-            
-            selected_gene = gene_combo.get()
-            ctk.CTkLabel(tree_canvas, 
-                        text=f"🌳 Árvore para {selected_gene}\n\n(Visualização em desenvolvimento)\n\nArquivos disponíveis: {len(tree_files)}",
-                        font=("Roboto", 12),
-                        text_color=self.COLORS['text_tertiary']).pack(expand=True)
-        
-        gene_combo.configure(command=render_tree)
-        render_tree()
+        if gene_list:
+            gene_combo.set(gene_list[0])
+
+        # Summary info label (updated per gene)
+        lrt_col = 'lrt_M0_vs_Branch'
+        has_lrt = lrt_col in self.df.columns
+        info_lbl = ctk.CTkLabel(ctrl, text="", font=("Roboto", 9),
+                                text_color=self.COLORS['text_tertiary'])
+        info_lbl.pack(side='left', padx=10)
+
+        # ── Chart area ─────────────────────────────────────────────────
+        chart_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_feed'], corner_radius=8)
+        chart_frame.pack(fill='both', expand=True, padx=10, pady=(0, 10))
+
+        def _omega_color(w: float) -> str:
+            if w > 2.0:   return '#ef4444'   # bright red — strong positive
+            if w > 1.5:   return '#f97316'   # orange — moderate positive
+            if w > 1.0:   return '#fbbf24'   # amber — slight positive
+            if w > 0.7:   return '#6366f1'   # indigo — nearly neutral
+            return         '#22d3ee'          # cyan — purifying selection
+
+        def render_branch(gene_name: str):
+            for w in chart_frame.winfo_children():
+                w.destroy()
+
+            row_data = self.df[self.df['Gene'] == gene_name]
+            if row_data.empty:
+                ctk.CTkLabel(chart_frame, text="Gene não encontrado",
+                             text_color=self.COLORS['text_tertiary']).pack(expand=True)
+                return
+
+            row = row_data.iloc[0]
+            omega_cols = branch_data.get('omega', {})
+            tags = sorted(omega_cols.keys(), key=lambda t: (t != 'background', t))
+            omegas = []
+            for tag in tags:
+                col = omega_cols[tag]
+                val = row[col] if col in self.df.columns else np.nan
+                omegas.append(float(val) if pd.notna(val) else 0.0)
+
+            if not omegas:
+                ctk.CTkLabel(chart_frame, text="Sem dados de ω para este gene",
+                             text_color=self.COLORS['text_tertiary']).pack(expand=True)
+                return
+
+            # Update LRT info label
+            if has_lrt:
+                lrt_val = row.get(lrt_col, np.nan)
+                if pd.notna(lrt_val):
+                    p = 1 - stats.chi2.cdf(lrt_val, df=1) if lrt_val > 0 else 1.0
+                    sig = "  ★ p < 0.05" if p < 0.05 else ""
+                    info_lbl.configure(
+                        text=f"LRT (M0 vs Branch): 2Δℓ = {lrt_val:.3f}  ·  p = {self._fmt_pval(p)}{sig}",
+                        text_color=self.COLORS['success'] if p < 0.05 else self.COLORS['text_tertiary']
+                    )
+
+            # Build labels
+            tag_labels = []
+            for t in tags:
+                if t == 'background':   tag_labels.append('Background (bg)')
+                elif t.startswith('#'): tag_labels.append(f'Ramo {t}')
+                else:                   tag_labels.append(t.replace('_', ' ').capitalize())
+
+            colors = [_omega_color(w) for w in omegas]
+            n = len(tags)
+            fig_h = max(3.2, n * 0.75)
+
+            fig, ax = plt.subplots(figsize=(8.5, fig_h), facecolor='#111115')
+            ax.set_facecolor('#16161a')
+
+            y_pos = list(range(n))
+            bars = ax.barh(y_pos, omegas, color=colors, alpha=0.88,
+                           height=0.54, edgecolor='none')
+
+            # ω = 1 reference line
+            x_max = max(max(omegas) * 1.25, 2.5)
+            ax.axvline(x=1.0, color='#9898a6', linestyle='--', linewidth=1.5, alpha=0.7)
+            ax.text(1.02, n - 0.15, 'neutro', color='#9898a6', fontsize=8)
+
+            # Value labels inside/outside bars
+            for bar, omega in zip(bars, omegas):
+                offset = x_max * 0.015
+                ax.text(omega + offset, bar.get_y() + bar.get_height() / 2,
+                        f'{omega:.3f}', va='center', ha='left',
+                        color='#ededef', fontsize=9, fontweight='bold')
+
+            ax.set_yticks(y_pos)
+            ax.set_yticklabels(tag_labels, color='#ededef', fontsize=10)
+            ax.set_xlabel('ω (dN/dS)', color='#9898a6', fontsize=10)
+            ax.set_title(f'Perfil de ω por Ramo  —  {gene_name}',
+                         color='#ededef', fontsize=12, fontweight='bold', pad=12)
+            ax.tick_params(colors='#9898a6', length=3)
+            ax.set_xlim(0, x_max)
+
+            # Legend
+            legend_els = [
+                mpatches.Patch(facecolor='#22d3ee', label='ω < 0.7  Purificação'),
+                mpatches.Patch(facecolor='#6366f1', label='0.7–1.0  Neutro'),
+                mpatches.Patch(facecolor='#fbbf24', label='ω > 1.0  Seleção positiva'),
+                mpatches.Patch(facecolor='#ef4444', label='ω > 2.0  Seleção forte'),
+            ]
+            ax.legend(handles=legend_els, loc='lower right', framealpha=0.35,
+                      facecolor='#1e1e24', edgecolor='#32323e',
+                      labelcolor='#9898a6', fontsize=8)
+
+            for spine in ax.spines.values():
+                spine.set_color('#222228')
+            ax.grid(axis='x', color='#222228', linewidth=0.5, alpha=0.7)
+
+            plt.tight_layout(pad=1.4)
+
+            canvas_w = FigureCanvasTkAgg(fig, master=chart_frame)
+            canvas_w.draw()
+            canvas_w.get_tk_widget().pack(fill='both', expand=True)
+            plt.close(fig)
+
+        gene_combo.configure(command=lambda v: render_branch(v))
+        if gene_list:
+            render_branch(gene_list[0])
     
     def _create_export_tab(self, parent):
         """Aba de exportação"""
@@ -862,20 +1099,32 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         
         for title, desc, command, color in export_options:
             card = ctk.CTkFrame(main_frame, fg_color=self.COLORS['bg_card'],
-                               corner_radius=10, border_width=1,
-                               border_color=self.COLORS['bg_card_hover'])
-            card.pack(fill='x', pady=10)
-            
-            ctk.CTkLabel(card, text=title, font=("Roboto", 12, "bold"),
-                        text_color=color).pack(anchor='w', padx=20, pady=(12, 4))
-            
-            ctk.CTkLabel(card, text=desc, font=("Roboto", 10),
-                        text_color=self.COLORS['text_secondary']).pack(anchor='w', padx=20, pady=(0, 10))
-            
-            ctk.CTkButton(card, text="Exportar", width=150,
-                         fg_color=color, hover_color=color,
-                         font=("Roboto", 10, "bold"),
-                         command=command).pack(padx=20, pady=(0, 15))
+                                corner_radius=12, border_width=1,
+                                border_color=self.COLORS['border'])
+            card.pack(fill='x', pady=8)
+
+            # Top strip
+            ctk.CTkFrame(card, fg_color=color, height=3,
+                         corner_radius=2).pack(fill='x')
+
+            row = ctk.CTkFrame(card, fg_color='transparent')
+            row.pack(fill='x', padx=20, pady=14)
+
+            txt = ctk.CTkFrame(row, fg_color='transparent')
+            txt.pack(side="left", fill='both', expand=True)
+            ctk.CTkLabel(txt, text=title, font=("Roboto", 12, "bold"),
+                         text_color=color, anchor='w').pack(anchor='w')
+            ctk.CTkLabel(txt, text=desc, font=("Roboto", 9),
+                         text_color=self.COLORS['text_muted'], anchor='w').pack(anchor='w', pady=(2, 0))
+
+            ctk.CTkButton(row, text="Exportar →", width=130, height=34,
+                          fg_color=self.COLORS['border'],
+                          hover_color=color,
+                          text_color=color,
+                          border_width=1, border_color=color,
+                          font=("Roboto", 10, "bold"),
+                          corner_radius=8,
+                          command=command).pack(side="right")
     
     # ═══════════════════════════════════════════════════════════
     # MÉTODOS AUXILIARES
@@ -1023,26 +1272,24 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         is_branch_model = alternative_model == 'branch'
         is_branchsite_model = 'branch-site' in alternative_model.lower()
         
-        # Header
-        header_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card_hover'],
-                                   corner_radius=6)
-        header_frame.pack(fill='x', padx=8, pady=8)
-        
+        # ── Table header ──────────────────────────────────────────────
+        header_frame = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=6)
+        header_frame.pack(fill='x', padx=8, pady=(4, 2))
+
         if is_branchsite_model:
-            # Headers para Branch-site com site classes (0, 1, 2a, 2b)
-            headers = ["Gene", "Class", "Proportion", "Background w", "Foreground w", "2Δℓ", "p-valor", "Significante?"]
-            col_widths = [200, 80, 120, 120, 120, 100, 120, 100]
+            headers    = ["Gene", "Class", "Proportion", "Background ω", "Foreground ω", "2Δℓ", "p-valor", "Sig."]
+            col_widths = [200, 80, 120, 120, 120, 100, 120, 60]
         elif is_branch_model:
-            headers = ["Gene", "ω (Branch Tags)", "2Δℓ", "p-valor", "Significante?"]
-            col_widths = [250, 400, 100, 120, 100]  # Expandido para acomodar múltiplas classes
+            headers    = ["Gene", "ω (Branch Tags)", "2Δℓ", "p-valor", "Sig."]
+            col_widths = [250, 400, 100, 120, 60]
         else:
-            headers = ["Gene", f"ω ({alt_display})", "2Δℓ", "p-valor", "Significante?"]
-            col_widths = [250, 120, 100, 120, 100]
-        
+            headers    = ["Gene", f"ω ({alt_display})", "2Δℓ", "p-valor", "Sig."]
+            col_widths = [260, 120, 100, 130, 60]
+
         for i, (h, width) in enumerate(zip(headers, col_widths)):
             ctk.CTkLabel(header_frame, text=h, font=("Roboto", 9, "bold"),
-                        text_color=self.COLORS['accent_blue'], width=width).grid(
-                            row=0, column=i, padx=5, pady=8, sticky="w")
+                         text_color=self.COLORS['accent_blue'], width=width).grid(
+                             row=0, column=i, padx=5, pady=8, sticky="w")
         
         # Rows
         row_count = 0
@@ -1175,27 +1422,21 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             p_val = 1 - stats.chi2.cdf(lrt_val, df=df_chi2) if lrt_val > 0 else 1.0
             is_sig = p_val < 0.05
             
-            p_val_str = f"{p_val:.2e}" if p_val < 0.001 else f"{p_val:.4f}"
+            p_val_str = self._fmt_pval(p_val)
             
-            # Cor de fundo baseada em significância
-            # Para Branch/Branch-site, não podemos determinar "omega > 1" facilmente (múltiplos valores)
-            if is_branch_model or is_branchsite_model:
-                if is_sig:
-                    bg_color = self.COLORS['bg_card']
-                    border_color = self.COLORS['accent_blue']
-                else:
-                    bg_color = self.COLORS['bg_feed']
-                    border_color = self.COLORS['bg_card_hover']
+            # ── Row color based on significance + omega ───────────────
+            is_strong = is_sig and pd.notna(omega) and omega > 1.0 if not (is_branch_model or is_branchsite_model) else False
+            row_idx = row_count  # for alternating
+
+            if is_strong:
+                bg_color    = '#0b2016'
+                border_color = '#10b981'
+            elif is_sig:
+                bg_color    = '#11112a'
+                border_color = self.COLORS['accent_blue']
             else:
-                if is_sig and pd.notna(omega) and omega > 1.0:
-                    bg_color = self.COLORS['success']
-                    border_color = self.COLORS['success']
-                elif is_sig:
-                    bg_color = self.COLORS['bg_card']
-                    border_color = self.COLORS['accent_blue']
-                else:
-                    bg_color = self.COLORS['bg_feed']
-                    border_color = self.COLORS['bg_card_hover']
+                bg_color    = self.COLORS['bg_card'] if row_idx % 2 == 0 else self.COLORS['bg_sidebar']
+                border_color = self.COLORS['border']
             
             # Para Branch-site, renderizar uma linha por site class
             if is_branchsite_model and branchsite_class_data:
@@ -1211,24 +1452,28 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                                             border_color=border_color)
                     row_frame.pack(fill='x', padx=8, pady=4)
                     
-                    sig_text = "✅ Sim" if is_sig else "❌ Não"
-                    
+                    sig_text = "★ Sim" if is_sig else "—"
+
                     vals = [
-                        gene if class_idx == 0 else "",  # Gene só na primeira linha
+                        gene if class_idx == 0 else "",
                         f"Class {class_name}",
                         f"{class_info['prop']:.4f}",
                         f"{class_info['bg_w']:.4f}",
                         f"{class_info['fg_w']:.4f}",
-                        f"{lrt_val:.4f}" if class_idx == 0 else "",  # 2Δℓ só na primeira linha
-                        p_val_str if class_idx == 0 else "",  # p-valor só na primeira linha
-                        sig_text if class_idx == 0 else ""  # Significância só na primeira linha
+                        f"{lrt_val:.4f}" if class_idx == 0 else "",
+                        p_val_str if class_idx == 0 else "",
+                        sig_text if class_idx == 0 else ""
                     ]
-                    
+
                     for i, (v, width) in enumerate(zip(vals, col_widths)):
                         if i == 7 and is_sig:
-                            color = self.COLORS['accent_cyan']
+                            color = self.COLORS['success_light']
                         elif i == 7:
-                            color = self.COLORS['danger']
+                            color = self.COLORS['text_muted']
+                        elif i == 6 and is_sig:
+                            color = self.COLORS['success_light']
+                        elif i == 6:
+                            color = self.COLORS['text_secondary']
                         else:
                             color = self.COLORS['text_secondary']
                         
@@ -1246,33 +1491,35 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 row_frame.pack(fill='x', padx=8, pady=4)
                 
                 # Destaque especial para omega > 1 E significante (apenas para não-Branch)
-                if is_branch_model:
-                    sig_text = "✅ Sim" if is_sig else "❌ Não"
+                if is_strong:
+                    sig_text = "★ ω>1"
+                elif is_sig:
+                    sig_text = "★ Sim"
                 else:
-                    sig_text = "✅ Sim (ω>1)" if (is_sig and pd.notna(omega) and omega > 1.0) else ("✅ Sim" if is_sig else "❌ Não")
-                
+                    sig_text = "—"
+
                 vals = [gene, omega_str, f"{lrt_val:.4f}", p_val_str, sig_text]
-                
-                # Para Branch models com múltiplas linhas, usar wraplength no label
+
                 for i, (v, width) in enumerate(zip(vals, col_widths)):
-                    if i == 4 and is_sig and not is_branch_model and pd.notna(omega) and omega > 1.0:
+                    if i == 4 and is_strong:
                         color = self.COLORS['success_light']
                     elif i == 4 and is_sig:
-                        color = self.COLORS['accent_cyan']
+                        color = self.COLORS['accent_blue']
                     elif i == 4:
-                        color = self.COLORS['danger']
+                        color = self.COLORS['text_muted']
+                    elif i == 3 and is_sig:
+                        color = self.COLORS['success_light'] if is_strong else self.COLORS['accent_blue']
                     else:
                         color = self.COLORS['text_secondary']
-                    
-                    # Para coluna de omega em Branch models, usar justify left e permettir wrapping
+
                     if i == 1 and is_branch_model and '\n' in str(v):
                         label = ctk.CTkLabel(row_frame, text=v, font=("Roboto", 8),
-                                   text_color=color, width=width, justify="left")
+                                             text_color=color, width=width, justify="left")
                     else:
                         label = ctk.CTkLabel(row_frame, text=v, font=("Roboto", 9),
-                                   text_color=color, width=width)
-                    
-                    label.grid(row=0, column=i, padx=5, pady=8, sticky="nw")
+                                             text_color=color, width=width)
+
+                    label.grid(row=0, column=i, padx=5, pady=7, sticky="nw")
             
             row_count += 1
         
@@ -1281,18 +1528,22 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         font=("Roboto", 11),
                         text_color=self.COLORS['warning']).pack(pady=30)
         else:
-            # Footer com resumo
-            footer = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card_hover'],
-                                 corner_radius=6)
-            footer.pack(fill='x', padx=8, pady=(12, 8))
-            
-            sig_count = sum(1 for _, row in self.df.iterrows() 
-                          if pd.notna(row.get(lrt_col)) and 
-                          (1 - stats.chi2.cdf(row[lrt_col], df=df_chi2) < 0.05))
-            
-            footer_text = f"📊 Total: {row_count} genes | Significantes (p<0.05): {sig_count} | df = {df_chi2}"
+            # ── Footer ───────────────────────────────────────────────
+            footer = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_sidebar'], corner_radius=6)
+            footer.pack(fill='x', padx=8, pady=(10, 8))
+
+            sig_count = sum(1 for _, row in self.df.iterrows()
+                            if pd.notna(row.get(lrt_col)) and
+                            (1 - stats.chi2.cdf(row[lrt_col], df=df_chi2) < 0.05))
+
+            footer_text = (
+                f"Total: {row_count} genes  ·  "
+                f"Significantes p < 0.05: {sig_count}  ·  "
+                f"df = {df_chi2}  ·  "
+                f"★ = significante  ·  ★ ω>1 = seleção positiva confirmada"
+            )
             ctk.CTkLabel(footer, text=footer_text, font=("Roboto", 9),
-                        text_color=self.COLORS['accent_cyan']).pack(pady=8)
+                         text_color=self.COLORS['text_tertiary']).pack(pady=8, padx=12)
     
     # ═══════════════════════════════════════════════════════════
     # EXPORTAÇÃO
@@ -1566,7 +1817,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     for signal_type, data in signals.items():
                         html_content += f"""
             <div class="signal">
-                {signal_type}: ω = {data['omega']:.4f}, p-valor = {data['p_value']:.2e}
+                {signal_type}: ω = {data['omega']:.4f}, p-valor = {self._fmt_pval(data['p_value'])}
             </div>
 """
                     html_content += "        </div>\n"

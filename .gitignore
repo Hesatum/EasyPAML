@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.env
+.venv/
+venv/
+env/
+
+# PAML / CODEML output files
+*.ctl
+*.txt.bak
+2ML.dS
+2ML.dN
+2ML.t
+4fold.nuc
+codeml.log
+rst
+rst1
+rub
+lnf
+
+# Analysis outputs (keep examples, ignore user runs)
+outputs/
+resultados/
+!exemplos_teste/resultados/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Claude Code session data
+.claude/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
