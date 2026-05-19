@@ -1,4 +1,4 @@
-# 🧬 EasyPAML - Interface Intuitiva para Análise de Seleção Positiva
+# EasyPAML - Interface Intuitiva para Análise de Seleção Positiva
 
 **EasyPAML** é uma aplicação de fácil uso que permite a análise de seleção positiva em sequências genômicas usando o motor **PAML/CODEML**, sem necessidade de conhecimentos técnicos avançados.
 
@@ -17,7 +17,7 @@ Interpretação:
 
 ---
 
-## 🚀 Instalação Rápida (2 passos)
+## Instalação Rápida (2 passos)
 
 ### 1️⃣ Baixar Python
 
