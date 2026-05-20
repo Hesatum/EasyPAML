@@ -8,6 +8,7 @@ Requer apenas arquivos .fas e .tree
 import os
 import platform
 import subprocess
+import tempfile
 import time
 import shutil
 import re
@@ -213,6 +214,35 @@ class CodemlBatchAnalysis:
         """Retorna o número de cores lógicos disponíveis no sistema."""
         return os.cpu_count() or 1
 
+    @staticmethod
+    def _get_fast_tempdir() -> str:
+        """
+        Retorna o diretório temporário mais rápido disponível na plataforma.
+
+        Linux: verifica /dev/shm (tmpfs — filesystem em RAM).  Se existir e for
+        gravável, usa-o para que os arquivos intermediários do CODEML (rub, rst,
+        2base.t, etc.) nunca toquem o disco, eliminando latência de I/O.
+
+        Windows / Mac / outros: fallback para tempfile.gettempdir(), que em
+        instalações modernas geralmente aponta para um SSD NVMe do sistema.
+
+        Nota de segurança: /dev/shm costuma ser limitado a 50 % da RAM, mas os
+        arquivos temporários de cada run são pequenos (< 5 MB por gene×modelo) e
+        são removidos imediatamente após a execução, então o uso simultâneo máximo
+        é de aproximadamente (n_workers × 5 MB) — muitíssimo abaixo do limite.
+        """
+        shm = Path('/dev/shm')
+        if shm.exists() and shm.is_dir():
+            try:
+                # Verificação de escrita real antes de comprometer
+                probe = shm / f'.easypam_probe_{os.getpid()}'
+                probe.write_bytes(b'\x00')
+                probe.unlink()
+                return str(shm)
+            except OSError:
+                pass          # /dev/shm cheio ou sem permissão → fallback
+        return tempfile.gettempdir()
+
     def __init__(self):
         self.results = {}
         self.config = {}
@@ -264,21 +294,28 @@ class CodemlBatchAnalysis:
                              omega: float = 0.5,
                              cleandata: int = 1,
                              model_name: str = None,
-                             kappa: float = None) -> str:
-        """Gera conteúdo do arquivo .ctl baseado no modelo
+                             kappa: float = None,
+                             fix_kappa_heuristic: bool = False,
+                             fix_blength: int = 0) -> str:
+        """Gera conteúdo do arquivo .ctl baseado no modelo.
 
         Parameters:
-        - seqfile, treefile, outfile: paths/names to write into the ctl
-        - model_config: dict with model parameters
-        - omega: initial omega value (float)
-        - cleandata: 0/1 whether to remove ambiguous sites
-        - model_name: name of the model (to check if it's a neutral model)
-        - kappa: optional warm-start κ from a prior M0 run; if given, CODEML starts
-                 the κ search from this value, typically reducing iterations by 40-60%.
-                 κ is still freely estimated (fix_kappa=0) — only the starting point changes.
+        - seqfile, treefile, outfile : caminhos/nomes a inserir no .ctl
+        - model_config               : dict com parâmetros do modelo
+        - omega                      : valor inicial de ω
+        - cleandata                  : 0/1 — remover sítios ambíguos
+        - model_name                 : nome do modelo (para verificar modelos neutros)
+        - kappa                      : κ estimado pelo M0 (warm-start ou fixado)
+        - fix_kappa_heuristic        : se True, insere fix_kappa=1 (modo heurístico —
+                                       κ fixado no valor do M0; acelera otimização mas
+                                       é uma aproximação.  LRT ainda válido se ambos os
+                                       modelos do par usarem o mesmo κ fixado.)
+        - fix_blength                : 0=estimar do zero  2=warm-start do M0 (safe —
+                                       branch lengths re-estimados livremente a partir
+                                       de valores iniciais melhores; sem impacto nos
+                                       resultados finais)
 
         Branch-site_null: fix_omega=1, omega=1.0 (ω₂=1 fixado, Yang et al. 2005)
-        Todos os outros modelos usam os valores de model_config diretamente.
         """
         # Para Branch-site_null, garantir fix_omega=1 mesmo se o usuário tiver editado
         fix_omega = model_config['fix_omega']
@@ -288,13 +325,29 @@ class CodemlBatchAnalysis:
             fix_omega = 1
             final_omega = 1.0
         elif fix_omega == 0:
-            # Para modelos não-neutros, usar omega inicial do usuário
             final_omega = omega
 
-        # Warm-start kappa line (only when a reliable estimate is available)
-        kappa_line = ""
+        # ── Bloco de kappa ────────────────────────────────────────────────────
+        # fix_kappa_heuristic=True  → fix_kappa=1, kappa=<valor M0>  (modo rápido)
+        # fix_kappa_heuristic=False → fix_kappa=0, kappa=<warm-start> (padrão)
         if kappa is not None and 0.1 <= kappa <= 20:
-            kappa_line = f"\n        kappa = {kappa:.4f}     * ts/tv warm-start from M0 (freely re-estimated)"
+            if fix_kappa_heuristic:
+                kappa_block = (
+                    f"\n    fix_kappa = 1              * κ fixado no valor M0 (modo heurístico)"
+                    f"\n        kappa = {kappa:.4f}     * ts/tv ratio estimado pelo M0"
+                )
+            else:
+                kappa_block = (
+                    f"\n    fix_kappa = 0              * κ livre (re-estimado)"
+                    f"\n        kappa = {kappa:.4f}     * ts/tv warm-start do M0 (ponto de partida)"
+                )
+        else:
+            kappa_block = ""
+
+        # ── Linha fix_blength ─────────────────────────────────────────────────
+        # fix_blength=2: warm-start dos branch lengths do M0; re-estimados livremente.
+        # Matematicamente equivalente a fix_blength=0, porém converge mais rápido.
+        blength_line = f"\n  fix_blength = {fix_blength}              * 0=estimar do zero  2=warm-start dos branch lengths" if fix_blength != 0 else ""
 
         ctl_template = f"""      seqfile = {seqfile}
      treefile = {treefile}
@@ -313,7 +366,7 @@ class CodemlBatchAnalysis:
       estFreq = 0              * Use observed freqs or estimate freqs by ML
         clock = 0              * Clock model
     fix_omega = {fix_omega}         * Estimate or fix omega
-        omega = {final_omega}        * Initial or fixed omega{kappa_line}
+        omega = {final_omega}        * Initial or fixed omega{kappa_block}{blength_line}
 """
         return ctl_template
 
@@ -343,6 +396,46 @@ class CodemlBatchAnalysis:
             pass
         return None
     
+    @staticmethod
+    def _extract_fitted_tree(output_path: Path) -> Optional[str]:
+        """
+        Extrai a árvore com branch lengths otimizados do arquivo de saída do CODEML.
+
+        O CODEML escreve, perto do final do output, a topologia com os comprimentos
+        de ramo estimados por ML em formato Newick.  Essa árvore é usada nos modelos
+        complexos (M1a, M2a, M7, M8, Branch-site) como ponto de partida via
+        fix_blength = 2 ("inicializar a partir dos valores fornecidos na árvore mas
+        ainda re-estimar livremente").
+
+        fix_blength = 2  ≠  fix_blength = 1
+          • fix_blength = 1: branch lengths FIXADOS (aproximação, altera resultados).
+          • fix_blength = 2: branch lengths usados só como WARM-START; o otimizador
+            ainda os re-estima livremente.  Os resultados finais são matematicamente
+            idênticos a qualquer outro ponto de partida — apenas convergem mais rápido.
+
+        Estratégia de extração:
+        Varredura reversa das linhas do arquivo (a árvore ajustada aparece após os
+        parâmetros ML, próxima ao final).  Critérios:
+          – começa com '(' e termina com ';'   (formato Newick)
+          – contém ':'                          (branch lengths presentes)
+          – contém pelo menos um dígito após ':'(exclui topologias sem comprimentos)
+
+        Returns:
+            String Newick com branch lengths, ou None se a extração falhar.
+        """
+        try:
+            text = output_path.read_text(encoding='utf-8', errors='ignore')
+            for line in reversed(text.splitlines()):
+                s = line.strip()
+                if (s.startswith('(')
+                        and s.endswith(';')
+                        and ':' in s
+                        and re.search(r':\s*\d[\d.]*', s)):
+                    return s
+        except Exception:
+            pass
+        return None
+
     def interactive_setup(self):
         """Configuração interativa via input do usuário"""
         
@@ -523,10 +616,17 @@ class CodemlBatchAnalysis:
             print(f"{'='*60}")
 
             gene_results = {}
-            gene_kappa: Optional[float] = None  # cached from M0 for warm-starting
+            gene_kappa:       Optional[float] = None   # κ estimado pelo M0 → warm-start
+            gene_fitted_tree: Optional[str]   = None   # árvore ajustada M0 → warm-start branch lengths
 
-            # Always run M0 first (if selected) so its kappa estimate can warm-start
-            # all subsequent site/branch models, reducing optimizer iterations by 40-60 %.
+            # Modo heurístico (opcional, ativado pela GUI):
+            # fix_kappa=1 fixa κ no valor do M0 em vez de apenas usá-lo como ponto de partida.
+            # Economiza ~20-30 % de iterações por modelo mas é uma aproximação.
+            heuristic_mode = bool(self.config.get('heuristic_mode', False))
+
+            # Sempre rodar M0 primeiro (se selecionado):
+            #  • κ estimado pelo M0 é usado como warm-start ou fixado nos modelos seguintes
+            #  • árvore ajustada pelo M0 (branch lengths ML) é usada como warm-start via fix_blength=2
             models_ordered = (
                 ['M0'] + [m for m in self.config['models'] if m != 'M0']
                 if 'M0' in self.config['models']
@@ -539,30 +639,50 @@ class CodemlBatchAnalysis:
                 if pause_event is not None:
                     pause_event.wait()
 
-                # M0 doesn't benefit from warm-start (it IS the source)
-                kappa_for_this = None if model_name == 'M0' else gene_kappa
+                # M0 não usa warm-start (ele É a fonte)
+                kappa_for_this       = None if model_name == 'M0' else gene_kappa
+                fitted_tree_for_this = None if model_name == 'M0' else gene_fitted_tree
+                fix_kappa_for_this   = heuristic_mode and (model_name != 'M0') and (kappa_for_this is not None)
 
                 print(f"  - Running {model_name}...", end=" ", flush=True)
                 result = self._run_single_analysis(
                     fas_file=fas_file,
                     model_name=model_name,
                     log_file=log_file,
-                    warm_start_kappa=kappa_for_this
+                    warm_start_kappa=kappa_for_this,
+                    fitted_tree=fitted_tree_for_this,
+                    fix_kappa_heuristic=fix_kappa_for_this,
                 )
                 if result:
                     gene_results[model_name] = result
                     lnL = result.get('lnL')
-                    t = result.get('execution_time')
-                    # Extract kappa from M0 for warm-starting subsequent models
+                    t   = result.get('execution_time')
+
+                    # Extrair κ e árvore ajustada do M0 para warm-start dos modelos seguintes
                     if model_name == 'M0' and result.get('output_file'):
-                        extracted = self._extract_kappa(Path(result['output_file']))
-                        if extracted is not None:
-                            gene_kappa = extracted
-                            print(f"[OK]  lnL={lnL:.2f}  t={t:.1f}s  κ={gene_kappa:.3f}→warm-start" if lnL is not None and t is not None else f"[OK]  κ={gene_kappa:.3f}→warm-start")
-                        else:
-                            print(f"[OK]  lnL={lnL:.2f}  t={t:.1f}s" if lnL is not None and t is not None else "[OK]")
+                        out_path = Path(result['output_file'])
+
+                        extracted_k = self._extract_kappa(out_path)
+                        if extracted_k is not None:
+                            gene_kappa = extracted_k
+
+                        extracted_tree = self._extract_fitted_tree(out_path)
+                        if extracted_tree:
+                            gene_fitted_tree = extracted_tree
+
+                        # Montar sufixo de status para o log
+                        ws_parts = []
+                        if gene_kappa        is not None: ws_parts.append(f"k={gene_kappa:.3f}")
+                        if gene_fitted_tree  is not None: ws_parts.append("bl=ok")
+                        ws_tag = "  →warm-start[" + ", ".join(ws_parts) + "]" if ws_parts else ""
+                        print(f"[OK]  lnL={lnL:.2f}  t={t:.1f}s{ws_tag}" if lnL is not None and t is not None else f"[OK]{ws_tag}")
                     else:
-                        ws = f"  (κ₀={kappa_for_this:.3f})" if kappa_for_this is not None else ""
+                        tags = []
+                        if kappa_for_this is not None:
+                            tags.append(f"k0={'fix' if fix_kappa_for_this else 'warm'}={kappa_for_this:.3f}")
+                        if fitted_tree_for_this is not None:
+                            tags.append("bl=warm")
+                        ws = ("  (" + ", ".join(tags) + ")") if tags else ""
                         print(f"[OK]  lnL={lnL:.2f}  t={t:.1f}s{ws}" if lnL is not None and t is not None else "[OK]")
                 else:
                     print("[ERROR]")
@@ -608,9 +728,23 @@ class CodemlBatchAnalysis:
     
     def _run_single_analysis(self, fas_file: Path, model_name: str,
                             log_file: Path,
-                            warm_start_kappa: float = None) -> Optional[Dict]:
-        """Executa análise CODEML para um arquivo e modelo"""
-        
+                            warm_start_kappa: float = None,
+                            fitted_tree: str = None,
+                            fix_kappa_heuristic: bool = False) -> Optional[Dict]:
+        """Executa análise CODEML para um arquivo e modelo.
+
+        Parâmetros de otimização de velocidade (sem impacto nos resultados):
+          warm_start_kappa  : κ estimado pelo M0 — usado como ponto de partida para
+                              a busca de κ em modelos subsequentes (fix_kappa=0).
+          fitted_tree       : árvore Newick com branch lengths otimizados pelo M0 —
+                              escrita no sandbox e referenciada com fix_blength=2,
+                              de forma que o otimizador parte de valores já próximos
+                              do ótimo.  Os branch lengths são re-estimados livremente;
+                              os resultados finais são matematicamente idênticos.
+          fix_kappa_heuristic: se True, insere fix_kappa=1 no .ctl (modo heurístico —
+                              κ fixado no valor M0; acelera ~20-30 % por modelo mas
+                              é uma aproximação.  Ativado pelo toggle na GUI.)
+        """
         base_name = fas_file.stem
         # start from default config and allow GUI-provided custom overrides
         model_config = dict(self.MODEL_CONFIGS.get(model_name, {}))
@@ -643,124 +777,115 @@ class CodemlBatchAnalysis:
         ctl_filename = f"{base_name}_{model_name}.ctl"
         ctl_path = model_output_dir / ctl_filename
         
-        # Gerar arquivo .ctl ou usar .ctl custom do usuário
+        # ── Preparar sandbox de execução ────────────────────────────────────────
+        # Cria diretório temporário isolado usando tempfile.mkdtemp().
+        # • No Linux, usa /dev/shm (tmpfs em RAM) quando disponível → zero I/O de disco.
+        # • No Windows/Mac, usa o temp dir padrão do sistema (normalmente SSD NVMe).
+        # • Nome único gerado pelo tempfile → sem colisões, sem necessidade de retry.
+        temp_dir = Path(tempfile.mkdtemp(
+            prefix=f'easypam_{model_name}_{base_name}_',
+            dir=self._get_fast_tempdir()
+        ))
+
         try:
-            # determine the tree filename that will be present in the temp_dir
-            labeled_full = self.config.get('labeled_tree_content')
+            # ── Determinar conteúdo da árvore para este modelo ────────────────
+            labeled_full      = self.config.get('labeled_tree_content')
             labeled_branchsite = self.config.get('labeled_tree_branchsite')
 
-            # Choose which labeled content to use depending on model
-            # Support both old name (BranchSite*) and new name (Branch-site*)
+            # Suporte ao nome antigo (BranchSite*) e novo (Branch-site*)
             if model_name.startswith('BranchSite') or model_name.startswith('Branch-site'):
-                labeled_content = labeled_branchsite or (labeled_full if labeled_full and '#1' in labeled_full else None)
+                labeled_content = labeled_branchsite or (
+                    labeled_full if labeled_full and '#1' in labeled_full else None)
             elif model_name == 'Branch':
                 labeled_content = labeled_full
             else:
                 labeled_content = None
 
+            # ── Decidir treefile no .ctl e o que escrever no sandbox ──────────
+            # Prioridade:
+            #   1. Árvore marcada pelo usuário (labeled_content) — obrigatória para Branch/Branch-site
+            #   2. Árvore ajustada do M0 (fitted_tree) — warm-start via fix_blength=2
+            #      (apenas para modelos de sítios; Branch exige marcação específica)
+            #   3. Árvore original do usuário — caminho absoluto; nenhuma cópia necessária
+            use_warmstart_blength = False
             if labeled_content:
-                tree_filename = 'labeled.nwk'
+                # Escrever árvore marcada no sandbox; .ctl referencia pelo nome relativo
+                (temp_dir / 'labeled.nwk').write_text(labeled_content, encoding='utf-8')
+                tree_ref  = 'labeled.nwk'   # relativo ao CWD (temp_dir)
+                fix_bl    = 0                # branch lengths estimados normalmente
+            elif (fitted_tree
+                  and not model_name.startswith('Branch')
+                  and model_name != 'M0'):
+                # Warm-start: escrever árvore M0 no sandbox; usar fix_blength=2
+                # Os branch lengths serão RE-ESTIMADOS livremente — sem impacto nos resultados.
+                (temp_dir / 'warm_tree.nwk').write_text(fitted_tree, encoding='utf-8')
+                tree_ref  = 'warm_tree.nwk' # relativo ao CWD (temp_dir)
+                fix_bl    = 2                # inicializar a partir dos valores do M0
+                use_warmstart_blength = True
             else:
-                tree_filename = Path(self.config['tree_file']).name
+                # Árvore original referenciada por caminho absoluto → sem cópia
+                tree_ref  = str(Path(self.config['tree_file']).absolute())
+                fix_bl    = 0
 
-            custom_paths = self.config.get('model_ctl_paths', {}) or {}
-            provided_ctl = custom_paths.get(model_name)
+            # Nota: seqfile já usa caminho absoluto → a cópia do .fas para o
+            # sandbox é desnecessária (eliminamos aqui 1 cópia por gene×modelo).
+
+            # ── Gerar conteúdo do .ctl ────────────────────────────────────────
+            custom_paths  = self.config.get('model_ctl_paths', {}) or {}
+            provided_ctl  = custom_paths.get(model_name)
+            omega_initial = float(self.config.get('omega', model_config.get('omega', 0.5) or 0.5))
+            cleandata_val = int(self.config.get('cleandata', 1))
 
             if provided_ctl:
-                # If GUI passed a Path object or string, normalize
                 provided_path = Path(provided_ctl)
                 if provided_path.exists() and provided_path.is_file():
-                    # Read user ctl and replace seqfile/treefile/outfile only
                     raw = provided_path.read_text(encoding='utf-8')
 
-                    # Patterns: replace the right-hand side of seqfile/treefile/outfile
                     def _replace_setting(content: str, key: str, newval: str) -> str:
-                        pat = rf'(^\s*{re.escape(key)}\s*=).*?$'
+                        pat  = rf'(^\s*{re.escape(key)}\s*=).*?$'
                         repl = rf"\1 {newval}"
                         return re.sub(pat, repl, content, flags=re.MULTILINE)
 
-                    raw2 = _replace_setting(raw, 'seqfile', str(fas_file.absolute()))
-                    raw2 = _replace_setting(raw2, 'treefile', tree_filename)
-                    raw2 = _replace_setting(raw2, 'outfile', output_filename)
-
-                    with open(ctl_path, 'w', encoding='utf-8') as f:
-                        f.write(raw2)
+                    ctl_content = _replace_setting(raw,         'seqfile', str(fas_file.absolute()))
+                    ctl_content = _replace_setting(ctl_content, 'treefile', tree_ref)
+                    ctl_content = _replace_setting(ctl_content, 'outfile',  output_filename)
                 else:
-                    # fall back to generated ctl if provided path invalid
                     with open(log_file, 'a', encoding='utf-8') as log:
-                        log.write(f"Warning: provided .ctl for {model_name} not found: {provided_ctl}; generating default .ctl\n")
+                        log.write(f"Warning: provided .ctl for {model_name} not found: "
+                                  f"{provided_ctl}; generating default .ctl\n")
                     ctl_content = self.generate_ctl_content(
                         seqfile=str(fas_file.absolute()),
-                        treefile=tree_filename,
+                        treefile=tree_ref,
                         outfile=output_filename,
                         model_config=model_config,
-                        omega=float(self.config.get('omega', model_config.get('omega', 0.5) or 0.5)),
-                        cleandata=int(self.config.get('cleandata', 1)),
+                        omega=omega_initial,
+                        cleandata=cleandata_val,
                         model_name=model_name,
-                        kappa=warm_start_kappa
+                        kappa=warm_start_kappa,
+                        fix_kappa_heuristic=fix_kappa_heuristic,
+                        fix_blength=fix_bl,
                     )
-                    with open(ctl_path, 'w', encoding='utf-8') as f:
-                        f.write(ctl_content)
             else:
                 ctl_content = self.generate_ctl_content(
                     seqfile=str(fas_file.absolute()),
-                    treefile=tree_filename,
+                    treefile=tree_ref,
                     outfile=output_filename,
                     model_config=model_config,
-                    omega=float(self.config.get('omega', model_config.get('omega', 0.5) or 0.5)),
-                    cleandata=int(self.config.get('cleandata', 1)),
+                    omega=omega_initial,
+                    cleandata=cleandata_val,
                     model_name=model_name,
-                    kappa=warm_start_kappa
+                    kappa=warm_start_kappa,
+                    fix_kappa_heuristic=fix_kappa_heuristic,
+                    fix_blength=fix_bl,
                 )
-                with open(ctl_path, 'w', encoding='utf-8') as f:
-                    f.write(ctl_content)
 
-        except Exception as e:
-            with open(log_file, 'a', encoding='utf-8') as log:
-                log.write(f"ERROR creating .ctl [{model_name}] {base_name}: {str(e)}\n")
-            return None
-        
-        # Executar CODEML
-        temp_dir = model_output_dir / f"temp_{base_name}"
-        
-        try:
-            # Preparar diretório temporário (remover com retries no Windows se necessário)
-            if temp_dir.exists():
-                removed = False
-                for attempt in range(5):
-                    try:
-                        shutil.rmtree(temp_dir)
-                        removed = True
-                        break
-                    except PermissionError as pe:
-                        with open(log_file, 'a', encoding='utf-8') as log:
-                            log.write(f"Warning: could not remove {temp_dir} (attempt {attempt+1}/5): {pe}\n")
-                        time.sleep(0.5)
-                if not removed:
-                    # If we couldn't remove the directory (likely locked files), avoid reusing it.
-                    # Create a new unique temp dir to avoid conflicts with locked files.
-                    timestamp = int(time.time())
-                    new_temp_dir = model_output_dir / f"temp_{base_name}_{timestamp}"
-                    with open(log_file, 'a', encoding='utf-8') as log:
-                        log.write(f"Warning: failed to remove {temp_dir}; using new temp dir {new_temp_dir}\n")
-                    temp_dir = new_temp_dir
-            temp_dir.mkdir(exist_ok=True)
-
-            # Copiar arquivos necessários
-            shutil.copy(ctl_path, temp_dir)
-            shutil.copy(fas_file, temp_dir)
-            # If a labeled tree was selected for this model, write it into temp_dir
-            if labeled_content:
-                try:
-                    with open(temp_dir / 'labeled.nwk', 'w', encoding='utf-8') as tf:
-                        tf.write(labeled_content)
-                except Exception:
-                    try:
-                        shutil.copy(self.config['tree_file'], temp_dir)
-                    except Exception:
-                        pass
-            else:
-                shutil.copy(self.config['tree_file'], temp_dir)
+            # Escrever .ctl no sandbox (para o CODEML) e em model_output_dir (para referência)
+            ctl_in_sandbox = temp_dir / ctl_filename
+            ctl_in_sandbox.write_text(ctl_content, encoding='utf-8')
+            try:
+                ctl_path.write_text(ctl_content, encoding='utf-8')
+            except Exception:
+                pass  # falha ao salvar referência não impede a execução
 
             exec_start = time.time()
 

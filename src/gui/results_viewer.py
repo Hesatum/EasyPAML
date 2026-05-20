@@ -669,9 +669,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         for h_text, width in headers:
             ctk.CTkLabel(th, text=h_text,
-                         font=("Roboto", 9, "bold"),
+                         font=("Roboto", 11, "bold"),
                          text_color=self.COLORS['accent_blue'],
-                         width=width).pack(side='left', padx=4, pady=7)
+                         width=width).pack(side='left', padx=4, pady=8)
 
         # ── Rows ─────────────────────────────────────────────────────
         for i, (_, row) in enumerate(df_filtered.iterrows()):
@@ -713,8 +713,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
             for cell_text, width, clr in cells:
                 ctk.CTkLabel(row_frame, text=cell_text,
-                             font=("Roboto", 9),
-                             text_color=clr, width=width).pack(side='left', padx=4, pady=7)
+                             font=("Roboto", 11),
+                             text_color=clr, width=width).pack(side='left', padx=4, pady=8)
 
         # ── Footer stats ──────────────────────────────────────────────
         footer = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_sidebar'], corner_radius=6)
@@ -731,7 +731,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             f"★ (p≥0.95): {sig95}",
         ]
         ctk.CTkLabel(footer, text="  ·  ".join(stats_parts),
-                     font=("Roboto", 9),
+                     font=("Roboto", 10),
                      text_color=self.COLORS['text_tertiary']).pack(pady=8, padx=12)
     
     def _parse_sites_manual(self, filepath: Path, method: str):
@@ -849,10 +849,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         headers = [("Site Class", 120), ("Proportion", 150), ("Background w", 150), ("Foreground w", 150)]
         
         for h_text, width in headers:
-            ctk.CTkLabel(table_header_frame, text=h_text, 
-                        font=("Roboto", 10, "bold"),
+            ctk.CTkLabel(table_header_frame, text=h_text,
+                        font=("Roboto", 11, "bold"),
                         text_color=self.COLORS['accent_blue'],
-                        width=width).pack(side='left', padx=8, pady=6)
+                        width=width).pack(side='left', padx=8, pady=8)
         
         # Dados
         for cls in ['0', '1', '2a', '2b']:
@@ -896,8 +896,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             ]
             
             for cell_text, width in cells:
-                ctk.CTkLabel(row_frame, text=cell_text, font=("Roboto", 10),
-                           text_color=self.COLORS['text_secondary'], width=width).pack(side='left', padx=8, pady=6)
+                ctk.CTkLabel(row_frame, text=cell_text, font=("Roboto", 11),
+                           text_color=self.COLORS['text_secondary'], width=width).pack(side='left', padx=8, pady=8)
         
         # Footer with interpretation
         footer_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card_hover'],
@@ -1287,9 +1287,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             col_widths = [260, 120, 100, 130, 60]
 
         for i, (h, width) in enumerate(zip(headers, col_widths)):
-            ctk.CTkLabel(header_frame, text=h, font=("Roboto", 9, "bold"),
+            ctk.CTkLabel(header_frame, text=h, font=("Roboto", 11, "bold"),
                          text_color=self.COLORS['accent_blue'], width=width).grid(
-                             row=0, column=i, padx=5, pady=8, sticky="w")
+                             row=0, column=i, padx=5, pady=9, sticky="w")
         
         # Rows
         row_count = 0
@@ -1477,24 +1477,24 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         else:
                             color = self.COLORS['text_secondary']
                         
-                        label = ctk.CTkLabel(row_frame, text=v, font=("Roboto", 9),
+                        label = ctk.CTkLabel(row_frame, text=v, font=("Roboto", 11),
                                    text_color=color, width=width)
                         label.grid(row=0, column=i, padx=5, pady=8, sticky="w")
-                
+
                 row_count += 1
             else:
                 # Renderização padrão para outros modelos
-                row_frame = ctk.CTkFrame(parent, 
+                row_frame = ctk.CTkFrame(parent,
                                         fg_color=bg_color,
                                         corner_radius=4, border_width=1,
                                         border_color=border_color)
                 row_frame.pack(fill='x', padx=8, pady=4)
-                
+
                 # Destaque especial para omega > 1 E significante (apenas para não-Branch)
                 if is_strong:
-                    sig_text = "★ ω>1"
+                    sig_text = "** pos"
                 elif is_sig:
-                    sig_text = "★ Sim"
+                    sig_text = "* sig"
                 else:
                     sig_text = "—"
 
@@ -1513,13 +1513,13 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         color = self.COLORS['text_secondary']
 
                     if i == 1 and is_branch_model and '\n' in str(v):
-                        label = ctk.CTkLabel(row_frame, text=v, font=("Roboto", 8),
+                        label = ctk.CTkLabel(row_frame, text=v, font=("Roboto", 10),
                                              text_color=color, width=width, justify="left")
                     else:
-                        label = ctk.CTkLabel(row_frame, text=v, font=("Roboto", 9),
+                        label = ctk.CTkLabel(row_frame, text=v, font=("Roboto", 11),
                                              text_color=color, width=width)
 
-                    label.grid(row=0, column=i, padx=5, pady=7, sticky="nw")
+                    label.grid(row=0, column=i, padx=5, pady=8, sticky="nw")
             
             row_count += 1
         
@@ -1542,7 +1542,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 f"df = {df_chi2}  ·  "
                 f"★ = significante  ·  ★ ω>1 = seleção positiva confirmada"
             )
-            ctk.CTkLabel(footer, text=footer_text, font=("Roboto", 9),
+            ctk.CTkLabel(footer, text=footer_text, font=("Roboto", 10),
                          text_color=self.COLORS['text_tertiary']).pack(pady=8, padx=12)
     
     # ═══════════════════════════════════════════════════════════
@@ -1552,32 +1552,35 @@ class ResultsViewerWindow(ctk.CTkToplevel):
     def _export_excel(self):
         """Exporta para Excel"""
         filepath = filedialog.asksaveasfilename(
+            parent=self,
             defaultextension=".xlsx",
             filetypes=[("Excel", "*.xlsx")]
         )
         if filepath:
             try:
                 self.df.to_excel(filepath, sheet_name='Resultados', index=False)
-                messagebox.showinfo("✅ Sucesso", f"Exportado para:\n{filepath}")
+                messagebox.showinfo("Sucesso", f"Exportado para:\n{filepath}", parent=self)
             except Exception as e:
-                messagebox.showerror("❌ Erro", f"Erro ao exportar: {e}")
-    
+                messagebox.showerror("Erro", f"Erro ao exportar: {e}", parent=self)
+
     def _export_csv(self):
         """Exporta para CSV"""
         filepath = filedialog.asksaveasfilename(
+            parent=self,
             defaultextension=".csv",
             filetypes=[("CSV", "*.csv")]
         )
         if filepath:
             try:
                 self.df.to_csv(filepath, index=False, sep='\t')
-                messagebox.showinfo("✅ Sucesso", f"Exportado para:\n{filepath}")
+                messagebox.showinfo("Sucesso", f"Exportado para:\n{filepath}", parent=self)
             except Exception as e:
-                messagebox.showerror("❌ Erro", f"Erro ao exportar: {e}")
-    
+                messagebox.showerror("Erro", f"Erro ao exportar: {e}", parent=self)
+
     def _export_charts(self):
         """Exporta gráficos"""
         filepath = filedialog.asksaveasfilename(
+            parent=self,
             defaultextension=".png",
             filetypes=[("PNG", "*.png"), ("PDF", "*.pdf")]
         )
@@ -1645,13 +1648,14 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             plt.savefig(filepath, dpi=300, facecolor='#0f0f0f')
             plt.close()
             
-            messagebox.showinfo("✅ Sucesso", f"Gráficos exportados em:\n{filepath}")
+            messagebox.showinfo("Sucesso", f"Graficos exportados em:\n{filepath}", parent=self)
         except Exception as e:
-            messagebox.showerror("❌ Erro", f"Erro ao exportar: {e}")
+            messagebox.showerror("Erro", f"Erro ao exportar: {e}", parent=self)
     
     def _export_html(self):
         """Exporta relatório HTML interativo"""
         filepath = filedialog.asksaveasfilename(
+            parent=self,
             defaultextension=".html",
             filetypes=[("HTML", "*.html")]
         )
@@ -1889,6 +1893,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             
-            messagebox.showinfo("✅ Sucesso", f"Relatório HTML exportado em:\n{filepath}")
+            messagebox.showinfo("Sucesso", f"Relatorio HTML exportado em:\n{filepath}", parent=self)
         except Exception as e:
-            messagebox.showerror("❌ Erro", f"Erro ao exportar HTML: {e}")
+            messagebox.showerror("Erro", f"Erro ao exportar HTML: {e}", parent=self)
