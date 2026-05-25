@@ -13,11 +13,16 @@ import time
 import shutil
 import re
 import threading
+import traceback
 import concurrent.futures
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from threading import Thread
+
+import pandas as pd
+from scipy import stats
+
 from .sites_parser import SitesParser
 
 # Absolute path to the bundled codeml binary — works regardless of CWD.
@@ -208,6 +213,14 @@ class CodemlBatchAnalysis:
     # Valor crítico a α=0.05: 2.706 (qchisq(0.90, df=1))
     # Valor crítico a α=0.01: 5.412 (qchisq(0.98, df=1))
     BRANCHSITE_MIXTURE_CRITICAL = {0.05: 2.706, 0.01: 5.412}
+
+    # Mapeamento de nomes legados (pastas antigas) → nomes de exibição atuais.
+    # Centralizado aqui para evitar repetição em _regenerate_analysis_summary,
+    # _regenerate_batch_log e _regenerate_lrt_results.
+    _LEGACY_MODEL_NAMES: Dict[str, str] = {
+        'BranchSite_A':      'Branch-site',
+        'BranchSite_A_null': 'Branch-site_null',
+    }
     
     @staticmethod
     def available_cores() -> int:
@@ -252,6 +265,10 @@ class CodemlBatchAnalysis:
         self.current_total_genes = 0
         self.current_processed_genes = 0
         self._results_lock = threading.Lock()
+        # Conjunto thread-safe de processos CODEML ativos; permite stop imediato
+        self._active_processes: set = set()
+        self._processes_lock = threading.Lock()
+        self.current_process = None   # compat. GUI (último processo ativo)
     
     @staticmethod
     def auto_complete_null_models(selected_models: List[str], include_neutral: bool = True) -> List[str]:
@@ -443,24 +460,29 @@ class CodemlBatchAnalysis:
         print("CODEML INTERACTIVE BATCH ANALYSIS")
         print("="*80 + "\n")
         
-        # 1. Pasta com arquivos .fas
+        # 1. Pasta com arquivos .fas / .fasta / .phy / .phylip
         while True:
-            input_folder = input("📁 Enter path to folder with .fas files: ").strip().strip('"')
+            input_folder = input("Enter path to folder with .fas/.fasta/.phy/.phylip files: ").strip().strip('"')
             input_path = Path(input_folder)
             if input_path.exists() and input_path.is_dir():
-                fas_files = list(input_path.glob("*.fas"))
+                fas_files = (
+                    list(input_path.glob("*.fas"))
+                    + list(input_path.glob("*.fasta"))
+                    + list(input_path.glob("*.phy"))
+                    + list(input_path.glob("*.phylip"))
+                )
                 if fas_files:
-                    print(f"   [OK] Found {len(fas_files)} .fas files")
+                    print(f"   [OK] Found {len(fas_files)} sequence files (.fas/.fasta/.phy/.phylip)")
                     self.config['input_folder'] = input_path
                     break
                 else:
-                    print("   [ERROR] No .fas files found in this folder. Try again.")
+                    print("   [ERROR] No .fas/.fasta/.phy/.phylip files found in this folder. Try again.")
             else:
                 print("   [ERROR] Folder not found. Try again.")
         
         # 2. Arquivo de árvore
         while True:
-            tree_file = input("\n🌳 Enter path to tree file (.tree or .txt): ").strip().strip('"')
+            tree_file = input("\nEnter path to tree file (.tree or .txt): ").strip().strip('"')
             tree_path = Path(tree_file)
             if tree_path.exists() and tree_path.is_file():
                 print(f"   [OK] Tree file loaded: {tree_path.name}")
@@ -470,7 +492,7 @@ class CodemlBatchAnalysis:
                 print("   [ERROR] Tree file not found. Try again.")
         
         # 3. Pasta de saída
-        output_folder = input("\n💾 Enter path for output folder: ").strip().strip('"')
+        output_folder = input("\nEnter path for output folder: ").strip().strip('"')
         output_path = Path(output_folder)
         output_path.mkdir(parents=True, exist_ok=True)
         print(f"   [OK] Output folder: {output_path}")
@@ -496,17 +518,17 @@ class CodemlBatchAnalysis:
         
         print("\nBRANCH-SITE MODELS (variation in both):")
         print(f"  8. Branch-site      - {self.MODEL_CONFIGS['Branch-site']['description']}")
-        print(f"  9. BranchSite_A_null - {self.MODEL_CONFIGS['BranchSite_A_null']['description']}")
+        print(f"  9. Branch-site_null - {self.MODEL_CONFIGS['Branch-site_null']['description']}")
         
         print("\nEnter model numbers separated by spaces (e.g., '1 4 5' for M0, M7, M8)")
         print("Or enter 'all' for all site models (recommended for testing positive selection)")
         
-        model_input = input("\n🔢 Select models: ").strip().lower()
+        model_input = input("\nSelect models: ").strip().lower()
         
         model_map = {
-            '1': 'M0', '2': 'M1a', '3': 'M2a', '4': 'M7', 
+            '1': 'M0', '2': 'M1a', '3': 'M2a', '4': 'M7',
             '5': 'M8', '6': 'Branch',
-            '7': 'BranchSite_A', '8': 'BranchSite_A_null'
+            '7': 'Branch-site', '8': 'Branch-site_null'
         }
         
         if model_input == 'all':
@@ -523,14 +545,14 @@ class CodemlBatchAnalysis:
         print(f"   [OK] Models to run: {', '.join(selected_models)}")
         
         # 5. Timeout
-        print("\n⏱️  Set timeout per analysis (in seconds)")
+        print("\nSet timeout per analysis (in seconds)")
         print("   Recommended: 1600 (≈27 minutes)")
         timeout_input = input("   Timeout [1600]: ").strip()
         self.config['timeout'] = int(timeout_input) if timeout_input else 1600
         print(f"   [OK] Timeout set to {self.config['timeout']} seconds")
         
         # 6. LRT
-        print("\n📊 Perform Likelihood Ratio Tests (LRT)?")
+        print("\nPerform Likelihood Ratio Tests (LRT)?")
         lrt_input = input("   Run LRT? [Y/n]: ").strip().lower()
         self.config['run_lrt'] = lrt_input != 'n'
         print(f"   [OK] LRT: {'Yes' if self.config['run_lrt'] else 'No'}")
@@ -578,8 +600,15 @@ class CodemlBatchAnalysis:
             log.write(f"Models: {', '.join(self.config['models'])}\n")
             log.write("="*80 + "\n\n")
         
-        # Obter arquivos .fas
-        fas_files = sorted(self.config['input_folder'].glob("*.fas"))
+        # Obter arquivos de sequência (.fas, .fasta, .phy, .phylip)
+        _input = self.config['input_folder']
+        fas_files = sorted(
+            list(_input.glob("*.fas"))
+            + list(_input.glob("*.fasta"))
+            + list(_input.glob("*.phy"))
+            + list(_input.glob("*.phylip")),
+            key=lambda p: p.name.lower()
+        )
         self.current_total_genes = len(fas_files)
         self.current_processed_genes = 0
 
@@ -609,11 +638,106 @@ class CodemlBatchAnalysis:
                 try:
                     manual_all_ev.clear()
                 except Exception:
-                    pass
+                    pass  # evento já limpo ou inválido — não é crítico
 
             print(f"\n{'='*60}")
             print(f"[{idx}/{len(fas_files)}] Gene: {fas_file.stem}")
             print(f"{'='*60}")
+
+            # ── Validar arquivo de sequência antes de passar ao CODEML ───────────
+            # CODEML rejeita silenciosamente arquivos com sequências de tamanhos
+            # diferentes (cria outfile vazio e sai com código -1).  Detectar aqui
+            # evita arquivos de resultado vazios e dá ao usuário uma mensagem clara.
+            # Suporta FASTA (>..) e PHYLIP sequential/interleaved (N  L na 1ª linha).
+            try:
+                _raw_text  = fas_file.read_text(encoding='utf-8', errors='ignore')
+                _raw_lines = [l for l in _raw_text.splitlines() if l.strip()]
+                _seqs: dict[str, str] = {}
+
+                _first_clean = _raw_lines[0].strip() if _raw_lines else ''
+                _is_phylip   = (
+                    bool(_first_clean)
+                    and _first_clean.split()[0].lstrip('-').isdigit()
+                    and not _first_clean.startswith('>')
+                )
+
+                if _is_phylip:
+                    # PHYLIP sequential: "N  L\nname10+seq\n..."
+                    _ph_parts = _first_clean.split()
+                    _ph_ns    = int(_ph_parts[0])
+                    _ph_ls    = int(_ph_parts[1]) if len(_ph_parts) > 1 else 0
+                    # Cada sequência ocupa uma ou mais linhas; nome = primeiros 10 chars
+                    _seq_lines = _raw_lines[1:]
+                    _cur_name: str | None = None
+                    _cur_seq:  list[str]  = []
+                    for _sln in _seq_lines:
+                        # Nova sequência: linha com nome no início (não é espaço ou continuação)
+                        if not _sln.startswith(' ') and len(_seqs) < _ph_ns:
+                            if _cur_name is not None:
+                                _seqs[_cur_name] = ''.join(_cur_seq)
+                            _cur_name = _sln[:10].strip() or f'seq{len(_seqs)+1}'
+                            _cur_seq  = [re.sub(r'\s', '', _sln[10:])]
+                        elif _cur_name is not None:
+                            _cur_seq.append(re.sub(r'\s', '', _sln))
+                    if _cur_name is not None:
+                        _seqs[_cur_name] = ''.join(_cur_seq)
+                else:
+                    # FASTA: > header lines
+                    _cur: str | None = None
+                    _parts: list[str] = []
+                    for _ln in _raw_lines:
+                        if _ln.startswith('>'):
+                            if _cur is not None:
+                                _seqs[_cur] = ''.join(_parts)
+                            _cur   = _ln[1:].split()[0]
+                            _parts = []
+                        elif _cur is not None:
+                            _parts.append(_ln.strip())
+                    if _cur is not None:
+                        _seqs[_cur] = ''.join(_parts)
+
+                _fmt_label = "PHYLIP" if _is_phylip else "FASTA"
+
+                if len(_seqs) < 2:
+                    print(f"[SKIP] {fas_file.name}: arquivo {_fmt_label} com menos de 2 sequencias — pulando")
+                    with open(log_file, 'a', encoding='utf-8') as _log:
+                        _log.write(f"[SKIP] {fas_file.stem}: menos de 2 sequencias no {_fmt_label}\n")
+                    with self._results_lock:
+                        self.results[fas_file.stem] = {}
+                        self.current_processed_genes += 1
+                    return fas_file.stem, {}
+
+                _lengths = {len(s) for s in _seqs.values()}
+                if len(_lengths) != 1:
+                    _sorted = sorted(_lengths)
+                    print(
+                        f"[SKIP] {fas_file.name}: sequencias nao alinhadas "
+                        f"(tamanhos: {_sorted}) — pulando"
+                    )
+                    with open(log_file, 'a', encoding='utf-8') as _log:
+                        _log.write(
+                            f"[SKIP] {fas_file.stem}: sequencias nao alinhadas "
+                            f"(tamanhos distintos: {_sorted})\n"
+                        )
+                    with self._results_lock:
+                        self.results[fas_file.stem] = {}
+                        self.current_processed_genes += 1
+                    return fas_file.stem, {}
+
+                _seq_len = _lengths.pop()
+                if _seq_len < 6:
+                    print(f"[SKIP] {fas_file.name}: sequencias muito curtas ({_seq_len} bp) — pulando")
+                    with open(log_file, 'a', encoding='utf-8') as _log:
+                        _log.write(f"[SKIP] {fas_file.stem}: sequencias com {_seq_len} bp (minimo 6 bp)\n")
+                    with self._results_lock:
+                        self.results[fas_file.stem] = {}
+                        self.current_processed_genes += 1
+                    return fas_file.stem, {}
+
+            except Exception as _val_err:
+                # Erro ao ler o arquivo — deixar o CODEML tentar e lidar com a falha
+                with open(log_file, 'a', encoding='utf-8') as _log:
+                    _log.write(f"[WARN] {fas_file.stem}: nao foi possivel validar arquivo de sequencia: {_val_err}\n")
 
             gene_results = {}
             gene_kappa:       Optional[float] = None   # κ estimado pelo M0 → warm-start
@@ -757,11 +881,10 @@ class CodemlBatchAnalysis:
                 custom_configs = custom_configs or {}
 
             if model_name in custom_configs:
-                # override keys present in custom config
                 for k, v in custom_configs[model_name].items():
                     model_config[k] = v
         except Exception:
-            pass
+            pass  # parâmetros customizados inválidos — usa configuração padrão
         
         # Pause support: if provided, wait before creating output dir / starting work
         pause_event = self.config.get('pause_event')
@@ -788,6 +911,150 @@ class CodemlBatchAnalysis:
         ))
 
         try:
+            # ── Sanitizar headers / preparar cópia do arquivo de sequência ─────────
+            # Para FASTA: CODEML 4.9j tem um limite interno de ~90 chars por linha de
+            # header.  Headers mais longos corrompem o parser e causam:
+            #   "Error in sequence data file: O at 10 seq 1."
+            # Solução: cópia no sandbox com headers truncados ao nome da espécie.
+            # Para PHYLIP: arquivo já está no formato correto; cópia direta no sandbox.
+            sanitized_fas = temp_dir / fas_file.name
+            _seqfile_ref  = str(fas_file.absolute())   # fallback: arquivo original
+            try:
+                _raw_seq = fas_file.read_text(encoding='utf-8', errors='replace')
+                _raw_seq_lines = _raw_seq.splitlines()
+                _first_sq = (_raw_seq_lines[0].strip() if _raw_seq_lines else '')
+                _seq_is_phylip = (
+                    bool(_first_sq)
+                    and _first_sq.split()[0].lstrip('-').isdigit()
+                    and not _first_sq.startswith('>')
+                )
+                if _seq_is_phylip:
+                    # PHYLIP: copiar sem modificar (formato já adequado para CODEML)
+                    sanitized_fas.write_text(_raw_seq, encoding='utf-8')
+                else:
+                    # FASTA: truncar headers ao primeiro token (nome da espécie)
+                    _lines_out: list[str] = []
+                    for _fline in _raw_seq_lines:
+                        if _fline.startswith('>'):
+                            _spname = _fline[1:].split()[0] if _fline[1:].strip() else 'seq'
+                            _lines_out.append(f'>{_spname}')
+                        else:
+                            _lines_out.append(_fline)
+                    sanitized_fas.write_text('\n'.join(_lines_out) + '\n', encoding='utf-8')
+                _seqfile_ref = str(sanitized_fas)
+            except Exception as _san_err:
+                with open(log_file, 'a', encoding='utf-8') as _log:
+                    _log.write(
+                        f"[WARN] {base_name}: preparação do arquivo de sequência falhou: "
+                        f"{_san_err}; usando arquivo original\n"
+                    )
+
+            # ── Podar árvore para corresponder ao FASTA ──────────────────────────
+            # CODEML exige que o número de sequências no FASTA seja igual ao número
+            # de taxons declarado no cabeçalho do arquivo de árvore ("N  1").
+            # Controlado pelo toggle 'auto_prune_tree' (padrão: True).
+            #   1. Identificar taxons da árvore ausentes no FASTA → podar
+            #   2. Identificar sequências do FASTA ausentes na árvore → excluir
+            #   3. Atualizar o contador na primeira linha do arquivo de árvore
+            _pruned_tree_path: Optional[Path] = None
+            if not self.config.get('auto_prune_tree', True):
+                pass  # Poda desativada pelo usuário — usar árvore original
+            else:
+                try:
+                    from io import StringIO as _SIO
+                    from Bio import Phylo as _Phylo
+
+                    # Taxons presentes no arquivo de sequência sanitizado
+                    # (suporta FASTA com '>' e PHYLIP sequential com nome nos primeiros 10 chars)
+                    _fasta_taxa: set = set()
+                    _san_lines = sanitized_fas.read_text(encoding='utf-8', errors='ignore').splitlines()
+                    _san_first = _san_lines[0].strip() if _san_lines else ''
+                    _san_is_phy = (
+                        bool(_san_first)
+                        and _san_first.split()[0].lstrip('-').isdigit()
+                        and not _san_first.startswith('>')
+                    )
+                    if _san_is_phy:
+                        # PHYLIP: extrair nomes (primeiros 10 chars não-espaço de cada linha de sequência)
+                        _phy_ns = int(_san_first.split()[0])
+                        for _pln in _san_lines[1:]:
+                            if _pln and not _pln.startswith(' ') and len(_fasta_taxa) < _phy_ns:
+                                _tx = _pln[:10].strip()
+                                if _tx:
+                                    _fasta_taxa.add(_tx)
+                    else:
+                        # FASTA: extrair nomes dos headers '>'
+                        for _fln in _san_lines:
+                            if _fln.startswith('>'):
+                                _tx = _fln[1:].split()[0] if _fln[1:].strip() else ''
+                                if _tx:
+                                    _fasta_taxa.add(_tx)
+
+                    # Ler e parsear a árvore original
+                    _orig_tree_file = Path(self.config['tree_file'])
+                    _orig_raw = _orig_tree_file.read_text(encoding='utf-8', errors='ignore')
+                    _orig_lines = _orig_raw.splitlines()
+                    # Cabeçalho PHYLIP opcional ("N  k") na primeira linha
+                    _has_header = (
+                        _orig_lines
+                        and _orig_lines[0].strip()
+                        and _orig_lines[0].strip().split()[0].isdigit()
+                    )
+                    _nwk_str = '\n'.join(_orig_lines[1:]) if _has_header else _orig_raw
+
+                    _bio_tree = _Phylo.read(_SIO(_nwk_str), 'newick')
+                    _tree_taxa: set = {t.name for t in _bio_tree.get_terminals() if t.name}
+
+                    _not_in_tree  = _fasta_taxa - _tree_taxa   # sequências FASTA sem match na árvore
+                    _not_in_fasta = _tree_taxa - _fasta_taxa   # taxons da árvore ausentes no FASTA
+
+                    if _not_in_tree:
+                        with open(log_file, 'a', encoding='utf-8') as _log:
+                            _log.write(
+                                f"[WARN] {base_name} [{model_name}]: {len(_not_in_tree)} "
+                                f"sequencia(s) do FASTA nao encontrada(s) na arvore (serao "
+                                f"excluidas da analise): {sorted(_not_in_tree)}\n"
+                            )
+
+                    # Podar árvore: remover taxons ausentes no FASTA
+                    for _tx in _not_in_fasta:
+                        _bio_tree.prune(_tx)
+
+                    # Filtrar FASTA: manter apenas taxons presentes na árvore
+                    _matching = _fasta_taxa & _tree_taxa
+                    if _not_in_tree:
+                        _raw_san = sanitized_fas.read_text(encoding='utf-8', errors='ignore')
+                        _kept_lines: list = []
+                        _include = False
+                        for _fln in _raw_san.splitlines():
+                            if _fln.startswith('>'):
+                                _tx = _fln[1:].split()[0] if _fln[1:].strip() else ''
+                                _include = _tx in _matching
+                            if _include:
+                                _kept_lines.append(_fln)
+                        sanitized_fas.write_text('\n'.join(_kept_lines) + '\n', encoding='utf-8')
+
+                    # Escrever árvore podada no sandbox
+                    _pnwk_io = _SIO()
+                    _Phylo.write(_bio_tree, _pnwk_io, 'newick')
+                    _pnwk = _pnwk_io.getvalue().strip()
+                    # Bio.Phylo adiciona branch length no nó raiz (ex: "...):0.00000;")
+                    # que CODEML não aceita — remover esse artefato
+                    _pnwk = re.sub(r'\):[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?;$', ');', _pnwk)
+                    _n_match = _bio_tree.count_terminals()
+                    _pruned_content = f"{_n_match}  1\n{_pnwk}\n"
+                    _pruned_tree_path = temp_dir / 'pruned_tree.nwk'
+                    _pruned_tree_path.write_text(_pruned_content, encoding='utf-8')
+
+                except ImportError:
+                    pass  # Biopython indisponível; CODEML pode falhar com contagem diferente
+                except Exception as _prune_err:
+                    with open(log_file, 'a', encoding='utf-8') as _log:
+                        _log.write(
+                            f"[WARN] {base_name} [{model_name}]: poda automatica da arvore "
+                            f"falhou: {_prune_err}\n"
+                        )
+
             # ── Determinar conteúdo da árvore para este modelo ────────────────
             labeled_full      = self.config.get('labeled_tree_content')
             labeled_branchsite = self.config.get('labeled_tree_branchsite')
@@ -807,7 +1074,6 @@ class CodemlBatchAnalysis:
             #   2. Árvore ajustada do M0 (fitted_tree) — warm-start via fix_blength=2
             #      (apenas para modelos de sítios; Branch exige marcação específica)
             #   3. Árvore original do usuário — caminho absoluto; nenhuma cópia necessária
-            use_warmstart_blength = False
             if labeled_content:
                 # Escrever árvore marcada no sandbox; .ctl referencia pelo nome relativo
                 (temp_dir / 'labeled.nwk').write_text(labeled_content, encoding='utf-8')
@@ -821,14 +1087,16 @@ class CodemlBatchAnalysis:
                 (temp_dir / 'warm_tree.nwk').write_text(fitted_tree, encoding='utf-8')
                 tree_ref  = 'warm_tree.nwk' # relativo ao CWD (temp_dir)
                 fix_bl    = 2                # inicializar a partir dos valores do M0
-                use_warmstart_blength = True
+            elif _pruned_tree_path is not None:
+                # Árvore podada (gerada acima) — referenciada pelo nome relativo no sandbox
+                tree_ref  = 'pruned_tree.nwk'
+                fix_bl    = 0
             else:
                 # Árvore original referenciada por caminho absoluto → sem cópia
                 tree_ref  = str(Path(self.config['tree_file']).absolute())
                 fix_bl    = 0
 
-            # Nota: seqfile já usa caminho absoluto → a cópia do .fas para o
-            # sandbox é desnecessária (eliminamos aqui 1 cópia por gene×modelo).
+            # Nota: seqfile agora aponta para a cópia sanitizada no sandbox.
 
             # ── Gerar conteúdo do .ctl ────────────────────────────────────────
             custom_paths  = self.config.get('model_ctl_paths', {}) or {}
@@ -846,7 +1114,7 @@ class CodemlBatchAnalysis:
                         repl = rf"\1 {newval}"
                         return re.sub(pat, repl, content, flags=re.MULTILINE)
 
-                    ctl_content = _replace_setting(raw,         'seqfile', str(fas_file.absolute()))
+                    ctl_content = _replace_setting(raw,         'seqfile', _seqfile_ref)
                     ctl_content = _replace_setting(ctl_content, 'treefile', tree_ref)
                     ctl_content = _replace_setting(ctl_content, 'outfile',  output_filename)
                 else:
@@ -854,7 +1122,7 @@ class CodemlBatchAnalysis:
                         log.write(f"Warning: provided .ctl for {model_name} not found: "
                                   f"{provided_ctl}; generating default .ctl\n")
                     ctl_content = self.generate_ctl_content(
-                        seqfile=str(fas_file.absolute()),
+                        seqfile=_seqfile_ref,
                         treefile=tree_ref,
                         outfile=output_filename,
                         model_config=model_config,
@@ -867,7 +1135,7 @@ class CodemlBatchAnalysis:
                     )
             else:
                 ctl_content = self.generate_ctl_content(
-                    seqfile=str(fas_file.absolute()),
+                    seqfile=_seqfile_ref,
                     treefile=tree_ref,
                     outfile=output_filename,
                     model_config=model_config,
@@ -962,44 +1230,55 @@ class CodemlBatchAnalysis:
                             except Exception:
                                 pass
 
-                            auto_continue = bool(self.config.get('auto_continue_stop_codons', True))
+                            auto_continue = bool(self.config.get('auto_continue_stop_codons', False))
+                            n_workers = int(self.config.get('n_workers', 1))
+
+                            # In parallel mode, multiple workers share the same
+                            # manual_continue_event.  Blocking on a shared event
+                            # causes all-but-one worker to deadlock → genes appear
+                            # skipped.  Force auto-continue whenever n_workers > 1.
+                            if n_workers > 1 and not auto_continue:
+                                auto_continue = True
+                                with open(log_file, 'a', encoding='utf-8') as log:
+                                    log.write(
+                                        f"[{model_name}] {base_name}: Parallel mode — "
+                                        f"forced auto-continue for stop codon.\n"
+                                    )
+
                             manual_all_ev = self.config.get('manual_continue_all_event')
+
+                            def _send_enter(reason: str) -> None:
+                                """Write a newline to the subprocess stdin reliably on Windows."""
+                                try:
+                                    if process.stdin:
+                                        # Use the binary buffer when available so the
+                                        # write bypasses TextIOWrapper internal buffering.
+                                        if hasattr(process.stdin, 'buffer'):
+                                            process.stdin.buffer.write(b'\n')
+                                            process.stdin.buffer.flush()
+                                        else:
+                                            process.stdin.write('\n')
+                                            process.stdin.flush()
+                                    with open(log_file, 'a', encoding='utf-8') as log:
+                                        log.write(f"[{model_name}] {base_name}: {reason}\n")
+                                except Exception as exc:
+                                    with open(log_file, 'a', encoding='utf-8') as log:
+                                        log.write(
+                                            f"[{model_name}] {base_name}: "
+                                            f"Failed to send Enter ({reason}): {exc}\n"
+                                        )
 
                             # If user requested auto-continue, or a manual-all event is set, send Enter
                             if auto_continue:
-                                try:
-                                    if process.stdin:
-                                        process.stdin.write('\n')
-                                        process.stdin.flush()
-                                    with open(log_file, 'a', encoding='utf-8') as log:
-                                        log.write(f"[{model_name}] {base_name}: Auto-sent Enter to subprocess (stop codon).\n")
-                                except Exception as e:
-                                    with open(log_file, 'a', encoding='utf-8') as log:
-                                        log.write(f"[{model_name}] {base_name}: Failed to auto-send Enter: {e}\n")
+                                _send_enter("Auto-sent Enter to subprocess (stop codon).")
                             elif manual_all_ev is not None and getattr(manual_all_ev, 'is_set') and manual_all_ev.is_set():
-                                try:
-                                    if process.stdin:
-                                        process.stdin.write('\n')
-                                        process.stdin.flush()
-                                    with open(log_file, 'a', encoding='utf-8') as log:
-                                        log.write(f"[{model_name}] {base_name}: manual-all event set; sent Enter.\n")
-                                except Exception as e:
-                                    with open(log_file, 'a', encoding='utf-8') as log:
-                                        log.write(f"[{model_name}] {base_name}: Failed to send Enter for manual-all: {e}\n")
+                                _send_enter("manual-all event set; sent Enter.")
                             else:
                                 # Wait for GUI/user to signal continuation via event
                                 event = self.config.get('manual_continue_event')
                                 if event is None:
                                     # no event provided -> fallback to auto
-                                    try:
-                                        if process.stdin:
-                                            process.stdin.write('\n')
-                                            process.stdin.flush()
-                                        with open(log_file, 'a', encoding='utf-8') as log:
-                                            log.write(f"[{model_name}] {base_name}: No manual event provided; auto-sent Enter.\n")
-                                    except Exception as e:
-                                        with open(log_file, 'a', encoding='utf-8') as log:
-                                            log.write(f"[{model_name}] {base_name}: Failed fallback auto-send Enter: {e}\n")
+                                    _send_enter("No manual event provided; auto-sent Enter.")
                                 else:
                                     with open(log_file, 'a', encoding='utf-8') as log:
                                         log.write(f"[{model_name}] {base_name}: Waiting for manual continue event...\n")
@@ -1010,15 +1289,7 @@ class CodemlBatchAnalysis:
                                         event.clear()
                                     except Exception:
                                         pass
-                                    try:
-                                        if process.stdin:
-                                            process.stdin.write('\n')
-                                            process.stdin.flush()
-                                        with open(log_file, 'a', encoding='utf-8') as log:
-                                            log.write(f"[{model_name}] {base_name}: Manual continue event received; sent Enter.\n")
-                                    except Exception as e:
-                                        with open(log_file, 'a', encoding='utf-8') as log:
-                                            log.write(f"[{model_name}] {base_name}: Failed to send Enter after manual event: {e}\n")
+                                    _send_enter("Manual continue event received; sent Enter.")
                 except Exception:
                     pass
 
@@ -1028,25 +1299,65 @@ class CodemlBatchAnalysis:
             stdout_thread.start()
             stderr_thread.start()
 
+            # Registrar processo como ativo (stop imediato e monitoramento paralelo)
+            with self._processes_lock:
+                self._active_processes.add(process)
+                self.current_process = process
+
+            stop_event  = self.config.get('stop_event')
+            pause_event = self.config.get('pause_event')
+            timeout_s   = self.config.get('timeout', 1600)
+            deadline    = time.time() + timeout_s
+            timed_out   = False
+            stopped     = False
+
             try:
-                process.wait(timeout=self.config['timeout'])
-            except subprocess.TimeoutExpired:
-                # Timeout: try to capture what we have and kill process
-                try:
-                    if process.poll() is None:
-                        process.kill()
-                except Exception:
-                    pass
-                stdout_thread.join(timeout=1)
-                stderr_thread.join(timeout=1)
+                while process.poll() is None:
+                    # Verificar stop imediato
+                    if stop_event is not None and stop_event.is_set():
+                        stopped = True
+                        try:
+                            process.terminate()
+                            process.wait(timeout=3)
+                        except Exception:
+                            try:
+                                process.kill()
+                            except Exception:
+                                pass
+                        break
+                    # Verificar timeout
+                    if time.time() > deadline:
+                        timed_out = True
+                        try:
+                            process.kill()
+                        except Exception:
+                            pass
+                        break
+                    # Aguardar; checar a cada 0.5 s para responsividade
+                    time.sleep(0.5)
+            finally:
+                with self._processes_lock:
+                    self._active_processes.discard(process)
+                    if self.current_process is process:
+                        self.current_process = None
+
+            stdout_thread.join(timeout=1)
+            stderr_thread.join(timeout=1)
+
+            if timed_out:
                 with open(log_file, 'a', encoding='utf-8') as log:
-                    log.write(f"[{model_name}] {base_name}: TIMEOUT after {self.config['timeout']}s\n")
+                    log.write(f"[{model_name}] {base_name}: TIMEOUT after {timeout_s}s\n")
                     log.write(f"  Captured stdout (last 200 lines):\n")
                     for L in stdout_lines[-200:]:
                         log.write(L + "\n")
                     log.write(f"  Captured stderr (last 200 lines):\n")
                     for L in stderr_lines[-200:]:
                         log.write(L + "\n")
+                return None
+
+            if stopped:
+                with open(log_file, 'a', encoding='utf-8') as log:
+                    log.write(f"[{model_name}] {base_name}: STOPPED by user\n")
                 return None
 
             # Wait for reader threads to finish
@@ -1137,7 +1448,6 @@ class CodemlBatchAnalysis:
             }
 
         except Exception as e:
-            import traceback
             tb = traceback.format_exc()
             with open(log_file, 'a', encoding='utf-8') as log:
                 log.write(f"[{model_name}] {base_name}: EXCEPTION - {e}\n")
@@ -1195,17 +1505,16 @@ class CodemlBatchAnalysis:
                         match = re.search(r'np:\s*(\d+)', line)
                         if match:
                             return int(match.group(1))
-        except:
+        except Exception:
             pass
         return None
-    
+
     def _extract_omega(self, output_file: Path) -> Optional[float]:
         """Extrai omega usando SitesParser (suporta Branch/Branch-Site/Site models)"""
         try:
-            # Usar função robusta que tenta múltiplas estratégias
             omega = SitesParser.extract_omega_robust(output_file)
             return omega
-        except:
+        except Exception:
             return None
     
     def _save_summary(self):
@@ -1241,7 +1550,8 @@ class CodemlBatchAnalysis:
             # Data
             for gene_name in sorted(self.results.keys()):
                 gene_results = self.results[gene_name]
-                row = [str(gene_name).replace('\n', '').replace('\r', '')]  # Remover newlines
+                # Remover caracteres que corrompem o formato TSV
+                row = [str(gene_name).replace('\n', '').replace('\r', '').replace('\t', '_')]
                 
                 for model in self.config['models']:
                     if model in gene_results and gene_results[model]:
@@ -1256,7 +1566,7 @@ class CodemlBatchAnalysis:
                                 try:
                                     from pathlib import Path
                                     omega_value = SitesParser.extract_omega_robust(Path(results_file))
-                                except:
+                                except Exception:
                                     omega_value = None
                         
                         row.extend([
@@ -1389,8 +1699,6 @@ class CodemlBatchAnalysis:
                         lrt_stat = 0.0
 
                     # Calcular p-value
-                    from scipy import stats
-
                     is_branchsite = (null_model == 'Branch-site_null' and alt_model == 'Branch-site')
 
                     if is_branchsite:
@@ -1432,10 +1740,14 @@ class CodemlBatchAnalysis:
                     f.write("\n" + "-"*60 + "\n\n")
                 
                 # Sumário da comparação
-                f.write("\nSUMMARY:\n")
-                f.write(f"  Total genes analyzed: {total_valid}\n")
-                f.write(f"  Significant at p < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
-                f.write(f"  Significant at p < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
+                f.write("\nRESUMO:\n")
+                f.write(f"  Total de genes analisados: {total_valid}\n")
+                if total_valid > 0:
+                    f.write(f"  Significativo em p < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
+                    f.write(f"  Significativo em p < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
+                else:
+                    f.write(f"  Significativo em p < 0.05: {sig_count_05}\n")
+                    f.write(f"  Significativo em p < 0.01: {sig_count_01}\n")
                 f.write("\n")
         
         print(f"\n  [OK] LRT results saved: {lrt_file}")
@@ -1507,9 +1819,16 @@ class CodemlBatchAnalysis:
         output_folder.mkdir(parents=True, exist_ok=True)
         log_file = output_folder / "wgs_analysis_log.txt"
 
-        fas_files = sorted(Path(self.config['input_folder']).glob("*.fas"))
+        _wgs_input = Path(self.config['input_folder'])
+        fas_files = sorted(
+            list(_wgs_input.glob("*.fas"))
+            + list(_wgs_input.glob("*.fasta"))
+            + list(_wgs_input.glob("*.phy"))
+            + list(_wgs_input.glob("*.phylip")),
+            key=lambda p: p.name.lower()
+        )
         if not fas_files:
-            print("[WGS] Nenhum arquivo .fas encontrado.")
+            print("[WGS] Nenhum arquivo .fas / .fasta / .phy / .phylip encontrado.")
             return
 
         print(f"\n[WGS] Convertendo {len(fas_files)} genes para PHYLIP combinado...")
@@ -1704,24 +2023,18 @@ class CodemlBatchAnalysis:
             return generated_files
         
         except Exception as e:
-            print(f"[ERROR] Error regenerating files: {str(e)}")
-            import traceback
+            print(f"[ERRO] Falha ao regenerar arquivos: {str(e)}")
             traceback.print_exc()
             return {}
     
     @staticmethod
     def _regenerate_analysis_summary(results_folder: Path) -> Optional[Path]:
         """Regenera analysis_summary.tsv"""
-        import pandas as pd
-        
         results_folder = Path(results_folder)
         summary_file = results_folder / "analysis_summary.tsv"
-        
-        # Mapeamento de nomes de pasta (antigos) para nomes de modelo (novos)
-        model_name_mapping = {
-            'BranchSite_A': 'Branch-site',
-            'BranchSite_A_null': 'Branch-site_null'
-        }
+
+        # Mapeamento de nomes de pasta (legados) para nomes de modelo (atuais)
+        model_name_mapping = CodemlBatchAnalysis._LEGACY_MODEL_NAMES
         
         # Descobrir quais modelos estão presentes
         models = []
@@ -1865,92 +2178,91 @@ class CodemlBatchAnalysis:
         """Regenera batch_analysis_log.txt"""
         results_folder = Path(results_folder)
         log_file = results_folder / "batch_analysis_log.txt"
-        
-        # Mapeamento de nomes
-        model_name_mapping = {
-            'BranchSite_A': 'Branch-site',
-            'BranchSite_A_null': 'Branch-site_null'
-        }
-        
+
+        # Mapeamento de nomes legados → atuais (centralizado na constante de classe)
+        model_name_mapping = CodemlBatchAnalysis._LEGACY_MODEL_NAMES
+        # Mapeamento inverso: nome de exibição → nome da pasta no disco
+        reverse_mapping = {v: k for k, v in model_name_mapping.items()}
+
         with open(log_file, 'w', encoding='utf-8') as f:
             f.write("="*80 + "\n")
-            f.write("CODEML BATCH ANALYSIS LOG (REGENERATED)\n")
+            f.write("LOG DE ANÁLISE CODEML (REGENERADO)\n")
             f.write("="*80 + "\n")
-            f.write(f"Regenerated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Results folder: {results_folder}\n")
+            f.write(f"Regenerado em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Pasta de resultados: {results_folder}\n")
             f.write("="*80 + "\n\n")
-            
-            f.write("ANALYSIS SUMMARY:\n")
+
+            f.write("RESUMO DA ANÁLISE:\n")
             f.write("-"*80 + "\n")
-            
-            # Descobrir modelos e genes
+
+            # Descobrir modelos e genes — usa item.name (pasta real) para o split do gene
             models = set()
             genes = set()
-            
+
             for item in results_folder.iterdir():
                 if item.is_dir() and item.name not in ['reports']:
-                    model = model_name_mapping.get(item.name, item.name)
-                    models.add(model)
-                    
+                    model_display = model_name_mapping.get(item.name, item.name)
+                    models.add(model_display)
+
                     for results_file in item.glob("*_results.txt"):
-                        gene = results_file.name.split(f'_{model}_results')[0]
+                        # CORREÇÃO: split pelo nome real da pasta (item.name), não pelo
+                        # nome de exibição (model_display), que pode ser diferente.
+                        gene = results_file.name.split(f'_{item.name}_results')[0]
                         genes.add(gene)
-            
-            f.write(f"Models found: {', '.join(sorted(models))}\n")
-            f.write(f"Genes found: {len(genes)} genes\n")
+
+            f.write(f"Modelos encontrados: {', '.join(sorted(models))}\n")
+            f.write(f"Genes encontrados: {len(genes)} genes\n")
             f.write(f"  {', '.join(sorted(genes)[:5])}" + ("..." if len(genes) > 5 else "") + "\n")
             f.write("\n")
-            
+
             # Detalhes de cada gene/modelo
-            f.write("DETAILED RESULTS:\n")
+            f.write("RESULTADOS DETALHADOS:\n")
             f.write("-"*80 + "\n\n")
-            
+
             for gene in sorted(genes):
                 f.write(f"Gene: {gene}\n")
                 f.write("-"*40 + "\n")
-                
-                for model in sorted(models):
-                    model_folder = results_folder / model
-                    results_file = model_folder / f"{gene}_{model}_results.txt"
-                    
+
+                for model_display in sorted(models):
+                    # CORREÇÃO: usar o nome real da pasta (folder_name) para construir
+                    # os caminhos — o nome de exibição pode não corresponder ao nome no disco.
+                    folder_name = reverse_mapping.get(model_display, model_display)
+                    model_folder = results_folder / folder_name
+                    results_file = model_folder / f"{gene}_{folder_name}_results.txt"
+
                     if results_file.exists():
                         try:
                             with open(results_file, 'r', encoding='utf-8', errors='ignore') as rf:
                                 content = rf.read()
-                            
+
                             lnL_match = re.search(r'lnL\(.*?\):\s+([-\d.]+)', content)
                             np_match = re.search(r'np:\s*(\d+)\)', content)
-                            
+
                             lnL = float(lnL_match.group(1)) if lnL_match else "NA"
                             np_val = np_match.group(1) if np_match else "NA"
-                            
-                            f.write(f"  {model:20s} | lnL = {lnL:>12} | np = {np_val:>2}\n")
-                        except:
-                            f.write(f"  {model:20s} | Error reading file\n")
+
+                            f.write(f"  {model_display:20s} | lnL = {lnL:>12} | np = {np_val:>2}\n")
+                        except Exception:
+                            f.write(f"  {model_display:20s} | Erro ao ler arquivo\n")
                     else:
-                        f.write(f"  {model:20s} | Not found\n")
-                
+                        f.write(f"  {model_display:20s} | Não encontrado\n")
+
                 f.write("\n")
-            
+
             f.write("="*80 + "\n")
-            f.write("END OF LOG\n")
+            f.write("FIM DO LOG\n")
             f.write("="*80 + "\n")
-        
+
         return log_file
     
     @staticmethod
     def _regenerate_lrt_results(results_folder: Path) -> Optional[Path]:
         """Regenera LRT_results.txt"""
-        from scipy import stats
-        
         results_folder = Path(results_folder)
         lrt_file = results_folder / "LRT_results.txt"
-        
-        # Mapeamento de nomes
-        model_name_mapping = {
-            'BranchSite_A': 'Branch-site',
-            'BranchSite_A_null': 'Branch-site_null'
-        }
+
+        # Mapeamento de nomes legados → atuais (centralizado na constante de classe)
+        model_name_mapping = CodemlBatchAnalysis._LEGACY_MODEL_NAMES
         reverse_mapping = {v: k for k, v in model_name_mapping.items()}
         
         # Descobrir quais modelos estão presentes
@@ -1977,7 +2289,8 @@ class CodemlBatchAnalysis:
         if 'M0' in models and 'Branch' in models:
             comparisons.append(('M0', 'Branch', 'Tests branch model (independent evolution rates)', 1))
         if 'Branch-site_null' in models and 'Branch-site' in models:
-            comparisons.append(('Branch-site_null', 'Branch-site', 'Tests branch-site model', 2))
+            # df=1 é usado no teste de mistura 50:50 χ²(0)+χ²(1); ver cálculo abaixo.
+            comparisons.append(('Branch-site_null', 'Branch-site', 'Testa seleção positiva no ramo foreground (mistura 50:50 χ²)', 1))
         
         with open(lrt_file, 'w', encoding='utf-8') as f:
             f.write("="*80 + "\n")
@@ -2027,8 +2340,17 @@ class CodemlBatchAnalysis:
                         
                         # Calcular LRT
                         lrt_stat = 2 * (lnL_alt - lnL_null)
-                        p_value = 1 - stats.chi2.cdf(lrt_stat, df)
-                        
+
+                        # Branch-site usa distribuição nula 50:50 de χ²(0)+χ²(1),
+                        # não χ² padrão — consistente com _run_lrt_analysis.
+                        # Referência: Yang et al. (2005), Zhang et al. (2005).
+                        is_branchsite = (null_model == 'Branch-site_null'
+                                         and alt_model == 'Branch-site')
+                        if is_branchsite:
+                            p_value = 0.5 * stats.chi2.sf(lrt_stat, df=1) if lrt_stat > 0 else 1.0
+                        else:
+                            p_value = 1 - stats.chi2.cdf(lrt_stat, df)
+
                         total_valid += 1
                         
                         if p_value < 0.05:
@@ -2053,15 +2375,15 @@ class CodemlBatchAnalysis:
                         
                         f.write("\n" + "-"*60 + "\n\n")
                     
-                    except Exception as e:
+                    except Exception:
                         continue
-                
-                # Sumário
+
+                # Resumo
                 if total_valid > 0:
-                    f.write("\nSUMMARY:\n")
-                    f.write(f"  Total genes analyzed: {total_valid}\n")
-                    f.write(f"  Significant at p < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
-                    f.write(f"  Significant at p < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
+                    f.write("\nRESUMO:\n")
+                    f.write(f"  Total de genes analisados: {total_valid}\n")
+                    f.write(f"  Significativo em p < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
+                    f.write(f"  Significativo em p < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
                     f.write("\n")
         
         return lrt_file
@@ -2073,10 +2395,9 @@ def main():
         analysis = CodemlBatchAnalysis()
         analysis.run_batch_analysis()
     except KeyboardInterrupt:
-        print("\n\n[WARN]️  Analysis interrupted by user")
+        print("\n\n[WARN]  Analysis interrupted by user")
     except Exception as e:
-        print(f"\n\n[ERROR] Error: {str(e)}")
-        import traceback
+        print(f"\n\n[ERRO] {str(e)}")
         traceback.print_exc()
 
 
