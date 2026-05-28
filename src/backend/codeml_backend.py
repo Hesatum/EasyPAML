@@ -1055,6 +1055,66 @@ class CodemlBatchAnalysis:
                             f"falhou: {_prune_err}\n"
                         )
 
+            # ── Desenraizar árvore para site models ──────────────────────────────
+            # O guia do PAML é explícito: site models (M0, M1a, M2a, M7, M8)
+            # exigem árvore NÃO-enraizada. Uma árvore enraizada tem o nó raiz
+            # com exatamente 2 filhos (bifurcação). Desraizamos colapsando um
+            # dos filhos do root para criar uma tricotomia no root.
+            # Branch/Branch-site são excluídos pois exigem árvore enraizada com
+            # marcação de ramo.
+            _SITE_MODELS_UNROOT = {'M0', 'M1a', 'M2a', 'M7', 'M8'}
+            if model_name in _SITE_MODELS_UNROOT:
+                try:
+                    from io import StringIO as _SIO_u
+                    from Bio import Phylo as _Phylo_u
+
+                    # Ler a árvore que está sendo usada (podada ou original)
+                    _usrc = _pruned_tree_path if _pruned_tree_path is not None \
+                            else Path(self.config['tree_file'])
+                    _uraw  = _usrc.read_text(encoding='utf-8', errors='ignore')
+                    _ulines = _uraw.splitlines()
+                    _uhdr   = (
+                        _ulines
+                        and _ulines[0].strip()
+                        and _ulines[0].strip().split()[0].isdigit()
+                    )
+                    _unwk = '\n'.join(_ulines[1:]) if _uhdr else _uraw
+
+                    _utree = _Phylo_u.read(_SIO_u(_unwk), 'newick')
+
+                    # Enraizada ↔ root com exatamente 2 filhos diretos
+                    if len(_utree.root.clades) == 2:
+                        _uc0, _uc1 = _utree.root.clades
+                        if _uc1.clades:
+                            # _uc1 é nó interno → elevar seus filhos ao root
+                            _utree.root.clades = [_uc0] + _uc1.clades
+                        elif _uc0.clades:
+                            # _uc0 é nó interno → elevar seus filhos ao root
+                            _utree.root.clades = _uc0.clades + [_uc1]
+                        # (se ambos forem folhas não há como desraizar — ignorar)
+
+                        _uio = _SIO_u()
+                        _Phylo_u.write(_utree, _uio, 'newick')
+                        _upnwk = _uio.getvalue().strip()
+                        # Remover artefato de branch length no root gerado pelo Bio.Phylo
+                        _upnwk = re.sub(
+                            r'\):[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?;$', ');', _upnwk
+                        )
+                        _un = _utree.count_terminals()
+                        _unrooted_path = temp_dir / 'unrooted_tree.nwk'
+                        _unrooted_path.write_text(
+                            f"{_un}  1\n{_upnwk}\n", encoding='utf-8'
+                        )
+                        _pruned_tree_path = _unrooted_path   # substituir referência
+                except ImportError:
+                    pass  # Bio.Phylo indisponível; prosseguir com árvore original
+                except Exception as _unroot_err:
+                    with open(log_file, 'a', encoding='utf-8') as _log:
+                        _log.write(
+                            f"[WARN] {base_name} [{model_name}]: desenraizamento "
+                            f"automatico falhou: {_unroot_err}\n"
+                        )
+
             # ── Determinar conteúdo da árvore para este modelo ────────────────
             labeled_full      = self.config.get('labeled_tree_content')
             labeled_branchsite = self.config.get('labeled_tree_branchsite')
@@ -1088,8 +1148,8 @@ class CodemlBatchAnalysis:
                 tree_ref  = 'warm_tree.nwk' # relativo ao CWD (temp_dir)
                 fix_bl    = 2                # inicializar a partir dos valores do M0
             elif _pruned_tree_path is not None:
-                # Árvore podada (gerada acima) — referenciada pelo nome relativo no sandbox
-                tree_ref  = 'pruned_tree.nwk'
+                # Árvore podada/desenraizada — referenciada pelo nome do arquivo no sandbox
+                tree_ref  = _pruned_tree_path.name   # ex: 'pruned_tree.nwk' ou 'unrooted_tree.nwk'
                 fix_bl    = 0
             else:
                 # Árvore original referenciada por caminho absoluto → sem cópia
