@@ -19,6 +19,9 @@ env/
 2ML.dS
 2ML.dN
 2ML.t
+2NG.dS
+2NG.dN
+2NG.t
 4fold.nuc
 codeml.log
 rst
@@ -30,6 +33,20 @@ lnf
 outputs/
 resultados/
 !exemplos_teste/resultados/
+
+# Runtime logs
+app_log.txt
+app_err.txt
+
+# Development / benchmark directories
+_test_warmstart_tmp/
+benchmark_standard/
+
+# Transient test-export files inside exemplos_teste root
+exemplos_teste/teste.*
+exemplos_teste/resultados/t.csv
+exemplos_teste/resultados/tabela.csv
+exemplos_teste/resultados/teste.*
 
 # OS
 .DS_Store

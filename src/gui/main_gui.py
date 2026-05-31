@@ -2038,10 +2038,7 @@ class App(ctk.CTk):
             self.append_log(f"[Erro] Erro critico: {e}\n")
             self.append_log(f"{traceback.format_exc()}\n")
         finally:
-            self.btn_run.configure(state="normal")
             self.analysis_instance = None
-            # Recheck results button in case summary files were generated
-            self.after(0, self._update_models_state)
 
             if self.stop_event.is_set():
                 self.append_log("\n" + "="*60 + "\n")
@@ -2051,6 +2048,24 @@ class App(ctk.CTk):
                 self.append_log("\n" + "="*60 + "\n")
                 self.append_log("[OK] ANALISE CONCLUIDA\n")
                 self.append_log("="*60 + "\n")
+
+            def _reset_ui():
+                self.btn_run.configure(
+                    state="normal",
+                    fg_color=self.COLORS['success'],
+                    text_color=self.COLORS['text_primary']
+                )
+                self.status_indicator.configure(
+                    text=TEXTS["status_ready"],
+                    text_color=self.COLORS['text_tertiary']
+                )
+                self.btn_pause.configure(
+                    text=TEXTS["btn_pause"],
+                    fg_color=self.COLORS['warning']
+                )
+                self._update_models_state()
+
+            self.after(0, _reset_ui)
 
 
 if __name__ == "__main__":

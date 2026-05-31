@@ -6,6 +6,12 @@ import sys
 import os
 from pathlib import Path
 
+# Force UTF-8 output so emoji/Unicode in print() works on Windows (cp1252 consoles).
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 # Always run from the directory where this file lives, so relative paths work
 # regardless of how the user launched the app (double-click, shortcut, terminal).
 _HERE = Path(__file__).resolve().parent
