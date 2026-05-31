@@ -110,7 +110,16 @@ TEXTS: dict[str, object] = {
 
     # ── Seção CONFIGURACOES — labels dos campos ──────────────────────────
     "label_omega_initial":  "dN/dS Inicial (w):",
-    "label_remove_gaps":    "Remover gaps",
+    "label_remove_gaps":      "Limpar alinhamento antes de analisar",
+    "label_remove_gaps_hint": (
+        "Recomendado para a maioria das análises.\n"
+        "Remove automaticamente colunas do alinhamento que\n"
+        "contenham gaps (—), bases incertas (N, ?) ou códons\n"
+        "incompletos — dados assim podem distorcer as\n"
+        "estimativas de seleção positiva.\n"
+        "Desative apenas se o alinhamento já foi curado\n"
+        "manualmente e você não quer perder nenhum sítio."
+    ),
     "label_cpus":           "CPUs (paralelismo):",
 
     # Toggle de modo heurístico (fixa κ do M0 nos modelos seguintes)

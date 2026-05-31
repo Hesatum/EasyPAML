@@ -734,6 +734,56 @@ class CodemlBatchAnalysis:
                         self.current_processed_genes += 1
                     return fas_file.stem, {}
 
+                # ── Verificação de alinhamento de códons ─────────────────────────
+                # CODEML opera em códons (tripletos de nucleotídeos).  O comprimento
+                # total do alinhamento deve ser múltiplo de 3.  Se não for, o último
+                # codon estará incompleto e o CODEML pode falhar ou descartar sítios.
+                if _seq_len % 3 != 0:
+                    _rem = _seq_len % 3
+                    _msg = (
+                        f"[WARN] {fas_file.stem}: comprimento do alinhamento "
+                        f"({_seq_len} bp) nao e multiplo de 3 "
+                        f"(sobra(m) {_rem} base(s)). "
+                        f"CODEML requer alinhamento de codons — revise o arquivo."
+                    )
+                    print(f"[WARN] {fas_file.name}: {_seq_len} bp não é múltiplo de 3 "
+                          f"(sobra(m) {_rem} base(s))")
+                    with open(log_file, 'a', encoding='utf-8') as _log:
+                        _log.write(_msg + '\n')
+                    # Não pula — CODEML tenta e reporta o erro com mais detalhes
+
+                # ── Contagem antecipada de stop codons ──────────────────────────
+                # Stop codons (TAA, TAG, TGA) no meio de um alinhamento de códons
+                # indicam erros de anotação ou frameshifts.  O CODEML irá pausar
+                # ao encontrá-los — informar o usuário ANTES da execução permite
+                # decidir se ativa "Ignorar Stop Codons" ou corrige o arquivo.
+                _STOP_SET = {'TAA', 'TAG', 'TGA'}
+                _stops_by_seq: list[tuple[str, int]] = []
+                for _sname, _seq in _seqs.items():
+                    _n_st = sum(
+                        1 for _ci in range(0, len(_seq) - 2, 3)
+                        if _seq[_ci:_ci+3].upper() in _STOP_SET
+                    )
+                    if _n_st > 0:
+                        _stops_by_seq.append((_sname, _n_st))
+
+                if _stops_by_seq:
+                    _tot_st = sum(n for _, n in _stops_by_seq)
+                    _seq_ct = len(_stops_by_seq)
+                    _detail = ', '.join(f'{s}({n})' for s, n in _stops_by_seq[:5])
+                    if len(_stops_by_seq) > 5:
+                        _detail += f' ...+{len(_stops_by_seq)-5} mais'
+                    _st_msg = (
+                        f"[WARN] {fas_file.stem}: {_tot_st} stop codon(s) "
+                        f"encontrado(s) em {_seq_ct} sequencia(s) [{_detail}]. "
+                        f"O CODEML ira pausar — ative 'Ignorar Stop Codons' "
+                        f"nas configuracoes ou remova-os do alinhamento."
+                    )
+                    print(f"  [WARN] Stop codons: {_tot_st} em {_seq_ct} seq(s) "
+                          f"— [{_detail}]")
+                    with open(log_file, 'a', encoding='utf-8') as _log:
+                        _log.write(_st_msg + '\n')
+
             except Exception as _val_err:
                 # Erro ao ler o arquivo — deixar o CODEML tentar e lidar com a falha
                 with open(log_file, 'a', encoding='utf-8') as _log:
@@ -850,6 +900,65 @@ class CodemlBatchAnalysis:
         print(f"Log file: {log_file}")
         print(f"{'='*80}\n")
     
+    @staticmethod
+    def _labeled_root_check(nwk_content: str) -> str:
+        """
+        Verifica se os dois ramos ao redor da raiz de uma árvore labelada têm a
+        mesma designação (ambos foreground #1 ou ambos background) ou designações
+        diferentes (um foreground, um background).
+
+        Conforme o guia do PAML (Figura S1D):
+        - 'mixed' → ramos com designações diferentes → árvore ENRAIZADA necessária
+        - 'same'  → ramos com mesma designação     → árvore não-enraizada pode ser usada
+        - 'unknown' → não foi possível determinar (tree com < 2 filhos no root, etc.)
+        """
+        # Remover cabeçalho PHYLIP ("N  1") se presente
+        lines = nwk_content.strip().splitlines()
+        nwk = ''
+        for line in lines:
+            stripped = line.strip()
+            if stripped and stripped[0].isdigit() and len(stripped.split()) <= 2:
+                continue   # linha de cabeçalho
+            nwk += stripped
+        nwk = nwk.strip().rstrip(';').strip()
+        if not nwk.startswith('('):
+            return 'unknown'
+
+        # Encontrar vírgulas de nível 1 (filhos diretos da raiz)
+        depth = 0
+        top_comma = -1
+        for i, ch in enumerate(nwk):
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth -= 1
+            elif ch == ',' and depth == 1:
+                top_comma = i
+                break   # basta a primeira vírgula top-level para separar os dois filhos
+
+        if top_comma == -1:
+            return 'unknown'
+
+        child1 = nwk[1:top_comma]          # conteúdo do 1º filho
+        child2_raw = nwk[top_comma + 1:]   # restante (2º filho + ")...")
+        # Isolar o 2º filho: tudo até a última ')' de nível 0
+        depth = 0
+        end_pos = len(child2_raw)
+        for i, ch in enumerate(child2_raw):
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                if depth == 0:
+                    end_pos = i
+                    break
+                depth -= 1
+        child2 = child2_raw[:end_pos]
+
+        c1_fg = '#1' in child1
+        c2_fg = '#1' in child2
+
+        return 'mixed' if c1_fg != c2_fg else 'same'
+
     def _run_single_analysis(self, fas_file: Path, model_name: str,
                             log_file: Path,
                             warm_start_kappa: float = None,
@@ -1135,10 +1244,44 @@ class CodemlBatchAnalysis:
             #      (apenas para modelos de sítios; Branch exige marcação específica)
             #   3. Árvore original do usuário — caminho absoluto; nenhuma cópia necessária
             if labeled_content:
-                # Escrever árvore marcada no sandbox; .ctl referencia pelo nome relativo
-                (temp_dir / 'labeled.nwk').write_text(labeled_content, encoding='utf-8')
+                # ── Strip de branch lengths da árvore labelada ────────────────────
+                # O guia do PAML recomenda remover branch lengths de árvores com
+                # marcação de ramos (#1, $1), pois podem interferir com as labels.
+                # O regex remove ":N.N" mas preserva "#1", "$1" e outras labels.
+                _lbl_clean = re.sub(
+                    r':\s*-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?',
+                    '',
+                    labeled_content
+                )
+                (temp_dir / 'labeled.nwk').write_text(_lbl_clean, encoding='utf-8')
                 tree_ref  = 'labeled.nwk'   # relativo ao CWD (temp_dir)
                 fix_bl    = 0                # branch lengths estimados normalmente
+
+                # ── Verificação de enraizamento para Branch-site (Figura S1D) ─────
+                # Se os dois ramos ao redor da raiz têm designações DIFERENTES
+                # (um foreground #1, outro background), a árvore enraizada é necessária.
+                # Se ambos têm a mesma designação, a árvore poderia ser não-enraizada.
+                if model_name.startswith('Branch-site') or model_name.startswith('BranchSite'):
+                    _root_status = self._labeled_root_check(_lbl_clean)
+                    if _root_status == 'mixed':
+                        _rs_msg = (
+                            f"  [INFO] Raiz da arvore: ramos com designacoes DIFERENTES "
+                            f"(foreground #1 vs background). "
+                            f"Arvore enraizada esta sendo usada corretamente (Fig. S1D)."
+                        )
+                    elif _root_status == 'same':
+                        _rs_msg = (
+                            f"  [INFO] Raiz da arvore: ambos os ramos com a MESMA "
+                            f"designacao. Uma arvore nao-enraizada poderia ser usada "
+                            f"neste caso (Fig. S1B/S1C). A analise prossegue normalmente."
+                        )
+                    else:
+                        _rs_msg = None
+
+                    if _rs_msg:
+                        print(_rs_msg)
+                        with open(log_file, 'a', encoding='utf-8') as _log_bs:
+                            _log_bs.write(_rs_msg.strip() + '\n')
             elif (fitted_tree
                   and not model_name.startswith('Branch')
                   and model_name != 'M0'):
@@ -1685,7 +1828,18 @@ class CodemlBatchAnalysis:
             f.write("="*80 + "\n")
             f.write("LIKELIHOOD RATIO TEST (LRT) RESULTS\n")
             f.write("="*80 + "\n\n")
-            
+            f.write(
+                "NOTA METODOLOGICA (Alvarez-Carretero et al. 2023, guia PAML):\n"
+                "  O LRT e robusto mesmo quando se usa arvore enraizada para site\n"
+                "  models (M0, M1a, M2a, M7, M8): o parametro extra de branch length\n"
+                "  na raiz e contado igualmente em ambos os modelos do par (nulo e\n"
+                "  alternativo), portanto o grau de liberdade (df = np_alt - np_null)\n"
+                "  e calculado corretamente e o teste permanece valido.\n"
+                "  Para Branch-site com ramos mistos na raiz (foreground vs background)\n"
+                "  a arvore enraizada e OBRIGATORIA — use-a nesse caso.\n"
+                "\n"
+            )
+
             # Determinar comparações relevantes
             comparisons = []
             selected_models = self.config['models']
