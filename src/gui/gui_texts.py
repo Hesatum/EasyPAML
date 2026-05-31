@@ -137,17 +137,6 @@ TEXTS: dict[str, object] = {
         "toggle adiciona apenas o kappa fixo."
     ),
 
-    # Toggle de modo WGS (ativa ndata no .ctl)
-    "label_wgs_mode": "Modo lote unico (ndata)",
-    "label_wgs_hint": (
-        "Combina TODOS os genes em um unico arquivo e\n"
-        "executa o CODEML uma vez com ndata=N.\n"
-        "Exige que todos os genes tenham EXATAMENTE\n"
-        "as mesmas especies (sem poda automatica).\n"
-        "Use apenas se os genes sao homogeneos.\n"
-        "Para analise padrao por gene, deixe desativado."
-    ),
-
     # Toggle de ignorar stop codons (auto_continue_stop_codons)
     # Desativado por padrão — CODEML irá parar e reportar stop codons normalmente.
     # Quando ativado, envia Enter automaticamente sem interromper a análise.

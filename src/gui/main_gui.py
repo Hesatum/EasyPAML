@@ -803,7 +803,6 @@ class App(ctk.CTk):
         # Auto-detect CPU cores; user can adjust via slider
         _max_cores = CodemlBatchAnalysis.available_cores()
         self.cores_var = ctk.IntVar(value=_max_cores)
-        self.wgs_mode_var = ctk.BooleanVar(value=False)
         self.ignore_stop_codons_var = ctk.BooleanVar(value=False)
         self.auto_prune_tree_var = ctk.BooleanVar(value=True)
 
@@ -972,10 +971,13 @@ class App(ctk.CTk):
             button_hover_color='#dcfce7',
             fg_color=self.COLORS['border'])
         self.cb_cleandata.pack(side='right')
-        ctk.CTkLabel(ci, text=TEXTS["label_remove_gaps_hint"],
-                     font=(_FONT_UI, 8),
-                     justify='left',
-                     text_color=self.COLORS['text_muted']).pack(anchor='w', padx=2, pady=(1, 8))
+        ctk.CTkButton(row_g, text="?", width=18, height=18, corner_radius=9,
+                      font=(_FONT_UI, 9, "bold"), fg_color=self.COLORS['border'],
+                      hover_color=self.COLORS['border_hover'],
+                      text_color=self.COLORS['text_muted'],
+                      command=lambda: self._show_help(
+                          TEXTS["label_remove_gaps"], TEXTS["label_remove_gaps_hint"])
+                      ).pack(side='right', padx=(0, 4))
 
         # CPU slider
         ctk.CTkLabel(ci, text=TEXTS["label_cpus"],
@@ -1024,34 +1026,13 @@ class App(ctk.CTk):
             button_hover_color='#fef3c7',
             fg_color=self.COLORS['border'])
         self.cb_heuristic.pack(side='right')
-        ctk.CTkLabel(ci,
-                     text=TEXTS["label_heuristic_hint"],
-                     font=(_FONT_UI, 8),
-                     wraplength=200,
-                     justify='left',
-                     text_color=self.COLORS['text_muted']).pack(anchor='w', padx=2, pady=(1, 6))
-
-        # Modo WGS toggle
-        row_wgs = ctk.CTkFrame(ci, fg_color='transparent')
-        row_wgs.pack(fill='x', pady=(10, 0))
-        ctk.CTkLabel(row_wgs, text=TEXTS["label_wgs_mode"],
-                     font=(_FONT_UI, 10),
-                     text_color=self.COLORS['text_secondary']).pack(side='left')
-        self.cb_wgs = ctk.CTkSwitch(
-            row_wgs, text="",
-            variable=self.wgs_mode_var,
-            onvalue=True, offvalue=False,
-            switch_width=36, switch_height=18,
-            progress_color=self.COLORS['accent_cyan'],
-            button_color='#f0fdff',
-            button_hover_color='#cffafe',
-            fg_color=self.COLORS['border'])
-        self.cb_wgs.pack(side='right')
-        ctk.CTkLabel(ci, text=TEXTS["label_wgs_hint"],
-                     font=(_FONT_UI, 8),
-                     justify='left',
-                     wraplength=200,
-                     text_color=self.COLORS['text_muted']).pack(anchor='w', padx=2, pady=(1, 6))
+        ctk.CTkButton(row_h, text="?", width=18, height=18, corner_radius=9,
+                      font=(_FONT_UI, 9, "bold"), fg_color=self.COLORS['border'],
+                      hover_color=self.COLORS['border_hover'],
+                      text_color=self.COLORS['text_muted'],
+                      command=lambda: self._show_help(
+                          TEXTS["label_heuristic_mode"], TEXTS["label_heuristic_hint"])
+                      ).pack(side='right', padx=(0, 4))
 
         # Ignorar Stop Codons toggle
         row_stops = ctk.CTkFrame(ci, fg_color='transparent')
@@ -1069,10 +1050,13 @@ class App(ctk.CTk):
             button_hover_color='#cffafe',
             fg_color=self.COLORS['border'])
         self.cb_ignore_stops.pack(side='right')
-        ctk.CTkLabel(ci, text=TEXTS["label_ignore_stops_hint"],
-                     font=(_FONT_UI, 8),
-                     justify='left',
-                     text_color=self.COLORS['text_muted']).pack(anchor='w', padx=2, pady=(2, 6))
+        ctk.CTkButton(row_stops, text="?", width=18, height=18, corner_radius=9,
+                      font=(_FONT_UI, 9, "bold"), fg_color=self.COLORS['border'],
+                      hover_color=self.COLORS['border_hover'],
+                      text_color=self.COLORS['text_muted'],
+                      command=lambda: self._show_help(
+                          TEXTS["label_ignore_stops"], TEXTS["label_ignore_stops_hint"])
+                      ).pack(side='right', padx=(0, 4))
 
         # Poda automática de árvore toggle
         row_prune = ctk.CTkFrame(ci, fg_color='transparent')
@@ -1090,10 +1074,13 @@ class App(ctk.CTk):
             button_hover_color='#cffafe',
             fg_color=self.COLORS['border'])
         self.cb_auto_prune.pack(side='right')
-        ctk.CTkLabel(ci, text=TEXTS["label_auto_prune_hint"],
-                     font=(_FONT_UI, 8),
-                     justify='left',
-                     text_color=self.COLORS['text_muted']).pack(anchor='w', padx=2, pady=(2, 6))
+        ctk.CTkButton(row_prune, text="?", width=18, height=18, corner_radius=9,
+                      font=(_FONT_UI, 9, "bold"), fg_color=self.COLORS['border'],
+                      hover_color=self.COLORS['border_hover'],
+                      text_color=self.COLORS['text_muted'],
+                      command=lambda: self._show_help(
+                          TEXTS["label_auto_prune"], TEXTS["label_auto_prune_hint"])
+                      ).pack(side='right', padx=(0, 4))
 
         self.main_frame = ctk.CTkFrame(self, fg_color=self.COLORS['bg_dark'])
         self.main_frame.pack(side="right", fill="both", expand=True, padx=20, pady=20)
@@ -1231,6 +1218,20 @@ class App(ctk.CTk):
 
         self._update_models_state()
         self._poll_stop_count()
+
+    def _show_help(self, title: str, body: str) -> None:
+        win = ctk.CTkToplevel(self)
+        win.title(title)
+        win.resizable(False, False)
+        win.grab_set()
+        win.focus_set()
+        ctk.CTkLabel(win, text=title, font=(_FONT_UI, 11, "bold"),
+                     text_color=self.COLORS['text_primary']).pack(padx=18, pady=(16, 4), anchor='w')
+        ctk.CTkLabel(win, text=body, font=(_FONT_UI, 10), wraplength=290,
+                     justify='left',
+                     text_color=self.COLORS['text_secondary']).pack(padx=18, pady=(0, 12))
+        ctk.CTkButton(win, text="OK", width=80, command=win.destroy,
+                      fg_color=self.COLORS['accent_blue']).pack(pady=(0, 14))
 
     def _update_cores_label(self, value=None):
         n = int(self.cores_var.get())
@@ -2017,7 +2018,6 @@ class App(ctk.CTk):
                 'run_lrt': True,
                 'n_workers': int(self.cores_var.get()),
                 'heuristic_mode': self.heuristic_mode_var.get(),
-                'wgs_mode': self.wgs_mode_var.get(),
                 'auto_continue_stop_codons': self.ignore_stop_codons_var.get(),
                 'auto_prune_tree': self.auto_prune_tree_var.get(),
                 'pause_event': self.pause_event,
