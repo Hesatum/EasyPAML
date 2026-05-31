@@ -972,6 +972,10 @@ class App(ctk.CTk):
             button_hover_color='#dcfce7',
             fg_color=self.COLORS['border'])
         self.cb_cleandata.pack(side='right')
+        ctk.CTkLabel(ci, text=TEXTS["label_remove_gaps_hint"],
+                     font=(_FONT_UI, 8),
+                     justify='left',
+                     text_color=self.COLORS['text_muted']).pack(anchor='w', padx=2, pady=(1, 8))
 
         # CPU slider
         ctk.CTkLabel(ci, text=TEXTS["label_cpus"],
@@ -1043,6 +1047,11 @@ class App(ctk.CTk):
             button_hover_color='#cffafe',
             fg_color=self.COLORS['border'])
         self.cb_wgs.pack(side='right')
+        ctk.CTkLabel(ci, text=TEXTS["label_wgs_hint"],
+                     font=(_FONT_UI, 8),
+                     justify='left',
+                     wraplength=200,
+                     text_color=self.COLORS['text_muted']).pack(anchor='w', padx=2, pady=(1, 6))
 
         # Ignorar Stop Codons toggle
         row_stops = ctk.CTkFrame(ci, fg_color='transparent')

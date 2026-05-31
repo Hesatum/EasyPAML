@@ -807,6 +807,48 @@ class CodemlBatchAnalysis:
                 else list(self.config['models'])
             )
 
+            # ── Warm-start implícito via M0 ───────────────────────────────────
+            # O warm-start de κ e branch lengths só funciona se M0 foi selecionado.
+            # Quando o modo heurístico está ativo e M0 não está na lista, roda-se M0
+            # silenciosamente apenas para extrair κ e branch lengths como ponto de
+            # partida — os resultados do M0 implícito NÃO são salvos na saída.
+            # Sem esse passo, fix_kappa e fix_blength=2 nunca seriam ativados.
+            _SITE_WARMUP = {'M1a', 'M2a', 'M7', 'M8'}
+            _needs_warmup = bool(set(models_ordered) & _SITE_WARMUP)
+            _m0_absent    = 'M0' not in models_ordered and _needs_warmup
+
+            if _m0_absent and not heuristic_mode:
+                # Sem heurístico e sem M0: avisar que não haverá warm-start
+                _nows_msg = (
+                    f"  [INFO] M0 nao selecionado: branch lengths e kappa serao "
+                    f"estimados do zero em cada modelo (sem warm-start). "
+                    f"Selecione M0 ou ative o Modo Heuristico para acelerar."
+                )
+                print(_nows_msg)
+                with open(log_file, 'a', encoding='utf-8') as _log:
+                    _log.write(_nows_msg.strip() + '\n')
+
+            elif _m0_absent and heuristic_mode:
+                # Modo heurístico ativo mas M0 ausente: rodar M0 para warm-start
+                print(f"  [warm-up] M0 implicito (extraindo kappa + branch lengths)...",
+                      end=" ", flush=True)
+                _ws_result = self._run_single_analysis(
+                    fas_file=fas_file,
+                    model_name='M0',
+                    log_file=log_file,
+                    warm_start_kappa=None,
+                    fitted_tree=None,
+                    fix_kappa_heuristic=False,
+                )
+                if _ws_result and _ws_result.get('output_file'):
+                    _wsp = Path(_ws_result['output_file'])
+                    if _wsp.exists():
+                        gene_kappa        = self._extract_kappa(_wsp)        or gene_kappa
+                        gene_fitted_tree  = self._extract_fitted_tree(_wsp)  or gene_fitted_tree
+                _wk  = f"k={gene_kappa:.3f}"  if gene_kappa       is not None else "k=?"
+                _wbl = "bl=ok"                 if gene_fitted_tree is not None else "bl=?"
+                print(f"[OK]  {_wk}  {_wbl}")
+
             for model_name in models_ordered:
                 if stop_event is not None and stop_event.is_set():
                     break
@@ -1253,6 +1295,9 @@ class CodemlBatchAnalysis:
                     '',
                     labeled_content
                 )
+                if _lbl_clean != labeled_content:
+                    print(f"  [tree] Branch lengths removidos da arvore labelada "
+                          f"(nao interferem com labels #1).")
                 (temp_dir / 'labeled.nwk').write_text(_lbl_clean, encoding='utf-8')
                 tree_ref  = 'labeled.nwk'   # relativo ao CWD (temp_dir)
                 fix_bl    = 0                # branch lengths estimados normalmente
@@ -1298,6 +1343,23 @@ class CodemlBatchAnalysis:
                 # Árvore original referenciada por caminho absoluto → sem cópia
                 tree_ref  = str(Path(self.config['tree_file']).absolute())
                 fix_bl    = 0
+
+            # ── Log da decisão de árvore ─────────────────────────────────────
+            # Visibilidade para o usuário sobre qual árvore está sendo usada e
+            # se branch lengths estão sendo warm-started (fix_blength=2) ou
+            # estimados do zero (fix_blength=0).
+            if tree_ref == 'labeled.nwk':
+                _tlog = "labeled.nwk (branch lengths removidos, estimativa livre)"
+            elif tree_ref == 'warm_tree.nwk':
+                _tlog = "warm_tree.nwk (branch lengths M0 → warm-start, fix_blength=2)"
+            elif tree_ref.endswith('unrooted_tree.nwk'):
+                _tlog = "unrooted_tree.nwk (desraizada, branch lengths estimados do zero)"
+            elif tree_ref.endswith('pruned_tree.nwk'):
+                _tlog = "pruned_tree.nwk (podada, branch lengths estimados do zero)"
+            else:
+                _tlog = f"{Path(tree_ref).name} (arvore original, branch lengths estimados do zero)"
+            with open(log_file, 'a', encoding='utf-8') as _log:
+                _log.write(f"[tree] {base_name} [{model_name}]: {_tlog}\n")
 
             # Nota: seqfile agora aponta para a cópia sanitizada no sandbox.
 

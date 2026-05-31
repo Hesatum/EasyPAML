@@ -123,15 +123,30 @@ TEXTS: dict[str, object] = {
     "label_cpus":           "CPUs (paralelismo):",
 
     # Toggle de modo heurístico (fixa κ do M0 nos modelos seguintes)
-    "label_heuristic_mode": "Modo Heuristico (kappa fixo)",
+    "label_heuristic_mode": "Modo Heuristico (acelerar analise)",
     # Dica textual abaixo do toggle
     "label_heuristic_hint": (
-        "Fixa kappa (ts/tv) do M0 nos modelos seguintes.\n"
-        "~20-30% mais rapido por modelo."
+        "Roda M0 como pré-passo e usa seus resultados\n"
+        "para acelerar os demais modelos de duas formas:\n"
+        "  1. Branch lengths do M0 como ponto de partida\n"
+        "     (maior ganho — evita busca do zero).\n"
+        "  2. Kappa (ts/tv) do M0 fixado nos modelos\n"
+        "     seguintes (ganho menor, ~5-15%).\n"
+        "Se M0 já estiver selecionado, o warm-start de\n"
+        "branch lengths ocorre automaticamente; este\n"
+        "toggle adiciona apenas o kappa fixo."
     ),
 
     # Toggle de modo WGS (ativa ndata no .ctl)
-    "label_wgs_mode": "Modo WGS (ndata)",
+    "label_wgs_mode": "Modo lote unico (ndata)",
+    "label_wgs_hint": (
+        "Combina TODOS os genes em um unico arquivo e\n"
+        "executa o CODEML uma vez com ndata=N.\n"
+        "Exige que todos os genes tenham EXATAMENTE\n"
+        "as mesmas especies (sem poda automatica).\n"
+        "Use apenas se os genes sao homogeneos.\n"
+        "Para analise padrao por gene, deixe desativado."
+    ),
 
     # Toggle de ignorar stop codons (auto_continue_stop_codons)
     # Desativado por padrão — CODEML irá parar e reportar stop codons normalmente.
