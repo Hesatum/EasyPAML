@@ -1891,14 +1891,17 @@ class CodemlBatchAnalysis:
             f.write("LIKELIHOOD RATIO TEST (LRT) RESULTS\n")
             f.write("="*80 + "\n\n")
             f.write(
-                "NOTA METODOLOGICA (Alvarez-Carretero et al. 2023, guia PAML):\n"
-                "  O LRT e robusto mesmo quando se usa arvore enraizada para site\n"
-                "  models (M0, M1a, M2a, M7, M8): o parametro extra de branch length\n"
-                "  na raiz e contado igualmente em ambos os modelos do par (nulo e\n"
-                "  alternativo), portanto o grau de liberdade (df = np_alt - np_null)\n"
-                "  e calculado corretamente e o teste permanece valido.\n"
-                "  Para Branch-site com ramos mistos na raiz (foreground vs background)\n"
-                "  a arvore enraizada e OBRIGATORIA — use-a nesse caso.\n"
+                "NOTA METODOLOGICA:\n"
+                "  Graus de liberdade canonicos (Yang & Nielsen 2002, PAML manual):\n"
+                "    M0  vs M1a  : df = 2  (M1a adiciona p0 e omega0 vs omega unico do M0)\n"
+                "    M1a vs M2a  : df = 2  (M2a adiciona omega2 e uma proporcao vs M1a)\n"
+                "    M7  vs M8   : df = 2  (M8  adiciona omega2 e uma proporcao vs M7)\n"
+                "    M0  vs Branch : df = 1  (modelo dois-omega: 1 omega extra de foreground)\n"
+                "    Branch-site : distribuicao mista 0.5*chi2(0) + 0.5*chi2(1)\n"
+                "                  Valor critico alpha=0.05: 2.706  alpha=0.01: 5.412\n"
+                "  NOTA: o CODEML reporta ntime>0 no np do M0 mas ntime=0 nos modelos\n"
+                "  NSsites (M1a, M2a, M7, M8) pois usa branch lengths do M0 como partida.\n"
+                "  Por isso df e calculado com valores fixos por par, nao por np_alt - np_null.\n"
                 "\n"
             )
 
@@ -1967,7 +1970,23 @@ class CodemlBatchAnalysis:
                     
                     # Calcular LRT
                     lrt_stat = 2 * (lnL_alt - lnL_null)
-                    df = abs(np_alt - np_null)
+
+                    # df fixo por par de comparação:
+                    # CODEML reporta ntime>0 no np do M0 (branch lengths livres) mas
+                    # ntime=0 nos modelos NSsites (M1a/M2a/M7/M8 — branch lengths
+                    # fixados pelo M0 e não contados como df).  Isso faz
+                    # abs(np_alt - np_null) dar df=14 para M0 vs M1a em vez de 2.
+                    # Usamos df canônicos da literatura (Yang & Nielsen 2002, PAML manual).
+                    _CANONICAL_DF = {
+                        ('M0',  'M1a'): 2,   # M1a adds p0 + ω0 vs M0's single ω
+                        ('M1a', 'M2a'): 2,   # M2a adds ω2 + one proportion vs M1a
+                        ('M7',  'M8'):  2,   # M8  adds ω2 + one proportion vs M7
+                        ('M0',  'Branch'): 1, # two-ratio model: 1 extra foreground ω
+                    }
+                    df = _CANONICAL_DF.get(
+                        (null_model, alt_model),
+                        abs(np_alt - np_null) if (np_alt and np_null) else 0
+                    )
 
                     if df == 0:
                         continue
@@ -2554,19 +2573,20 @@ class CodemlBatchAnalysis:
                     gene = results_file.name.split(f'_{folder_name}_results')[0]
                     genes.add(gene)
         
-        # Definir comparações possíveis
+        # df canonicos por par (Yang & Nielsen 2002, PAML manual):
+        # M0/M1a/M2a/M7/M8 sao NSsites models (ntime=0 no np do CODEML);
+        # M0 tem ntime>0; abs(np_alt-np_null) nao funciona entre essas classes.
         comparisons = []
         if 'M0' in models and 'M1a' in models:
-            comparisons.append(('M0', 'M1a', 'Tests if ω varies among sites', 1))
+            comparisons.append(('M0', 'M1a', 'Tests if omega varies among sites', 2))
         if 'M1a' in models and 'M2a' in models:
-            comparisons.append(('M1a', 'M2a', 'Tests for positive selection', 1))
+            comparisons.append(('M1a', 'M2a', 'Tests for positive selection', 2))
         if 'M7' in models and 'M8' in models:
-            comparisons.append(('M7', 'M8', 'Tests for positive selection (alternative)', 1))
+            comparisons.append(('M7', 'M8', 'Tests for positive selection (alternative)', 2))
         if 'M0' in models and 'Branch' in models:
             comparisons.append(('M0', 'Branch', 'Tests branch model (independent evolution rates)', 1))
         if 'Branch-site_null' in models and 'Branch-site' in models:
-            # df=1 é usado no teste de mistura 50:50 χ²(0)+χ²(1); ver cálculo abaixo.
-            comparisons.append(('Branch-site_null', 'Branch-site', 'Testa seleção positiva no ramo foreground (mistura 50:50 χ²)', 1))
+            comparisons.append(('Branch-site_null', 'Branch-site', 'Testa selecao positiva no ramo foreground (mistura 50:50 chi2)', 1))
         
         with open(lrt_file, 'w', encoding='utf-8') as f:
             f.write("="*80 + "\n")
