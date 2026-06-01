@@ -1971,17 +1971,20 @@ class CodemlBatchAnalysis:
                     # Calcular LRT
                     lrt_stat = 2 * (lnL_alt - lnL_null)
 
-                    # df fixo por par de comparação:
-                    # CODEML reporta ntime>0 no np do M0 (branch lengths livres) mas
-                    # ntime=0 nos modelos NSsites (M1a/M2a/M7/M8 — branch lengths
-                    # fixados pelo M0 e não contados como df).  Isso faz
-                    # abs(np_alt - np_null) dar df=14 para M0 vs M1a em vez de 2.
-                    # Usamos df canônicos da literatura (Yang & Nielsen 2002, PAML manual).
+                    # df por par de comparação (Yang & Nielsen 2002, PAML manual):
+                    # CODEML reporta ntime>0 no np do M0 mas ntime=0 nos modelos
+                    # NSsites (M1a/M2a/M7/M8 — branch lengths fixados pelo M0 e não
+                    # contados como df).  Isso faz abs(np_alt - np_null) dar df=14
+                    # para M0 vs M1a em vez de 2.  Usamos df fixos para esses pares.
+                    # Para M0 vs Branch: ambos têm ntime>0 (estimam branch lengths
+                    # livremente), então abs(np_alt - np_null) = n_grupos_foreground
+                    # e está correto diretamente — suporta 1, 2, 3... grupos marcados.
                     _CANONICAL_DF = {
-                        ('M0',  'M1a'): 2,   # M1a adds p0 + ω0 vs M0's single ω
-                        ('M1a', 'M2a'): 2,   # M2a adds ω2 + one proportion vs M1a
-                        ('M7',  'M8'):  2,   # M8  adds ω2 + one proportion vs M7
-                        ('M0',  'Branch'): 1, # two-ratio model: 1 extra foreground ω
+                        ('M0',  'M1a'): 2,  # M1a adds p0 + ω0 vs M0's single ω
+                        ('M1a', 'M2a'): 2,  # M2a adds ω2 + one proportion vs M1a
+                        ('M7',  'M8'):  2,  # M8  adds ω2 + one proportion vs M7
+                        # M0 vs Branch: NÃO fixo — df = abs(np_Branch - np_M0)
+                        # = número de grupos foreground marcados (1, 2, 3…)
                     }
                     df = _CANONICAL_DF.get(
                         (null_model, alt_model),
@@ -2637,6 +2640,19 @@ class CodemlBatchAnalysis:
                         # Calcular LRT
                         lrt_stat = 2 * (lnL_alt - lnL_null)
 
+                        # Para M0 vs Branch: df depende do número de grupos foreground
+                        # marcados pelo usuário (1 grupo → df=1, 2 grupos → df=2, …).
+                        # Como ambos os modelos têm ntime>0 (Branch lengths livres),
+                        # abs(np_alt - np_null) dá o número correto de ω extras.
+                        gene_df = df
+                        if null_model == 'M0' and alt_model == 'Branch':
+                            np_null_m = re.search(r'np:\s*(\d+)', null_content)
+                            np_alt_m  = re.search(r'np:\s*(\d+)', alt_content)
+                            if np_null_m and np_alt_m:
+                                gene_df = abs(int(np_alt_m.group(1)) - int(np_null_m.group(1)))
+                            if gene_df == 0:
+                                gene_df = 1  # fallback seguro
+
                         # Branch-site usa distribuição nula 50:50 de χ²(0)+χ²(1),
                         # não χ² padrão — consistente com _run_lrt_analysis.
                         # Referência: Yang et al. (2005), Zhang et al. (2005).
@@ -2645,7 +2661,7 @@ class CodemlBatchAnalysis:
                         if is_branchsite:
                             p_value = 0.5 * stats.chi2.sf(lrt_stat, df=1) if lrt_stat > 0 else 1.0
                         else:
-                            p_value = 1 - stats.chi2.cdf(lrt_stat, df)
+                            p_value = 1 - stats.chi2.cdf(lrt_stat, gene_df)
 
                         total_valid += 1
                         
@@ -2658,8 +2674,9 @@ class CodemlBatchAnalysis:
                         f.write(f"Gene: {gene}\n")
                         f.write(f"  lnL {null_model}: {lnL_null:.6f}\n")
                         f.write(f"  lnL {alt_model}: {lnL_alt:.6f}\n")
+                        df_display = "mixture(0,1)" if is_branchsite else str(gene_df)
                         f.write(f"  2Δl = {lrt_stat:.6f}\n")
-                        f.write(f"  df = {df}\n")
+                        f.write(f"  df = {df_display}\n")
                         f.write(f"  p-value = {p_value:.6e}\n")
                         
                         if p_value < 0.01:
