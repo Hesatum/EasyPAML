@@ -1,0 +1,1155 @@
+================================================================================
+CODEML BATCH ANALYSIS LOG
+================================================================================
+Start time: 2026-05-25 19:55:19
+Input folder: C:\Users\Matheus\Desktop\EasyPAML\exemplos_teste\amostras
+Output folder: C:\Users\Matheus\Desktop\EasyPAML\exemplos_teste\resultados kappa fixo
+Tree file: C:\Users\Matheus\Desktop\EasyPAML\exemplos_teste\caster_site_annotated_rooted.txt
+Models: M2a, M1a
+================================================================================
+
+[WARN] 04_AQP_PIP1-4__aquaporin_water_channel [M2a]: 4 sequencia(s) do FASTA nao encontrada(s) na arvore (serao excluidas da analise): ['cereus_calcirupicola_GS194A2', 'cereus_calcirupicola_GS195A3', 'cereus_hankeanus_S149V15', 'cereus_jamacaru_L93J2']
+[WARN] 01_PEPC1__phosphoenolpyruvate_carboxylase_CAM [M2a]: 4 sequencia(s) do FASTA nao encontrada(s) na arvore (serao excluidas da analise): ['cereus_calcirupicola_GS194A2', 'cereus_calcirupicola_GS195A3', 'cereus_hankeanus_S149V15', 'cereus_jamacaru_L93J2']
+[WARN] 02_PPCK1__PEPC_kinase_CAM_regulator [M2a]: 2 sequencia(s) do FASTA nao encontrada(s) na arvore (serao excluidas da analise): ['cereus_calcirupicola_GS194A2', 'cereus_jamacaru_L93J2']
+[WARN] 05_OSCA4__hyperosmolality_calcium_channel [M2a]: 4 sequencia(s) do FASTA nao encontrada(s) na arvore (serao excluidas da analise): ['cereus_calcirupicola_GS194A2', 'cereus_calcirupicola_GS195A3', 'cereus_hankeanus_S149V15', 'cereus_jamacaru_L93J2']
+[WARN] 03_ALMT2__malate_transporter_CAM [M2a]: 4 sequencia(s) do FASTA nao encontrada(s) na arvore (serao excluidas da analise): ['cereus_calcirupicola_GS194A2', 'cereus_calcirupicola_GS195A3', 'cereus_hankeanus_S149V15', 'cereus_jamacaru_L93J2']
+[WARN] 06_P5CS__proline_synthesis_drought_stress [M2a]: 1 sequencia(s) do FASTA nao encontrada(s) na arvore (serao excluidas da analise): ['cereus_calcirupicola_GS194A2']
+[WARN] 08_RBCL__RuBisCO_large_chain [M2a]: 4 sequencia(s) do FASTA nao encontrada(s) na arvore (serao excluidas da analise): ['cereus_calcirupicola_GS194A2', 'cereus_calcirupicola_GS195A3', 'cereus_hankeanus_S149V15', 'cereus_jamacaru_L93J2']
+[M2a] 01_PEPC1__phosphoenolpyruvate_carboxylase_CAM: Running command: ['C:\\Users\\Matheus\\Desktop\\EasyPAML\\bin\\codeml.exe', '01_PEPC1__phosphoenolpyruvate_carboxylase_CAM_M2a.ctl'] in C:\Users\Matheus\AppData\Local\Temp\easypam_M2a_01_PEPC1__phosphoenolpyruvate_carboxylase_CAM_rpuooebe
+[M2a] 04_AQP_PIP1-4__aquaporin_water_channel: Running command: ['C:\\Users\\Matheus\\Desktop\\EasyPAML\\bin\\codeml.exe', '04_AQP_PIP1-4__aquaporin_water_channel_M2a.ctl'] in C:\Users\Matheus\AppData\Local\Temp\easypam_M2a_04_AQP_PIP1-4__aquaporin_water_channel___wiluf0
+[M2a] 02_PPCK1__PEPC_kinase_CAM_regulator: Running command: ['C:\\Users\\Matheus\\Desktop\\EasyPAML\\bin\\codeml.exe', '02_PPCK1__PEPC_kinase_CAM_regulator_M2a.ctl'] in C:\Users\Matheus\AppData\Local\Temp\easypam_M2a_02_PPCK1__PEPC_kinase_CAM_regulator_gcmuxbj5
+[M2a] 05_OSCA4__hyperosmolality_calcium_channel: Running command: ['C:\\Users\\Matheus\\Desktop\\EasyPAML\\bin\\codeml.exe', '05_OSCA4__hyperosmolality_calcium_channel_M2a.ctl'] in C:\Users\Matheus\AppData\Local\Temp\easypam_M2a_05_OSCA4__hyperosmolality_calcium_channel_yzgseon1
+[M2a] 03_ALMT2__malate_transporter_CAM: Running command: ['C:\\Users\\Matheus\\Desktop\\EasyPAML\\bin\\codeml.exe', '03_ALMT2__malate_transporter_CAM_M2a.ctl'] in C:\Users\Matheus\AppData\Local\Temp\easypam_M2a_03_ALMT2__malate_transporter_CAM_canc97x2
+[M2a] 06_P5CS__proline_synthesis_drought_stress: Running command: ['C:\\Users\\Matheus\\Desktop\\EasyPAML\\bin\\codeml.exe', '06_P5CS__proline_synthesis_drought_stress_M2a.ctl'] in C:\Users\Matheus\AppData\Local\Temp\easypam_M2a_06_P5CS__proline_synthesis_drought_stress_xi41x56z
+[M2a] 08_RBCL__RuBisCO_large_chain: Running command: ['C:\\Users\\Matheus\\Desktop\\EasyPAML\\bin\\codeml.exe', '08_RBCL__RuBisCO_large_chain_M2a.ctl'] in C:\Users\Matheus\AppData\Local\Temp\easypam_M2a_08_RBCL__RuBisCO_large_chain_lqauf2ok
+[WARN] 07_RBCS6__RuBisCO_small_subunit [M2a]: 4 sequencia(s) do FASTA nao encontrada(s) na arvore (serao excluidas da analise): ['cereus_calcirupicola_GS194A2', 'cereus_calcirupicola_GS195A3', 'cereus_hankeanus_S149V15', 'cereus_jamacaru_L93J2']
+[M2a] 07_RBCS6__RuBisCO_small_subunit: Running command: ['C:\\Users\\Matheus\\Desktop\\EasyPAML\\bin\\codeml.exe', '07_RBCS6__RuBisCO_small_subunit_M2a.ctl'] in C:\Users\Matheus\AppData\Local\Temp\easypam_M2a_07_RBCS6__RuBisCO_small_subunit_bi9x7vaw
+[M2a] 01_PEPC1__phosphoenolpyruvate_carboxylase_CAM: process returncode=0
+  stdout (last 200 lines):
+
+CODONML in paml version 4.9j, February 2020
+
+----------------------------------------------
+Phe F TTT | Ser S TCT | Tyr Y TAT | Cys C TGT
+      TTC |       TCC |       TAC |       TGC
+Leu L TTA |       TCA | *** * TAA | *** * TGA
+      TTG |       TCG |       TAG | Trp W TGG
+----------------------------------------------
+Leu L CTT | Pro P CCT | His H CAT | Arg R CGT
+      CTC |       CCC |       CAC |       CGC
+      CTA |       CCA | Gln Q CAA |       CGA
+      CTG |       CCG |       CAG |       CGG
+----------------------------------------------
+Ile I ATT | Thr T ACT | Asn N AAT | Ser S AGT
+      ATC |       ACC |       AAC |       AGC
+      ATA |       ACA | Lys K AAA | Arg R AGA
+Met M ATG |       ACG |       AAG |       AGG
+----------------------------------------------
+Val V GTT | Ala A GCT | Asp D GAT | Gly G GGT
+      GTC |       GCC |       GAC |       GGC
+      GTA |       GCA | Glu E GAA |       GGA
+      GTG |       GCG |       GAG |       GGG
+----------------------------------------------
+Nice code, uuh?
+
+processing fasta file
+reading seq# 1 cereus_hildmaniannus_GS199A1                          6516 sites
+reading seq# 2 cereus_ingens_L68N5                                   6516 sites
+reading seq# 3 cereus_jamacaru_GS189A4                               6516 sites
+reading seq# 4 cereus_jamacaru_L93K2                                 6516 sites
+reading seq# 5 cereus_jamacaru_S188J3                                6516 sites
+reading seq# 6 cereus_mirabella_GS193A4                              6516 sites
+reading seq# 7 cereus_phatnospermus_S149V10                          6516 sites
+reading seq# 8 cereus_pierre-braunianus_GS197A2                      6516 sitesns = 8  	ls = 6516
+Reading sequences, sequential format..
+Counting site patterns..  0:00
+
+Compressing,    350 patterns at   2172 /   2172 sites (100.0%),  0:00
+
+Collecting fpatt[] & pose[],    350 patterns at   2172 /   2172 sites (100.0%),  0:00
+57 ambiguous codons are seen in the data:
+ ACN CNA CNT CTN GCN GNC NAA NAT NCT NGG NGT NTN CGN NTG GTN AAN GAN GNT AGN TNG ANC NTC CAN NAC CNN GNN NGA TCN NNN TTN NAN CCN CNC ANT TNN NTA ANA ANG NAG NCC ANN ATN NTT CNG NNT NCA NNG NCN NNA GNA GNG GGN NGN TAN TNT TNC TGN
+Counting codons..
+
+      224 bytes for distance
+   341600 bytes for conP
+     8400 bytes for fhK
+  5000000 bytes for space
+
+TREE #  1
+((((((5, 4), 3), 8), 1), 2), (7, 6));   MP score: -1
+This is a rooted tree, without clock.  Check.
+
+  1195600 bytes for conP, adjusted
+
+initial w for M2:NSpselection reset.
+
+ntime & nrate & np:    14     6    22
+Qfactor_NS = 0.522820
+
+np =    22
+lnL0 = -10869.737508
+Out..
+lnL  = -9591.846970
+1917 lfun, 7668 eigenQcodon, 80514 P(t)
+
+BEBing (dim = 4).  This may take several minutes.
+Calculating f(x_h|w): 10 categories 21 w sets.
+Calculating f(X), the marginal likelihood.
+	log(fX) = -9596.701042  S = -9345.298061  -269.307034
+Calculating f(w|X), posterior probabilities of site classes.
+
+	did  10 / 350 patterns   1:04
+	did  20 / 350 patterns   1:04
+	did  30 / 350 patterns   1:04
+	did  40 / 350 patterns   1:04
+	did  50 / 350 patterns   1:04
+	did  60 / 350 patterns   1:04
+	did  70 / 350 patterns   1:04
+	did  80 / 350 patterns   1:05
+	did  90 / 350 patterns   1:05
+	did 100 / 350 patterns   1:05
+	did 110 / 350 patterns   1:05
+	did 120 / 350 patterns   1:05
+	did 130 / 350 patterns   1:05
+	did 140 / 350 patterns   1:05
+	did 150 / 350 patterns   1:05
+	did 160 / 350 patterns   1:05
+	did 170 / 350 patterns   1:05
+	did 180 / 350 patterns   1:05
+	did 190 / 350 patterns   1:05
+	did 200 / 350 patterns   1:05
+	did 210 / 350 patterns   1:05
+	did 220 / 350 patterns   1:05
+	did 230 / 350 patterns   1:05
+	did 240 / 350 patterns   1:05
+	did 250 / 350 patterns   1:05
+	did 260 / 350 patterns   1:05
+	did 270 / 350 patterns   1:05
+	did 280 / 350 patterns   1:05
+	did 290 / 350 patterns   1:05
+	did 300 / 350 patterns   1:05
+	did 310 / 350 patterns   1:05
+	did 320 / 350 patterns   1:05
+	did 330 / 350 patterns   1:05
+	did 340 / 350 patterns   1:05
+	did 350 / 350 patterns   1:05
+Time used:  1:05
+[M2a] 01_PEPC1__phosphoenolpyruvate_carboxylase_CAM: FINISHED (lnL=-9591.84697, np=22, ω=0.5085, time=65.4s, stop_count=0)
+[M2a] 06_P5CS__proline_synthesis_drought_stress: process returncode=0
+  stdout (last 200 lines):
+
+CODONML in paml version 4.9j, February 2020
+
+----------------------------------------------
+Phe F TTT | Ser S TCT | Tyr Y TAT | Cys C TGT
+      TTC |       TCC |       TAC |       TGC
+Leu L TTA |       TCA | *** * TAA | *** * TGA
+      TTG |       TCG |       TAG | Trp W TGG
+----------------------------------------------
+Leu L CTT | Pro P CCT | His H CAT | Arg R CGT
+      CTC |       CCC |       CAC |       CGC
+      CTA |       CCA | Gln Q CAA |       CGA
+      CTG |       CCG |       CAG |       CGG
+----------------------------------------------
+Ile I ATT | Thr T ACT | Asn N AAT | Ser S AGT
+      ATC |       ACC |       AAC |       AGC
+      ATA |       ACA | Lys K AAA | Arg R AGA
+Met M ATG |       ACG |       AAG |       AGG
+----------------------------------------------
+Val V GTT | Ala A GCT | Asp D GAT | Gly G GGT
+      GTC |       GCC |       GAC |       GGC
+      GTA |       GCA | Glu E GAA |       GGA
+      GTG |       GCG |       GAG |       GGG
+----------------------------------------------
+Nice code, uuh?
+
+processing fasta file
+reading seq# 1 cereus_albicaulis_GS188A3                             4587 sites
+reading seq# 2 cereus_hexagonus_S155A4                               4587 sites
+reading seq# 3 cereus_hildmaniannus_GS199A1                          4587 sites
+reading seq# 4 cereus_insularis_S115D60                              4587 sites
+reading seq# 5 cereus_jamacaru_GS189A4                               4587 sites
+reading seq# 6 cereus_mirabella_GS187M2                              4587 sites
+reading seq# 7 cereus_mirabella_GS193A4                              4587 sites
+reading seq# 8 cereus_phatnospermus_S131F4                           4587 sites
+reading seq# 9 cereus_phatnospermus_S149V10                          4587 sites
+reading seq#10 cereus_sericifer_L30B2b                               4587 sites
+reading seq#11 cipocereus_bradei_S186B2                              4587 sitesns = 11  	ls = 4587
+Reading sequences, sequential format..
+Counting site patterns..  0:00
+
+Compressing,    261 patterns at   1529 /   1529 sites (100.0%),  0:00
+
+Collecting fpatt[] & pose[],    261 patterns at   1529 /   1529 sites (100.0%),  0:00
+49 ambiguous codons are seen in the data:
+ AAN AGN ANG ANT ATN CAN CTN GNG GTN NAC NAN NAT NCA NCC NGA NGT NTA NTC NTG TNA TNT TTN ANA ANN NAA NNA ANC ACN NCT NNG CNA CNC TAN NAG NNN NTT GNN GAN GNT GCN GNA NNT NGC NGG NGN TNN NTN TCN NCG
+Counting codons..
+
+      440 bytes for distance
+   254736 bytes for conP
+     6264 bytes for fhK
+  5000000 bytes for space
+
+TREE #  1
+(((((5, 2), 3), (4, 10)), ((8, 9), ((1, 6), 7))), 11);   MP score: -1
+This is a rooted tree, without clock.  Check.
+
+  1273680 bytes for conP, adjusted
+
+initial w for M2:NSpselection reset.
+
+ntime & nrate & np:    20     6    28
+Qfactor_NS = 0.553325
+
+np =    28
+lnL0 = -8059.985201
+Out..
+lnL  = -6772.577108
+3514 lfun, 14056 eigenQcodon, 210840 P(t)
+
+BEBing (dim = 4).  This may take several minutes.
+Calculating f(x_h|w): 10 categories 21 w sets.
+Calculating f(X), the marginal likelihood.
+	log(fX) = -6777.937331  S = -6578.513650  -211.710635
+Calculating f(w|X), posterior probabilities of site classes.
+
+	did  10 / 261 patterns   2:13
+	did  20 / 261 patterns   2:13
+	did  30 / 261 patterns   2:13
+	did  40 / 261 patterns   2:13
+	did  50 / 261 patterns   2:13
+	did  60 / 261 patterns   2:13
+	did  70 / 261 patterns   2:13
+	did  80 / 261 patterns   2:13
+	did  90 / 261 patterns   2:13
+	did 100 / 261 patterns   2:13
+	did 110 / 261 patterns   2:14
+	did 120 / 261 patterns   2:14
+	did 130 / 261 patterns   2:14
+	did 140 / 261 patterns   2:14
+	did 150 / 261 patterns   2:14
+	did 160 / 261 patterns   2:14
+	did 170 / 261 patterns   2:14
+	did 180 / 261 patterns   2:14
+	did 190 / 261 patterns   2:14
+	did 200 / 261 patterns   2:14
+	did 210 / 261 patterns   2:14
+	did 220 / 261 patterns   2:14
+	did 230 / 261 patterns   2:14
+	did 240 / 261 patterns   2:14
+	did 250 / 261 patterns   2:14
+	did 260 / 261 patterns   2:14
+	did 261 / 261 patterns   2:14
+Time used:  2:14
+[M2a] 06_P5CS__proline_synthesis_drought_stress: FINISHED (lnL=-6772.577108, np=28, ω=0.6823, time=134.0s, stop_count=0)
+[M2a] 08_RBCL__RuBisCO_large_chain: process returncode=0
+  stdout (last 200 lines):
+
+CODONML in paml version 4.9j, February 2020
+
+----------------------------------------------
+Phe F TTT | Ser S TCT | Tyr Y TAT | Cys C TGT
+      TTC |       TCC |       TAC |       TGC
+Leu L TTA |       TCA | *** * TAA | *** * TGA
+      TTG |       TCG |       TAG | Trp W TGG
+----------------------------------------------
+Leu L CTT | Pro P CCT | His H CAT | Arg R CGT
+      CTC |       CCC |       CAC |       CGC
+      CTA |       CCA | Gln Q CAA |       CGA
+      CTG |       CCG |       CAG |       CGG
+----------------------------------------------
+Ile I ATT | Thr T ACT | Asn N AAT | Ser S AGT
+      ATC |       ACC |       AAC |       AGC
+      ATA |       ACA | Lys K AAA | Arg R AGA
+Met M ATG |       ACG |       AAG |       AGG
+----------------------------------------------
+Val V GTT | Ala A GCT | Asp D GAT | Gly G GGT
+      GTC |       GCC |       GAC |       GGC
+      GTA |       GCA | Glu E GAA |       GGA
+      GTG |       GCG |       GAG |       GGG
+----------------------------------------------
+Nice code, uuh?
+
+processing fasta file
+reading seq# 1 cereus_albicaulis_GS188A3                             3498 sites
+reading seq# 2 cereus_fernambucensis_GS200A2                         3498 sites
+reading seq# 3 cereus_gerardii_L120A11                               3498 sites
+reading seq# 4 cereus_hexagonus_S155A4                               3498 sites
+reading seq# 5 cereus_hildmaniannus_GS199A1                          3498 sites
+reading seq# 6 cereus_ingens_L68N5                                   3498 sites
+reading seq# 7 cereus_insularis_S115D60                              3498 sites
+reading seq# 8 cereus_jamacaru_GS189A4                               3498 sites
+reading seq# 9 cereus_jamacaru_L93K2                                 3498 sites
+reading seq#10 cereus_jamacaru_S188J3                                3498 sites
+reading seq#11 cereus_mirabella_GS187M2                              3498 sites
+reading seq#12 cereus_mirabella_GS193A4                              3498 sites
+reading seq#13 cereus_phatnospermus_S131F4                           3498 sites
+reading seq#14 cereus_phatnospermus_S149V10                          3498 sites
+reading seq#15 cereus_phatnospermus_S99V2                            3498 sites
+reading seq#16 cereus_pierre-braunianus_GS197A2                      3498 sites
+reading seq#17 cereus_saddianus_S103D3                               3498 sites
+reading seq#18 cereus_saddianus_S103DV2                              3498 sites
+reading seq#19 cereus_sericifer_L30B2b                               3498 sites
+reading seq#20 cipocereus_bradei_S186B2                              3498 sitesns = 20  	ls = 3498
+Reading sequences, sequential format..
+Counting site patterns..  0:00
+
+Compressing,    111 patterns at   1166 /   1166 sites (100.0%),  0:00
+
+Collecting fpatt[] & pose[],    111 patterns at   1166 /   1166 sites (100.0%),  0:00
+28 ambiguous codons are seen in the data:
+ AAN ANC ANG ANT CAN CNA CNT GAN GNN GTN NAA NAN NAT NCT NNG NNT NTA TNA TNG TTN ACN GNG GCN NGG NGC NTG ANN NNA
+Counting codons..
+
+     1520 bytes for distance
+   108336 bytes for conP
+     2664 bytes for fhK
+  5000000 bytes for space
+
+TREE #  1
+(((((((((10, 9), 8), (3, 4)), 16), 5), 6), ((7, 2), 19)), ((((13, 14), 15), (17, 18)), ((1, 11), 12))), 20);   MP score: -1
+This is a rooted tree, without clock.  Check.
+
+  1029192 bytes for conP, adjusted
+
+1 node(s) used for scaling (Yang 2000 J Mol Evol 51:423-432):
+ 22
+
+initial w for M2:NSpselection reset.
+
+ntime & nrate & np:    38     6    46
+Qfactor_NS = 0.514265
+
+np =    46
+lnL0 = -6775.746225
+Out..
+lnL  = -4955.395360
+4860 lfun, 19440 eigenQcodon, 554040 P(t)
+
+BEBing (dim = 4).  This may take several minutes.
+Calculating f(x_h|w): 10 categories 21 w sets.
+Calculating f(X), the marginal likelihood.
+	log(fX) = -4963.602439  S = -4865.690945  -105.408221
+Calculating f(w|X), posterior probabilities of site classes.
+
+	did  10 / 111 patterns   3:08
+	did  20 / 111 patterns   3:08
+	did  30 / 111 patterns   3:08
+	did  40 / 111 patterns   3:08
+	did  50 / 111 patterns   3:08
+	did  60 / 111 patterns   3:08
+	did  70 / 111 patterns   3:08
+	did  80 / 111 patterns   3:08
+	did  90 / 111 patterns   3:09
+	did 100 / 111 patterns   3:09
+	did 110 / 111 patterns   3:09
+	did 111 / 111 patterns   3:09
+Time used:  3:09
+[M2a] 08_RBCL__RuBisCO_large_chain: FINISHED (lnL=-4955.39536, np=46, ω=0.9083, time=188.7s, stop_count=0)
+[M2a] 02_PPCK1__PEPC_kinase_CAM_regulator: process returncode=0
+  stdout (last 200 lines):
+reading seq# 1 cereus_albicaulis_GS188A3                             4815 sites
+reading seq# 2 cereus_hexagonus_S155A4                               4815 sites
+reading seq# 3 cereus_ingens_L68N5                                   4815 sites
+reading seq# 4 cereus_insularis_S115D60                              4815 sites
+reading seq# 5 cereus_jamacaru_GS189A4                               4815 sites
+reading seq# 6 cereus_mirabella_GS187M2                              4815 sites
+reading seq# 7 cereus_phatnospermus_S131F4                           4815 sites
+reading seq# 8 cereus_phatnospermus_S149V10                          4815 sites
+reading seq# 9 cereus_pierre-braunianus_GS197A2                      4815 sites
+reading seq#10 cereus_saddianus_S103D3                               4815 sites
+reading seq#11 cereus_saddianus_S103DV2                              4815 sites
+reading seq#12 cereus_sericifer_L30B2b                               4815 sites
+reading seq#13 cipocereus_bradei_S186B2                              4815 sitesns = 13  	ls = 4815
+Reading sequences, sequential format..
+Counting site patterns..  0:00
+
+Compressing,    220 patterns at   1605 /   1605 sites (100.0%),  0:00
+
+Collecting fpatt[] & pose[],    220 patterns at   1605 /   1605 sites (100.0%),  0:00
+44 ambiguous codons are seen in the data:
+ ANC ANG ATN CAN CGN GAN GGN GNT NAG NAT NCG NGT NNT NTA NTG NTT TCN TNC CCN CTN GCN ANA NAC AGN NNN GNA GTN NNG TGN NAA NNA AAN NAN NCA CNT NCT CNA GNC NNC TNN TTN NCN NCC GNN
+Counting codons..
+
+      624 bytes for distance
+   214720 bytes for conP
+     5280 bytes for fhK
+  5000000 bytes for space
+
+TREE #  1
+((((((5, 2), 9), 3), (4, 12)), (((7, 8), (10, 11)), (1, 6))), 13);   MP score: -1
+This is a rooted tree, without clock.  Check.
+
+  1288320 bytes for conP, adjusted
+
+initial w for M2:NSpselection reset.
+
+ntime & nrate & np:    24     6    32
+Qfactor_NS = 0.535045
+
+np =    32
+lnL0 = -8875.351434
+
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 3  r = 1 fhK = -1.59416e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 10  r = 1 fhK = -4.68169e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 19  r = 1 fhK = -8.32383e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 20  r = 1 fhK = -8.96887e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 26  r = 1 fhK = -2.30407e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 29  r = 1 fhK = -4.56059e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 35  r = 1 fhK = -7.28745e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 36  r = 1 fhK = -8.46530e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 40  r = 1 fhK = -7.16501e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 47  r = 1 fhK = -7.02379e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 50  r = 1 fhK = -8.22800e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 51  r = 1 fhK = -3.00331e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 52  r = 1 fhK = -8.70215e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 55  r = 1 fhK = -5.44579e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 56  r = 1 fhK = -1.51229e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 74  r = 1 fhK = -4.67959e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 80  r = 1 fhK = -3.19110e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 82  r = 1 fhK = -4.38836e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 90  r = 1 fhK = -1.05300e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 95  r = 1 fhK = -2.12711e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 103  r = 1 fhK = -7.28342e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 110  r = 1 fhK = -4.10925e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 112  r = 1 fhK = -5.02926e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 121  r = 1 fhK = -2.28384e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 126  r = 1 fhK = -7.51068e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 127  r = 1 fhK = -1.29210e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 130  r = 1 fhK = -2.27607e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 142  r = 1 fhK = -2.51525e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 145  r = 1 fhK = -2.98134e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 147  r = 1 fhK = -3.60771e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 157  r = 1 fhK = -5.17989e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 160  r = 1 fhK = -4.57062e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 173  r = 1 fhK = -1.03496e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 174  r = 1 fhK = -1.23692e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 177  r = 1 fhK = -2.21837e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 178  r = 1 fhK = -3.20250e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 179  r = 1 fhK = -7.35695e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 182  r = 1 fhK = -7.96360e-10
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 188  r = 1 fhK = -7.54005e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 201  r = 1 fhK = -5.27787e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 205  r = 1 fhK = -1.77709e-09
+    0.001018    0.001316    0.001916    0.000004    0.000004    0.005169    0.004543    0.008254    0.005230    0.001249    0.007055    0.004641    0.000004    0.013562    0.000991    0.001998    0.003896    0.004494    0.001183    0.001431    0.008127    0.002462    0.002294    0.012266    4.207684    0.869182    1.784749    1.374643    2.352435   -3.173210   -0.000094    7.955834
+
+fx_r: h = 210  r = 1 fhK = -1.10064e-09 Out..
+lnL  = -7569.622861
+5788 lfun, 23152 eigenQcodon, 416736 P(t)
+
+BEBing (dim = 4).  This may take several minutes.
+Calculating f(x_h|w): 10 categories 21 w sets.
+Calculating f(X), the marginal likelihood.
+	log(fX) = -7577.353134  S = -7341.461253  -270.800681
+Calculating f(w|X), posterior probabilities of site classes.
+
+	did  10 / 220 patterns   3:42
+	did  20 / 220 patterns   3:42
+	did  30 / 220 patterns   3:42
+	did  40 / 220 patterns   3:42
+	did  50 / 220 patterns   3:42
+	did  60 / 220 patterns   3:42
+	did  70 / 220 patterns   3:42
+	did  80 / 220 patterns   3:42
+	did  90 / 220 patterns   3:42
+	did 100 / 220 patterns   3:42
+	did 110 / 220 patterns   3:42
+	did 120 / 220 patterns   3:42
+	did 130 / 220 patterns   3:42
+	did 140 / 220 patterns   3:42
+	did 150 / 220 patterns   3:42
+	did 160 / 220 patterns   3:42
+	did 170 / 220 patterns   3:42
+	did 180 / 220 patterns   3:42
+	did 190 / 220 patterns   3:42
+	did 200 / 220 patterns   3:42
+	did 210 / 220 patterns   3:42
+	did 220 / 220 patterns   3:42
+Time used:  3:42
+[M2a] 02_PPCK1__PEPC_kinase_CAM_regulator: FINISHED (lnL=-7569.622861, np=32, ω=0.6696, time=222.5s, stop_count=0)
+[M2a] 03_ALMT2__malate_transporter_CAM: process returncode=0
+  stdout (last 200 lines):
+
+CODONML in paml version 4.9j, February 2020
+
+----------------------------------------------
+Phe F TTT | Ser S TCT | Tyr Y TAT | Cys C TGT
+      TTC |       TCC |       TAC |       TGC
+Leu L TTA |       TCA | *** * TAA | *** * TGA
+      TTG |       TCG |       TAG | Trp W TGG
+----------------------------------------------
+Leu L CTT | Pro P CCT | His H CAT | Arg R CGT
+      CTC |       CCC |       CAC |       CGC
+      CTA |       CCA | Gln Q CAA |       CGA
+      CTG |       CCG |       CAG |       CGG
+----------------------------------------------
+Ile I ATT | Thr T ACT | Asn N AAT | Ser S AGT
+      ATC |       ACC |       AAC |       AGC
+      ATA |       ACA | Lys K AAA | Arg R AGA
+Met M ATG |       ACG |       AAG |       AGG
+----------------------------------------------
+Val V GTT | Ala A GCT | Asp D GAT | Gly G GGT
+      GTC |       GCC |       GAC |       GGC
+      GTA |       GCA | Glu E GAA |       GGA
+      GTG |       GCG |       GAG |       GGG
+----------------------------------------------
+Nice code, uuh?
+
+processing fasta file
+reading seq# 1 cereus_albicaulis_GS188A3                             4395 sites
+reading seq# 2 cereus_fernambucensis_GS200A2                         4395 sites
+reading seq# 3 cereus_gerardii_L120A11                               4395 sites
+reading seq# 4 cereus_hexagonus_S155A4                               4395 sites
+reading seq# 5 cereus_hildmaniannus_GS199A1                          4395 sites
+reading seq# 6 cereus_ingens_L68N5                                   4395 sites
+reading seq# 7 cereus_insularis_S115D60                              4395 sites
+reading seq# 8 cereus_jamacaru_GS189A4                               4395 sites
+reading seq# 9 cereus_jamacaru_L93K2                                 4395 sites
+reading seq#10 cereus_jamacaru_S188J3                                4395 sites
+reading seq#11 cereus_mirabella_GS187M2                              4395 sites
+reading seq#12 cereus_mirabella_GS193A4                              4395 sites
+reading seq#13 cereus_phatnospermus_S131F4                           4395 sites
+reading seq#14 cereus_phatnospermus_S149V10                          4395 sites
+reading seq#15 cereus_phatnospermus_S99V2                            4395 sites
+reading seq#16 cereus_pierre-braunianus_GS197A2                      4395 sites
+reading seq#17 cereus_saddianus_S103D3                               4395 sites
+reading seq#18 cereus_saddianus_S103DV2                              4395 sites
+reading seq#19 cereus_sericifer_L30B2b                               4395 sites
+reading seq#20 cipocereus_bradei_S186B2                              4395 sitesns = 20  	ls = 4395
+Reading sequences, sequential format..
+Counting site patterns..  0:00
+
+Compressing,    146 patterns at   1465 /   1465 sites (100.0%),  0:00
+
+Collecting fpatt[] & pose[],    146 patterns at   1465 /   1465 sites (100.0%),  0:00
+14 ambiguous codons are seen in the data:
+ AAN NAT AGN ANN ANT NTA CGN GAN TCN GGN TTN NGC NCA ACN
+Counting codons..
+
+     1520 bytes for distance
+   142496 bytes for conP
+     3504 bytes for fhK
+  5000000 bytes for space
+
+TREE #  1
+(((((((((10, 9), 8), (3, 4)), 16), 5), 6), ((7, 2), 19)), ((((13, 14), 15), (17, 18)), ((1, 11), 12))), 20);   MP score: -1
+This is a rooted tree, without clock.  Check.
+
+  1353712 bytes for conP, adjusted
+
+1 node(s) used for scaling (Yang 2000 J Mol Evol 51:423-432):
+ 22
+
+initial w for M2:NSpselection reset.
+
+ntime & nrate & np:    38     6    46
+Qfactor_NS = 0.507090
+
+np =    46
+lnL0 = -9009.423551
+
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 3  r = 1 fhK = -1.02361e+39
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 9  r = 1 fhK = -9.95340e+39
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 10  r = 1 fhK = -9.95340e+39
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 13  r = 1 fhK = -2.57025e+35
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 15  r = 1 fhK = -1.18198e-08
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 28  r = 1 fhK = -7.46361e+36
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 32  r = 1 fhK = -6.14067e-09
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 33  r = 1 fhK = -1.13398e+39
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 35  r = 1 fhK = -5.12749e+37
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 41  r = 1 fhK = -1.43475e+36
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 43  r = 1 fhK = -4.17755e+38
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 47  r = 1 fhK = -4.44581e+36
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 49  r = 1 fhK = -2.54705e-09
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 51  r = 1 fhK = -1.93869e+36
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 67  r = 1 fhK = -1.98653e+35
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 79  r = 1 fhK = -1.22460e+41
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 81  r = 1 fhK = -4.13461e-09
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 87  r = 1 fhK = -4.30454e+38
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 102  r = 1 fhK = -1.31301e+37
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 114  r = 1 fhK = -5.73537e+05
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 117  r = 1 fhK = -1.66333e+39
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 120  r = 1 fhK = -2.92979e+38
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 127  r = 1 fhK = -2.19720e-09
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 138  r = 1 fhK = -3.06978e+11
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 139  r = 1 fhK = -2.81365e+39
+    0.010688    0.000004    0.003369    0.000004    0.000004    0.001225    0.000004    0.000004    0.000743    0.002813    0.002145    0.000908    0.004265    0.003793    0.002309    0.006013    0.003787    0.003333    0.000767    0.002645    0.001008    0.001661    0.000835    0.003779    0.000004    0.002842    0.003457    0.001456    0.004301    0.002963    0.002115    0.000731    0.000004    0.000835    0.008120    0.007884    0.006335    0.003648    3.961584    0.674568    0.970999    0.803751    4.052672    2.237395   -0.000094   20.784549
+
+fx_r: h = 143  r = 1 fhK = -1.98143e+39 Out..
+lnL  = -6861.204469
+9847 lfun, 39388 eigenQcodon, 1122558 P(t)
+
+BEBing (dim = 4).  This may take several minutes.
+Calculating f(x_h|w): 10 categories 21 w sets.
+Calculating f(X), the marginal likelihood.
+	log(fX) = -6874.508627  S = -6710.380924  -175.988867
+Calculating f(w|X), posterior probabilities of site classes.
+
+	did  10 / 146 patterns   6:45
+	did  20 / 146 patterns   6:45
+	did  30 / 146 patterns   6:45
+	did  40 / 146 patterns   6:45
+	did  50 / 146 patterns   6:45
+	did  60 / 146 patterns   6:45
+	did  70 / 146 patterns   6:45
+	did  80 / 146 patterns   6:45
+	did  90 / 146 patterns   6:45
+	did 100 / 146 patterns   6:46
+	did 110 / 146 patterns   6:46
+	did 120 / 146 patterns   6:46
+	did 130 / 146 patterns   6:46
+	did 140 / 146 patterns   6:46
+	did 146 / 146 patterns   6:46
+Time used:  6:46
+[M2a] 03_ALMT2__malate_transporter_CAM: FINISHED (lnL=-6861.204469, np=46, ω=0.4141, time=405.7s, stop_count=0)
+[M2a] 05_OSCA4__hyperosmolality_calcium_channel: process returncode=0
+  stdout (last 200 lines):
+
+CODONML in paml version 4.9j, February 2020
+
+----------------------------------------------
+Phe F TTT | Ser S TCT | Tyr Y TAT | Cys C TGT
+      TTC |       TCC |       TAC |       TGC
+Leu L TTA |       TCA | *** * TAA | *** * TGA
+      TTG |       TCG |       TAG | Trp W TGG
+----------------------------------------------
+Leu L CTT | Pro P CCT | His H CAT | Arg R CGT
+      CTC |       CCC |       CAC |       CGC
+      CTA |       CCA | Gln Q CAA |       CGA
+      CTG |       CCG |       CAG |       CGG
+----------------------------------------------
+Ile I ATT | Thr T ACT | Asn N AAT | Ser S AGT
+      ATC |       ACC |       AAC |       AGC
+      ATA |       ACA | Lys K AAA | Arg R AGA
+Met M ATG |       ACG |       AAG |       AGG
+----------------------------------------------
+Val V GTT | Ala A GCT | Asp D GAT | Gly G GGT
+      GTC |       GCC |       GAC |       GGC
+      GTA |       GCA | Glu E GAA |       GGA
+      GTG |       GCG |       GAG |       GGG
+----------------------------------------------
+Nice code, uuh?
+
+processing fasta file
+reading seq# 1 cereus_albicaulis_GS188A3                             5961 sites
+reading seq# 2 cereus_fernambucensis_GS200A2                         5961 sites
+reading seq# 3 cereus_gerardii_L120A11                               5961 sites
+reading seq# 4 cereus_hexagonus_S155A4                               5961 sites
+reading seq# 5 cereus_hildmaniannus_GS199A1                          5961 sites
+reading seq# 6 cereus_ingens_L68N5                                   5961 sites
+reading seq# 7 cereus_insularis_S115D60                              5961 sites
+reading seq# 8 cereus_jamacaru_GS189A4                               5961 sites
+reading seq# 9 cereus_jamacaru_L93K2                                 5961 sites
+reading seq#10 cereus_jamacaru_S188J3                                5961 sites
+reading seq#11 cereus_mirabella_GS187M2                              5961 sites
+reading seq#12 cereus_mirabella_GS193A4                              5961 sites
+reading seq#13 cereus_phatnospermus_S131F4                           5961 sites
+reading seq#14 cereus_phatnospermus_S149V10                          5961 sites
+reading seq#15 cereus_phatnospermus_S99V2                            5961 sites
+reading seq#16 cereus_pierre-braunianus_GS197A2                      5961 sites
+reading seq#17 cereus_saddianus_S103D3                               5961 sites
+reading seq#18 cereus_saddianus_S103DV2                              5961 sites
+reading seq#19 cereus_sericifer_L30B2b                               5961 sites
+reading seq#20 cipocereus_bradei_S186B2                              5961 sitesns = 20  	ls = 5961
+Reading sequences, sequential format..
+Counting site patterns..  0:00
+
+Compressing,    194 patterns at   1987 /   1987 sites (100.0%),  0:00
+
+Collecting fpatt[] & pose[],    194 patterns at   1987 /   1987 sites (100.0%),  0:00
+16 ambiguous codons are seen in the data:
+ AGN CTN GGN GTN NAG TCN ATN GCN NTT TTN CNG GNG CGN NTG GAN NNG
+Counting codons..
+
+     1520 bytes for distance
+   189344 bytes for conP
+     4656 bytes for fhK
+  5000000 bytes for space
+
+TREE #  1
+(((((((((10, 9), 8), (3, 4)), 16), 5), 6), ((7, 2), 19)), ((((13, 14), 15), (17, 18)), ((1, 11), 12))), 20);   MP score: -1
+This is a rooted tree, without clock.  Check.
+
+  1798768 bytes for conP, adjusted
+
+1 node(s) used for scaling (Yang 2000 J Mol Evol 51:423-432):
+ 22
+
+initial w for M2:NSpselection reset.
+
+ntime & nrate & np:    38     6    46
+Qfactor_NS = 0.490789
+
+np =    46
+lnL0 = -12648.199291
+Out..
+lnL  = -9778.365451
+9965 lfun, 39860 eigenQcodon, 1136010 P(t)
+
+BEBing (dim = 4).  This may take several minutes.
+Calculating f(x_h|w): 10 categories 21 w sets.
+Calculating f(X), the marginal likelihood.
+	log(fX) = -9803.563191  S = -9606.330498  -226.989506
+Calculating f(w|X), posterior probabilities of site classes.
+
+	did  10 / 194 patterns   8:08
+	did  20 / 194 patterns   8:08
+	did  30 / 194 patterns   8:08
+	did  40 / 194 patterns   8:08
+	did  50 / 194 patterns   8:08
+	did  60 / 194 patterns   8:08
+	did  70 / 194 patterns   8:08
+	did  80 / 194 patterns   8:08
+	did  90 / 194 patterns   8:08
+	did 100 / 194 patterns   8:08
+	did 110 / 194 patterns   8:08
+	did 120 / 194 patterns   8:08
+	did 130 / 194 patterns   8:08
+	did 140 / 194 patterns   8:08
+	did 150 / 194 patterns   8:08
+	did 160 / 194 patterns   8:08
+	did 170 / 194 patterns   8:08
+	did 180 / 194 patterns   8:08
+	did 190 / 194 patterns   8:08
+	did 194 / 194 patterns   8:08
+Time used:  8:08
+[M2a] 05_OSCA4__hyperosmolality_calcium_channel: FINISHED (lnL=-9778.365451, np=46, ω=0.1786, time=488.2s, stop_count=0)
+[M2a] 07_RBCS6__RuBisCO_small_subunit: process returncode=0
+  stdout (last 200 lines):
+
+CODONML in paml version 4.9j, February 2020
+
+----------------------------------------------
+Phe F TTT | Ser S TCT | Tyr Y TAT | Cys C TGT
+      TTC |       TCC |       TAC |       TGC
+Leu L TTA |       TCA | *** * TAA | *** * TGA
+      TTG |       TCG |       TAG | Trp W TGG
+----------------------------------------------
+Leu L CTT | Pro P CCT | His H CAT | Arg R CGT
+      CTC |       CCC |       CAC |       CGC
+      CTA |       CCA | Gln Q CAA |       CGA
+      CTG |       CCG |       CAG |       CGG
+----------------------------------------------
+Ile I ATT | Thr T ACT | Asn N AAT | Ser S AGT
+      ATC |       ACC |       AAC |       AGC
+      ATA |       ACA | Lys K AAA | Arg R AGA
+Met M ATG |       ACG |       AAG |       AGG
+----------------------------------------------
+Val V GTT | Ala A GCT | Asp D GAT | Gly G GGT
+      GTC |       GCC |       GAC |       GGC
+      GTA |       GCA | Glu E GAA |       GGA
+      GTG |       GCG |       GAG |       GGG
+----------------------------------------------
+Nice code, uuh?
+
+processing fasta file
+reading seq# 1 cereus_albicaulis_GS188A3                             1980 sites
+reading seq# 2 cereus_fernambucensis_GS200A2                         1980 sites
+reading seq# 3 cereus_gerardii_L120A11                               1980 sites
+reading seq# 4 cereus_hexagonus_S155A4                               1980 sites
+reading seq# 5 cereus_hildmaniannus_GS199A1                          1980 sites
+reading seq# 6 cereus_ingens_L68N5                                   1980 sites
+reading seq# 7 cereus_insularis_S115D60                              1980 sites
+reading seq# 8 cereus_jamacaru_GS189A4                               1980 sites
+reading seq# 9 cereus_jamacaru_L93K2                                 1980 sites
+reading seq#10 cereus_jamacaru_S188J3                                1980 sites
+reading seq#11 cereus_mirabella_GS187M2                              1980 sites
+reading seq#12 cereus_phatnospermus_S131F4                           1980 sites
+reading seq#13 cereus_phatnospermus_S149V10                          1980 sites
+reading seq#14 cereus_phatnospermus_S99V2                            1980 sites
+reading seq#15 cereus_pierre-braunianus_GS197A2                      1980 sites
+reading seq#16 cereus_saddianus_S103D3                               1980 sites
+reading seq#17 cereus_saddianus_S103DV2                              1980 sites
+reading seq#18 cereus_sericifer_L30B2b                               1980 sites
+reading seq#19 cipocereus_bradei_S186B2                              1980 sitesns = 19  	ls = 1980
+Reading sequences, sequential format..
+Counting site patterns..  0:00
+
+Compressing,    117 patterns at    660 /    660 sites (100.0%),  0:00
+
+Collecting fpatt[] & pose[],    117 patterns at    660 /    660 sites (100.0%),  0:00
+34 ambiguous codons are seen in the data:
+ AAN GAN GCN NAA NGT ACN NTA NTC NCG NCC GNG TNT TGN NGG NTT ANT GGN ANN CNG NAT TNA TCN TNG GNA NAG CCN NGC TNC GNC NGN AGN GNN GTN NCN
+Counting codons..
+
+     1368 bytes for distance
+   114192 bytes for conP
+     2808 bytes for fhK
+  5000000 bytes for space
+
+TREE #  1
+(((((((((10, 9), 8), (3, 4)), 15), 5), 6), ((7, 2), 18)), ((((12, 13), 14), (16, 17)), (1, 11))), 19);   MP score: -1
+This is a rooted tree, without clock.  Check.
+
+  1027728 bytes for conP, adjusted
+
+1 node(s) used for scaling (Yang 2000 J Mol Evol 51:423-432):
+ 21
+
+initial w for M2:NSpselection reset.
+
+ntime & nrate & np:    36     6    44
+Qfactor_NS = 0.536505
+
+np =    44
+lnL0 = -3808.679276
+Out..
+lnL  = -2882.014351
+16848 lfun, 67392 eigenQcodon, 1819584 P(t)
+
+BEBing (dim = 4).  This may take several minutes.
+Calculating f(x_h|w): 10 categories 21 w sets.
+Calculating f(X), the marginal likelihood.
+	log(fX) = -2887.070303  S = -2819.076949   -71.508102
+Calculating f(w|X), posterior probabilities of site classes.
+
+	did  10 / 117 patterns   8:57
+	did  20 / 117 patterns   8:57
+	did  30 / 117 patterns   8:57
+	did  40 / 117 patterns   8:57
+	did  50 / 117 patterns   8:57
+	did  60 / 117 patterns   8:57
+	did  70 / 117 patterns   8:57
+	did  80 / 117 patterns   8:57
+	did  90 / 117 patterns   8:57
+	did 100 / 117 patterns   8:57
+	did 110 / 117 patterns   8:57
+	did 117 / 117 patterns   8:57
+Time used:  8:57
+[M2a] 07_RBCS6__RuBisCO_small_subunit: FINISHED (lnL=-2882.014351, np=44, ω=1.195, time=537.1s, stop_count=0)
+[M2a] 04_AQP_PIP1-4__aquaporin_water_channel: process returncode=0
+  stdout (last 200 lines):
+
+fx_r: h = 60  r = 1 fhK = -4.71095e-02
+    0.005429    0.000705    0.000690    0.000711    0.000004    0.000004    0.003028    0.000004    0.002085    0.001433    0.002232    0.000004    0.001415    0.002087    0.004050    0.003350    0.002847    0.000004    0.000004    0.000782    0.002894    0.002653    0.000004    0.002197    0.002916    0.000004    0.005013    0.000004    0.001428    0.004214    0.000701    0.000690    0.000004    0.002836    0.000700    0.000004    0.001392    0.001018    3.707860    0.798385    3.289893    0.490498    3.329168   -0.918649    0.000001    6.640716
+
+fx_r: h = 60  r = 1 fhK = -6.98739e-02
+    0.005429    0.000705    0.000690    0.000711    0.000004    0.000004    0.003028    0.000004    0.002085    0.001433    0.002232    0.000004    0.001415    0.002087    0.004050    0.003350    0.002847    0.000004    0.000004    0.000782    0.002894    0.002653    0.000004    0.002197    0.002916    0.000004    0.005013    0.000004    0.001428    0.004214    0.000701    0.000690    0.000004    0.002835    0.000701    0.000004    0.001392    0.001018    3.707860    0.798385    3.289893    0.490498    3.329168   -0.918649    0.000001    6.640716
+
+fx_r: h = 60  r = 1 fhK = -6.98868e-02
+    0.005429    0.000705    0.000690    0.000711    0.000004    0.000004    0.003028    0.000004    0.002085    0.001433    0.002232    0.000004    0.001415    0.002087    0.004050    0.003350    0.002847    0.000004    0.000004    0.000782    0.002894    0.002653    0.000004    0.002197    0.002916    0.000004    0.005013    0.000004    0.001428    0.004214    0.000701    0.000690    0.000004    0.002835    0.000700    0.000005    0.001392    0.001018    3.707860    0.798385    3.289893    0.490498    3.329168   -0.918649    0.000001    6.640716
+
+fx_r: h = 60  r = 1 fhK = -6.98868e-02
+    0.005429    0.000705    0.000690    0.000711    0.000004    0.000004    0.003028    0.000004    0.002085    0.001433    0.002232    0.000004    0.001415    0.002087    0.004050    0.003350    0.002847    0.000004    0.000004    0.000782    0.002894    0.002653    0.000004    0.002197    0.002916    0.000004    0.005013    0.000004    0.001428    0.004214    0.000701    0.000690    0.000004    0.002835    0.000700    0.000004    0.001393    0.001018    3.707860    0.798385    3.289893    0.490498    3.329168   -0.918649    0.000001    6.640716
+
+fx_r: h = 60  r = 1 fhK = -6.98605e-02
+    0.005429    0.000705    0.000690    0.000711    0.000004    0.000004    0.003028    0.000004    0.002085    0.001433    0.002232    0.000004    0.001415    0.002087    0.004050    0.003350    0.002847    0.000004    0.000004    0.000782    0.002894    0.002653    0.000004    0.002197    0.002916    0.000004    0.005013    0.000004    0.001428    0.004214    0.000701    0.000690    0.000004    0.002835    0.000700    0.000004    0.001392    0.001019    3.707860    0.798385    3.289893    0.490498    3.329168   -0.918649    0.000001    6.640716
+
+fx_r: h = 60  r = 1 fhK = -6.98976e-02
+    0.005429    0.000705    0.000690    0.000711    0.000004    0.000004    0.003028    0.000004    0.002085    0.001433    0.002232    0.000004    0.001415    0.002087    0.004050    0.003350    0.002847    0.000004    0.000004    0.000782    0.002894    0.002653    0.000004    0.002197    0.002916    0.000004    0.005013    0.000004    0.001428    0.004214    0.000701    0.000690    0.000004    0.002835    0.000700    0.000004    0.001392    0.001018    3.707865    0.798385    3.289893    0.490498    3.329168   -0.918649    0.000001    6.640716
+
+fx_r: h = 60  r = 1 fhK = -3.34326e-02
+    0.005429    0.000705    0.000690    0.000711    0.000004    0.000004    0.003028    0.000004    0.002085    0.001433    0.002232    0.000004    0.001415    0.002087    0.004050    0.003350    0.002847    0.000004    0.000004    0.000782    0.002894    0.002653    0.000004    0.002197    0.002916    0.000004    0.005013    0.000004    0.001428    0.004214    0.000701    0.000690    0.000004    0.002835    0.000700    0.000004    0.001392    0.001018    3.707860    0.798385    3.289898    0.490498    3.329168   -0.918649    0.000001    6.640716
+
+fx_r: h = 60  r = 1 fhK = -1.33560e-02
+    0.005429    0.000705    0.000690    0.000711    0.000004    0.000004    0.003028    0.000004    0.002085    0.001433    0.002232    0.000004    0.001415    0.002087    0.004050    0.003350    0.002847    0.000004    0.000004    0.000782    0.002894    0.002653    0.000004    0.002197    0.002916    0.000004    0.005013    0.000004    0.001428    0.004214    0.000701    0.000690    0.000004    0.002835    0.000700    0.000004    0.001392    0.001018    3.707860    0.798385    3.289893    0.490500    3.329168   -0.918649    0.000001    6.640716
+
+fx_r: h = 60  r = 1 fhK = -1.35249e+03
+    0.005429    0.000705    0.000690    0.000711    0.000004    0.000004    0.003028    0.000004    0.002085    0.001433    0.002232    0.000004    0.001415    0.002087    0.004050    0.003350    0.002847    0.000004    0.000004    0.000782    0.002894    0.002653    0.000004    0.002197    0.002916    0.000004    0.005013    0.000004    0.001428    0.004214    0.000701    0.000690    0.000004    0.002835    0.000700    0.000004    0.001392    0.001018    3.707860    0.798385    3.289893    0.490498    3.329172   -0.918649    0.000001    6.640716
+
+fx_r: h = 60  r = 1 fhK = -6.98856e-02
+    0.005429    0.000705    0.000690    0.000711    0.000004    0.000004    0.003028    0.000004    0.002085    0.001433    0.002232    0.000004    0.001415    0.002087    0.004050    0.003350    0.002847    0.000004    0.000004    0.000782    0.002894    0.002653    0.000004    0.002197    0.002916    0.000004    0.005013    0.000004    0.001428    0.004214    0.000701    0.000690    0.000004    0.002835    0.000700    0.000004    0.001392    0.001018    3.707860    0.798385    3.289893    0.490498    3.329168   -0.918647    0.000001    6.640716
+
+fx_r: h = 60  r = 1 fhK = -6.98869e-02
+    0.005429    0.000705    0.000690    0.000711    0.000004    0.000004    0.003028    0.000004    0.002085    0.001433    0.002232    0.000004    0.001415    0.002087    0.004050    0.003350    0.002847    0.000004    0.000004    0.000782    0.002894    0.002653    0.000004    0.002197    0.002916    0.000004    0.005013    0.000004    0.001428    0.004214    0.000701    0.000690    0.000004    0.002835    0.000700    0.000004    0.001392    0.001018    3.707860    0.798385    3.289893    0.490498    3.329168   -0.918649    0.000001    6.640724
+
+fx_r: h = 60  r = 1 fhK = -6.98871e-02
+    0.005336    0.000694    0.000683    0.000699    0.000004    0.000004    0.002377    0.000004    0.001983    0.001445    0.001551    0.000004    0.001385    0.002237    0.004183    0.003381    0.002812    0.000004    0.000004    0.000781    0.002825    0.001935    0.000004    0.002027    0.002763    0.000004    0.003927    0.000004    0.001407    0.004242    0.000694    0.000679    0.000004    0.002795    0.000691    0.000004    0.001374    0.001006    3.797231    0.772557    3.449082    0.449807    3.419143   -0.992278    0.000001    7.018173
+
+fx_r: h = 60  r = 1 fhK = -1.69938e+00
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005284    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50682e-03
+    0.005283    0.000694    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50440e-03
+    0.005283    0.000693    0.000682    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50657e-03
+    0.005283    0.000693    0.000681    0.000700    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000005    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50657e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000005    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002297    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000005    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001969    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001463    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001864    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000005    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001392    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002194    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004236    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003401    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002800    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000005    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50657e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000005    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000782    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002782    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002050    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50657e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000005    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.52018e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002050    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.46010e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002731    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000005    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003365    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000005    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001412    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004253    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000693    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000680    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000005    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.25056e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002773    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50646e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000692    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000005    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001370    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50633e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000968    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50682e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433908   -1.004358    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50642e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004356    0.000001    7.080099
+
+fx_r: h = 60  r = 1 fhK = -1.50658e-03
+    0.005283    0.000693    0.000681    0.000699    0.000004    0.000004    0.002296    0.000004    0.001968    0.001462    0.001863    0.000004    0.001391    0.002193    0.004235    0.003400    0.002799    0.000004    0.000004    0.000781    0.002781    0.002049    0.000004    0.002049    0.002730    0.000004    0.003364    0.000004    0.001411    0.004252    0.000692    0.000679    0.000004    0.002772    0.000691    0.000004    0.001369    0.000967    3.811888    0.768314    3.475198    0.443146    3.433903   -1.004358    0.000001    7.080107
+
+fx_r: h = 60  r = 1 fhK = -1.50662e-03
+    0.005267    0.000693    0.000681    0.000699    0.000004    0.000004    0.002309    0.000004    0.001951    0.001472    0.001856    0.000004    0.001390    0.002192    0.004236    0.003402    0.002794    0.000004    0.000004    0.000781    0.002773    0.002050    0.000004    0.002057    0.002745    0.000004    0.003360    0.000004    0.001411    0.004253    0.000692    0.000679    0.000004    0.002764    0.000691    0.000004    0.001369    0.000951    3.811946    0.768289    3.475294    0.443143    3.433955   -1.004402    0.000001    7.080327
+
+fx_r: h = 60  r = 1 fhK = -1.12668e+03
+    0.005258    0.000693    0.000681    0.000699    0.000004    0.000004    0.002312    0.000004    0.001955    0.001470    0.001855    0.000004    0.001390    0.002191    0.004237    0.003403    0.002793    0.000004    0.000004    0.000781    0.002772    0.002052    0.000004    0.002041    0.002742    0.000004    0.003360    0.000004    0.001411    0.004253    0.000692    0.000679    0.000004    0.002765    0.000691    0.000004    0.001369    0.000942    3.812016    0.768220    3.475431    0.443220    3.434022   -1.004467    0.000001    7.080667
+
+fx_r: h = 60  r = 1 fhK = -4.33336e-02
+    0.005233    0.000693    0.000680    0.000699    0.000004    0.000004    0.002322    0.000004    0.001964    0.001462    0.001853    0.000004    0.001390    0.002188    0.004239    0.003405    0.002791    0.000004    0.000004    0.000780    0.002771    0.002057    0.000004    0.001997    0.002735    0.000004    0.003360    0.000004    0.001411    0.004255    0.000691    0.000679    0.000004    0.002765    0.000691    0.000004    0.001368    0.000917    3.812218    0.768039    3.475792    0.443422    3.434198   -1.004638    0.000001    7.081553
+
+fx_r: h = 60  r = 1 fhK = -7.17470e-02
+    0.005233    0.000693    0.000680    0.000699    0.000004    0.000004    0.002322    0.000004    0.001964    0.001462    0.001853    0.000004    0.001390    0.002188    0.004239    0.003405    0.002791    0.000004    0.000004    0.000780    0.002771    0.002057    0.000004    0.001997    0.002735    0.000004    0.003360    0.000004    0.001411    0.004255    0.000691    0.000679    0.000004    0.002765    0.000691    0.000004    0.001368    0.000917    3.812213    0.768039    3.475796    0.443422    3.434198   -1.004638    0.000001    7.081553
+
+fx_r: h = 60  r = 1 fhK = -2.69063e-03 Out..
+lnL  = -6293.149203
+24438 lfun, 97752 eigenQcodon, 2785932 P(t)
+
+BEBing (dim = 4).  This may take several minutes.
+Calculating f(x_h|w): 10 categories 21 w sets.
+Calculating f(X), the marginal likelihood.
+	log(fX) = -6307.789049  S = -6198.124341  -116.175042
+Calculating f(w|X), posterior probabilities of site classes.
+
+	did  10 / 134 patterns  13:07
+	did  20 / 134 patterns  13:07
+	did  30 / 134 patterns  13:07
+	did  40 / 134 patterns  13:07
+	did  50 / 134 patterns  13:07
+	did  60 / 134 patterns  13:07
+	did  70 / 134 patterns  13:07
+	did  80 / 134 patterns  13:07
+	did  90 / 134 patterns  13:07
+	did 100 / 134 patterns  13:07
+	did 110 / 134 patterns  13:07
+	did 120 / 134 patterns  13:07
+	did 130 / 134 patterns  13:07
+	did 134 / 134 patterns  13:07
+Time used: 13:07
+[M2a] 04_AQP_PIP1-4__aquaporin_water_channel: FINISHED (lnL=-6293.149203, np=46, ω=0.4002, time=787.3s, stop_count=0)

@@ -1,58 +1,6 @@
 ================================================================================
-LIKELIHOOD RATIO TEST (LRT) RESULTS (REGENERATED)
+LIKELIHOOD RATIO TEST (LRT) RESULTS
 ================================================================================
-
-
-================================================================================
-COMPARISON: M0 (null) vs M1a (alternative)
-Description: Tests if ω varies among sites
-================================================================================
-
-Gene: OG0075476.onlyexons
-  lnL M0: -398.363344
-  lnL M1a: -394.981033
-  2Δl = 6.764622
-  df = 1
-  p-value = 9.298262e-03
-  Result: [OK][OK] M1a significantly better (p < 0.01)
-
-------------------------------------------------------------
-
-Gene: OG0075668.onlyexons
-  lnL M0: -2502.028386
-  lnL M1a: -2502.028394
-  2Δl = -0.000016
-  df = 1
-  p-value = 1.000000e+00
-  Result: [ERROR] No significant difference
-
-------------------------------------------------------------
-
-Gene: OG0075966.onlyexons
-  lnL M0: -421.780913
-  lnL M1a: -409.279250
-  2Δl = 25.003326
-  df = 1
-  p-value = 5.723150e-07
-  Result: [OK][OK] M1a significantly better (p < 0.01)
-
-------------------------------------------------------------
-
-Gene: OG0076119.onlyexons
-  lnL M0: -3402.954427
-  lnL M1a: -3355.315279
-  2Δl = 95.278296
-  df = 1
-  p-value = 0.000000e+00
-  Result: [OK][OK] M1a significantly better (p < 0.01)
-
-------------------------------------------------------------
-
-
-SUMMARY:
-  Total genes analyzed: 4
-  Significant at p < 0.05: 3 (75.0%)
-  Significant at p < 0.01: 3 (75.0%)
 
 
 ================================================================================
@@ -60,159 +8,259 @@ COMPARISON: M1a (null) vs M2a (alternative)
 Description: Tests for positive selection
 ================================================================================
 
-Gene: OG0075476.onlyexons
-  lnL M1a: -394.981033
-  lnL M2a: -394.981012
-  2Δl = 0.000042
-  df = 1
-  p-value = 9.948292e-01
+Gene: 01_PEPC1__phosphoenolpyruvate_carboxylase_CAM
+  lnL M1a: -9592.050278 (np=20)
+  lnL M2a: -9591.816803 (np=22)
+  2Δl = 0.466950
+  df = 2
+  p-value = 7.917774e-01
   Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
-Gene: OG0075668.onlyexons
-  lnL M1a: -2502.028394
-  lnL M2a: -2483.693818
-  2Δl = 36.669152
-  df = 1
-  p-value = 1.399770e-09
+Gene: 02_PPCK1__PEPC_kinase_CAM_regulator
+  lnL M1a: -7590.564732 (np=30)
+  lnL M2a: -7569.623078 (np=32)
+  2Δl = 41.883308
+  df = 2
+  p-value = 8.038133e-10
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
 
-Gene: OG0075966.onlyexons
-  lnL M1a: -409.279250
-  lnL M2a: -409.499385
-  2Δl = -0.440270
-  df = 1
-  p-value = 1.000000e+00
+Gene: 03_ALMT2__malate_transporter_CAM
+  lnL M1a: -6910.494612 (np=44)
+  lnL M2a: -6861.204379 (np=46)
+  2Δl = 98.580466
+  df = 2
+  p-value = 0.000000e+00
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 04_AQP_PIP1-4__aquaporin_water_channel
+  lnL M1a: -6323.197580 (np=44)
+  lnL M2a: -6293.152666 (np=46)
+  2Δl = 60.089828
+  df = 2
+  p-value = 8.948398e-14
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 05_OSCA4__hyperosmolality_calcium_channel
+  lnL M1a: -9816.526621 (np=44)
+  lnL M2a: -9778.365707 (np=46)
+  2Δl = 76.321828
+  df = 2
+  p-value = 0.000000e+00
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 06_P5CS__proline_synthesis_drought_stress
+  lnL M1a: -6780.076657 (np=26)
+  lnL M2a: -6772.577047 (np=28)
+  2Δl = 14.999220
+  df = 2
+  p-value = 5.533001e-04
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 07_RBCS6__RuBisCO_small_subunit
+  lnL M1a: -2890.497687 (np=42)
+  lnL M2a: -2882.014294 (np=44)
+  2Δl = 16.966786
+  df = 2
+  p-value = 2.068756e-04
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 08_RBCL__RuBisCO_large_chain
+  lnL M1a: -4967.394495 (np=44)
+  lnL M2a: -4955.395289 (np=46)
+  2Δl = 23.998412
+  df = 2
+  p-value = 6.149093e-06
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 09_PSBD__photosystem_II_D1_reaction_center
+  lnL M1a: -3448.381389 (np=42)
+  lnL M2a: -3432.302582 (np=44)
+  2Δl = 32.157614
+  df = 2
+  p-value = 1.040071e-07
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 10_CERK1__chitin_receptor_kinase_immunity
+  lnL M1a: -5191.344419 (np=26)
+  lnL M2a: -5164.654187 (np=28)
+  2Δl = 53.380464
+  df = 2
+  p-value = 2.561951e-12
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 11_CRK5__cysteine_rich_receptor_kinase
+  lnL M1a: -9517.694267 (np=30)
+  lnL M2a: -9468.337727 (np=32)
+  2Δl = 98.713080
+  df = 2
+  p-value = 0.000000e+00
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 12_GSTU7__glutathione_S_transferase_defense
+  lnL M1a: -7015.810638 (np=42)
+  lnL M2a: -7000.527616 (np=44)
+  2Δl = 30.566044
+  df = 2
+  p-value = 2.304984e-07
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 13_VLS__valencene_synthase_terpenoids
+  lnL M1a: -3862.545902 (np=36)
+  lnL M2a: -3853.702164 (np=38)
+  2Δl = 17.687476
+  df = 2
+  p-value = 1.442824e-04
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 14_CHS__chalcone_synthase_flavonoids
+  lnL M1a: -2353.685780 (np=26)
+  lnL M2a: -2346.502683 (np=28)
+  2Δl = 14.366194
+  df = 2
+  p-value = 7.593126e-04
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 15_GCR1__G_protein_coupled_receptor
+  lnL M1a: -4030.622776 (np=42)
+  lnL M2a: -4024.614592 (np=44)
+  2Δl = 12.016368
+  df = 2
+  p-value = 2.458549e-03
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 16_ABP19a__auxin_binding_protein
+  lnL M1a: -1775.183035 (np=20)
+  lnL M2a: -1775.183034 (np=22)
+  2Δl = 0.000002
+  df = 2
+  p-value = 9.999990e-01
   Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
-Gene: OG0076119.onlyexons
-  lnL M1a: -3355.315279
-  lnL M2a: -3334.727217
-  2Δl = 41.176124
-  df = 1
-  p-value = 1.391115e-10
+Gene: 17_GLR2.5__glutamate_receptor_calcium
+  lnL M1a: -5676.595957 (np=40)
+  lnL M2a: -5616.760059 (np=42)
+  2Δl = 119.671796
+  df = 2
+  p-value = 0.000000e+00
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 18_FAR__fatty_acyl_reductase_wax_cuticle
+  lnL M1a: -2255.300127 (np=44)
+  lnL M2a: -2242.899761 (np=46)
+  2Δl = 24.800732
+  df = 2
+  p-value = 4.117082e-06
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 19_CESA3__cellulose_synthase
+  lnL M1a: -8024.716902 (np=44)
+  lnL M2a: -8023.234617 (np=46)
+  2Δl = 2.964570
+  df = 2
+  p-value = 2.271181e-01
+  Result: [ERROR] No significant difference
+
+------------------------------------------------------------
+
+Gene: 20_DMC1__meiotic_recombination
+  lnL M1a: -6563.856502 (np=44)
+  lnL M2a: -6549.613943 (np=46)
+  2Δl = 28.485118
+  df = 2
+  p-value = 6.524319e-07
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 21_CYT_B6F__cytochrome_b6f_iron_sulfur_Rieske
+  lnL M1a: -5392.310139 (np=22)
+  lnL M2a: -5385.394322 (np=24)
+  2Δl = 13.831634
+  df = 2
+  p-value = 9.919707e-04
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 22_CYTF__cytochrome_f_electron_donor_to_PSI
+  lnL M1a: -1661.279855 (np=44)
+  lnL M2a: -1660.724448 (np=46)
+  2Δl = 1.110814
+  df = 2
+  p-value = 5.738387e-01
+  Result: [ERROR] No significant difference
+
+------------------------------------------------------------
+
+Gene: 23_PRX2F__peroxiredoxin_mitochondrial_ROS
+  lnL M1a: -1209.717849 (np=32)
+  lnL M2a: -1206.193937 (np=34)
+  2Δl = 7.047824
+  df = 2
+  p-value = 2.948387e-02
+  Result: [OK] M2a significantly better (p < 0.05)
+
+------------------------------------------------------------
+
+Gene: 24_FRO7__ferric_reduction_oxidase_iron_rocky_substrate
+  lnL M1a: -6686.855045 (np=18)
+  lnL M2a: -6669.287019 (np=20)
+  2Δl = 35.136052
+  df = 2
+  p-value = 2.345866e-08
+  Result: [OK][OK] M2a significantly better (p < 0.01)
+
+------------------------------------------------------------
+
+Gene: 25_PHOT2__phototropin2_chloroplast_avoidance_high_light
+  lnL M1a: -2949.382258 (np=28)
+  lnL M2a: -2926.337606 (np=30)
+  2Δl = 46.089304
+  df = 2
+  p-value = 9.813750e-11
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
 
 
-SUMMARY:
-  Total genes analyzed: 4
-  Significant at p < 0.05: 2 (50.0%)
-  Significant at p < 0.01: 2 (50.0%)
-
-
-================================================================================
-COMPARISON: M7 (null) vs M8 (alternative)
-Description: Tests for positive selection (alternative)
-================================================================================
-
-Gene: OG0075476.onlyexons
-  lnL M7: -394.985754
-  lnL M8: -394.985775
-  2Δl = -0.000042
-  df = 1
-  p-value = 1.000000e+00
-  Result: [ERROR] No significant difference
-
-------------------------------------------------------------
-
-Gene: OG0075668.onlyexons
-  lnL M7: -2502.028387
-  lnL M8: -2483.693818
-  2Δl = 36.669138
-  df = 1
-  p-value = 1.399780e-09
-  Result: [OK][OK] M8 significantly better (p < 0.01)
-
-------------------------------------------------------------
-
-Gene: OG0075966.onlyexons
-  lnL M7: -409.284984
-  lnL M8: -410.137849
-  2Δl = -1.705730
-  df = 1
-  p-value = 1.000000e+00
-  Result: [ERROR] No significant difference
-
-------------------------------------------------------------
-
-Gene: OG0076119.onlyexons
-  lnL M7: -3355.614173
-  lnL M8: -3334.721246
-  2Δl = 41.785854
-  df = 1
-  p-value = 1.018375e-10
-  Result: [OK][OK] M8 significantly better (p < 0.01)
-
-------------------------------------------------------------
-
-
-SUMMARY:
-  Total genes analyzed: 4
-  Significant at p < 0.05: 2 (50.0%)
-  Significant at p < 0.01: 2 (50.0%)
-
-
-================================================================================
-COMPARISON: M0 (null) vs Branch (alternative)
-Description: Tests branch model (independent evolution rates)
-================================================================================
-
-Gene: OG0075476.onlyexons
-  lnL M0: -398.363344
-  lnL Branch: -392.882882
-  2Δl = 10.960924
-  df = 1
-  p-value = 9.305340e-04
-  Result: [OK][OK] Branch significantly better (p < 0.01)
-
-------------------------------------------------------------
-
-Gene: OG0075668.onlyexons
-  lnL M0: -2502.028386
-  lnL Branch: -2496.913516
-  2Δl = 10.229740
-  df = 1
-  p-value = 1.381941e-03
-  Result: [OK][OK] Branch significantly better (p < 0.01)
-
-------------------------------------------------------------
-
-Gene: OG0075966.onlyexons
-  lnL M0: -421.780913
-  lnL Branch: -409.188203
-  2Δl = 25.185420
-  df = 1
-  p-value = 5.207439e-07
-  Result: [OK][OK] Branch significantly better (p < 0.01)
-
-------------------------------------------------------------
-
-Gene: OG0076119.onlyexons
-  lnL M0: -3402.954427
-  lnL Branch: -3381.913498
-  2Δl = 42.081858
-  df = 1
-  p-value = 8.753154e-11
-  Result: [OK][OK] Branch significantly better (p < 0.01)
-
-------------------------------------------------------------
-
-
-SUMMARY:
-  Total genes analyzed: 4
-  Significant at p < 0.05: 4 (100.0%)
-  Significant at p < 0.01: 4 (100.0%)
-
-
-================================================================================
-COMPARISON: Branch-site_null (null) vs Branch-site (alternative)
-Description: Tests branch-site model
-================================================================================
+RESUMO:
+  Total de genes analisados: 25
+  Significativo em p < 0.05: 21 (84.0%)
+  Significativo em p < 0.01: 20 (80.0%)
 

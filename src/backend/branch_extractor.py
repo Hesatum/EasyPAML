@@ -33,7 +33,9 @@ class BranchExtractor:
             content = f.read()
         
         # Procurar a seção "dN & dS for each branch"
-        pattern = r'dN & dS for each branch\s*\n\s*branch\s+t\s+N\s+S\s+dN/dS\s+dN\s+dS\s+N\*dN\s+S\*dS(.*?)(?:\n\n|$)'
+        # The column header row is followed by a blank line before the data rows,
+        # so consume that blank line in the fixed part, then capture the data.
+        pattern = r'dN & dS for each branch\s*\n\s*branch\s+t\s+N\s+S\s+dN/dS\s+dN\s+dS\s+N\*dN\s+S\*dS\s*\n\s*\n(.*?)(?:\n\s*\n|\Z)'
         match = re.search(pattern, content, re.DOTALL)
         
         if not match:
@@ -204,6 +206,7 @@ class BranchExtractor:
             df.to_csv(output_file, sep='\t', index=False)
             print(f"Salvo: {output_file}")
     
+    # DEAD CODE — create_tree_json_with_omega não é chamada em nenhum lugar do projeto
     @staticmethod
     def create_tree_json_with_omega(filepath: Path) -> Dict:
         """

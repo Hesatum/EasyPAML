@@ -1,0 +1,9 @@
+Gene	M2a_lnL	M2a_np	M2a_omega	M2a_time	M2a_stops	M1a_lnL	M1a_np	M1a_omega	M1a_time	M1a_stops	lrt_M1a_vs_M2a
+01_PEPC1__phosphoenolpyruvate_carboxylase_CAM	-9591.846970	22	0.508500	65.36	0	NA	NA	NA	NA	0	NA
+02_PPCK1__PEPC_kinase_CAM_regulator	-7569.622861	32	0.669600	222.46	0	NA	NA	NA	NA	0	NA
+03_ALMT2__malate_transporter_CAM	-6861.204469	46	0.414100	405.71	0	NA	NA	NA	NA	0	NA
+04_AQP_PIP1-4__aquaporin_water_channel	-6293.149203	46	0.400200	787.33	0	NA	NA	NA	NA	0	NA
+05_OSCA4__hyperosmolality_calcium_channel	-9778.365451	46	0.178600	488.21	0	NA	NA	NA	NA	0	NA
+06_P5CS__proline_synthesis_drought_stress	-6772.577108	28	0.682300	134.04	0	NA	NA	NA	NA	0	NA
+07_RBCS6__RuBisCO_small_subunit	-2882.014351	44	1.195000	537.14	0	NA	NA	NA	NA	0	NA
+08_RBCL__RuBisCO_large_chain	-4955.395360	46	0.908300	188.73	0	NA	NA	NA	NA	0	NA

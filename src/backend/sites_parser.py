@@ -41,14 +41,32 @@ class SitesParser:
         
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
-        
+
+        # Normalizar line endings (CODEML no Windows pode gerar \r\n)
+        content = content.replace('\r\n', '\n').replace('\r', '\n')
+
         # Encontrar a seção apropriada (BEB ou NEB)
-        # Pode ser "BEB analysis" ou "BEB) analysis"
+        # Pode ser "BEB analysis", "BEB) analysis" ou "Bayes Empirical Bayes (BEB) analysis"
+        # O padrão usa \s* entre o cabeçalho e os dados para tolerar variações de espaçamento
         if method == "BEB":
-            pattern = r"BEB\)?.*?analysis.*?Positively selected sites.*?\n\s*\(amino acids refer to.*?\)\s*\n\s*Pr\(w>1\).*?\n\n(.*?)(?:\n\n|Time used:|$)"
+            pattern = (
+                r"BEB\b.*?analysis"                      # cabeçalho BEB
+                r".*?Positively selected sites"           # seção de sítios
+                r".*?\(amino acids refer to[^\)]*\)"     # referência à 1ª sequência
+                r".*?Pr\(w>1\)[^\n]*\n"                  # linha de header da tabela
+                r"\s*(.*?)"                               # captura: linhas de sítios
+                r"(?:\n\s*\n|Time used:|$)"              # termina em linha vazia ou fim
+            )
         else:  # NEB
-            pattern = r"NEB analysis.*?Positively selected sites.*?\n\s*\(amino acids refer to.*?\)\s*\n\s*Pr\(w>1\).*?\n\n(.*?)(?:\n\n|Bayes|Time used:|$)"
-        
+            pattern = (
+                r"NEB\b.*?analysis"
+                r".*?Positively selected sites"
+                r".*?\(amino acids refer to[^\)]*\)"
+                r".*?Pr\(w>1\)[^\n]*\n"
+                r"\s*(.*?)"
+                r"(?:\n\s*\n|Bayes|Time used:|$)"
+            )
+
         match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
         
         if not match:
@@ -149,11 +167,11 @@ class SitesParser:
                 # Retornar a mediana ou média dos omegas encontrados
                 # Para modelos com omega constante, todos devem ser similares
                 return float(np.median(omegas))
-            
+
             return None
-        except:
+        except Exception:
             return None
-    
+
     @staticmethod
     def extract_omega_by_branches(filepath: Path) -> Dict[str, float]:
         """
@@ -202,9 +220,9 @@ class SitesParser:
                     break
             
             return branch_omegas
-        except:
+        except Exception:
             return {}
-    
+
     @staticmethod
     def extract_omega_values_from_model_params(filepath: Path) -> Optional[float]:
         """
@@ -233,9 +251,9 @@ class SitesParser:
                         return omega
             
             return None
-        except:
+        except Exception:
             return None
-    
+
     @staticmethod
     def extract_omega_robust(filepath: Path) -> Optional[float]:
         """
@@ -257,9 +275,9 @@ class SitesParser:
             if 'site class' in content and 'background w' in content and 'foreground w' in content:
                 # Este é um Branch-site Model - não retorna omega único
                 return None
-        except:
+        except Exception:
             pass
-        
+
         # Tentar primeiro método: tabela de branches
         omega = SitesParser.extract_omega_global(filepath)
         if omega is not None:
@@ -312,15 +330,15 @@ class SitesParser:
                     try:
                         bg_omega = float(bg_vals[-1])  # Último valor
                         fg_omega = float(fg_vals[-1])  # Último valor
-                        
+
                         if -10 <= bg_omega <= 100:
                             tag_omegas['background'] = bg_omega
                         if -10 <= fg_omega <= 100:
                             tag_omegas['foreground'] = fg_omega
-                        
+
                         if tag_omegas:
                             return tag_omegas
-                    except:
+                    except Exception:
                         pass
             
             # ═══ SEGUNDO: Branch (múltiplos valores com placeholders) ═══
@@ -335,10 +353,10 @@ class SitesParser:
                 for val_str in values_str.split():
                     try:
                         val = float(val_str)
-                        # ACEITA TODOS os valores, inclusive 999 (placeholder)
+                        # Aceita todos os valores, inclusive 999 (placeholder sem dados)
                         if -10 <= val <= 100 or val == 999:
                             omega_values.append(val)
-                    except:
+                    except Exception:
                         pass
                 
                 # Se encontrou 2 ou mais valores
@@ -390,7 +408,7 @@ class SitesParser:
             return tag_omegas
         
         except Exception as e:
-            print(f"⚠️ Erro ao extrair omegas por tags: {e}")
+            print(f"[AVISO] Erro ao extrair omegas por tags: {e}")
             return {}
     
     @staticmethod
@@ -610,4 +628,5 @@ class SitesParser:
             
             return {}
         except Exception as e:
+            print(f"[AVISO] extract_branchsite_class_data: falha ao parsear classes de sítios em '{filepath.name}': {e}")
             return {}

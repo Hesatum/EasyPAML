@@ -48,11 +48,11 @@ class LRTVisualizer:
         }
     }
     
-    # Critical values for alpha levels
-    ALPHA_LEVELS = {
-        0.05: {'name': 'α = 0.05', 'color': 'darkgray', 'label': 'χ²_{df,0.05}'},
-        0.01: {'name': 'α = 0.01', 'color': 'brown', 'label': 'χ²_{df,0.01}'}
-    }
+    # Atributo não utilizado — mantido para referência futura
+    # ALPHA_LEVELS = {
+    #     0.05: {'name': 'α = 0.05', 'color': 'darkgray', 'label': 'χ²_{df,0.05}'},
+    #     0.01: {'name': 'α = 0.01', 'color': 'brown', 'label': 'χ²_{df,0.01}'}
+    # }
     
     def __init__(self, figsize: Tuple[int, int] = (14, 4), dpi: int = 100):
         """Initialize the visualizer."""
@@ -299,4 +299,4 @@ if __name__ == '__main__':
     visualizer = LRTVisualizer()
     fig, axes = visualizer.plot_multiple_comparisons(example_lrt, 
                                                      output_path='lrt_comparison.png')
-    print("✅ LRT comparison plots created successfully!")
+    print("LRT comparison plots created successfully!")
