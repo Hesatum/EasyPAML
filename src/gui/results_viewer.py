@@ -1898,6 +1898,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             #   Branch-site     : mistura 50:50 chi2(0)+chi2(1) → p = 0.5*chi2.sf(x, 1)
             #   demais (M1a etc): chi2(df=1)  [M0 vs M1a nunca chega aqui; já é tratado]
             if alternative_model in ['m2a', 'm8']:
+                df_chi2 = 2
                 p_val = 1 - stats.chi2.cdf(lrt_val, df=2) if lrt_val > 0 else 1.0
             elif is_branch_model:
                 # df = número de grupos foreground; ambos Branch e M0 têm ntime>0,
@@ -2034,12 +2035,21 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             footer = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_sidebar'], corner_radius=6)
             footer.pack(fill='x', padx=8, pady=(10, 8))
 
+            # Recalcular sig_count com a mesma distribuição usada nas linhas
+            def _footer_pval(x):
+                if not (pd.notna(x) and x > 0):
+                    return 1.0
+                if is_branchsite_model:
+                    return 0.5 * stats.chi2.sf(x, df=1)
+                return 1 - stats.chi2.cdf(x, df=df_chi2)
+
             sig_count = sum(1 for _, row in self.df.iterrows()
                             if pd.notna(row.get(lrt_col)) and
-                            (1 - stats.chi2.cdf(row[lrt_col], df=df_chi2) < 0.05))
+                            _footer_pval(row[lrt_col]) < 0.05)
 
+            df_display_footer = "mixture(0,1)" if is_branchsite_model else str(df_chi2)
             footer_text = TEXTS["lrt_footer_template"].format(
-                total=row_count, sig=sig_count, df=df_chi2
+                total=row_count, sig=sig_count, df=df_display_footer
             )
             ctk.CTkLabel(footer, text=footer_text, font=("Roboto", 10),
                          text_color=self.COLORS['text_tertiary']).pack(pady=8, padx=12)
