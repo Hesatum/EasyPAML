@@ -135,6 +135,15 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             # Tentar recuperar omegas faltantes dos arquivos de resultados
             self._recover_missing_omegas()
 
+            # ── 3. Detectar órfãos (.ctl sem resultado) e guardar para aviso na UI
+            try:
+                from src.backend.codeml_backend import CodemlBatchAnalysis
+                self._orphaned_analyses = CodemlBatchAnalysis._find_orphaned_analyses(
+                    self.output_folder
+                )
+            except Exception:
+                self._orphaned_analyses = {}
+
             print(f"[OK] Dados carregados: {len(self.df)} genes")
             print(f"[OK] Colunas: {list(self.df.columns)}")
             return True
@@ -327,7 +336,41 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         stats_frame = ctk.CTkFrame(self, fg_color='transparent')
         stats_frame.pack(fill='x', padx=20, pady=(16, 4))
         self._create_stats_panel(stats_frame)
-        
+
+        # ── BANNER DE AVISO: análises órfãs (.ctl sem resultado) ──────────────
+        orphaned = getattr(self, '_orphaned_analyses', {})
+        if orphaned:
+            warn_frame = ctk.CTkFrame(
+                self,
+                fg_color='#3A1C00',
+                corner_radius=8,
+                border_width=1,
+                border_color=self.COLORS['warning']
+            )
+            warn_frame.pack(fill='x', padx=20, pady=(0, 4))
+
+            n_genes  = len(orphaned)
+            n_models = sum(len(v) for v in orphaned.values())
+            genes_list = ', '.join(sorted(orphaned.keys())[:5])
+            if n_genes > 5:
+                genes_list += f' … (+{n_genes - 5})'
+
+            warn_text = (
+                f"⚠  {n_genes} gene(s) started but never finished "
+                f"({n_models} run(s) orphaned — .ctl without result).\n"
+                f"Likely cause: parallel worker crash or session interrupted.\n"
+                f"Affected: {genes_list}\n"
+                f"→ Re-run those genes in EasyPAML to recover missing data."
+            )
+            ctk.CTkLabel(
+                warn_frame,
+                text=warn_text,
+                font=("Roboto", 9),
+                text_color=self.COLORS['warning'],
+                justify='left',
+                anchor='w',
+            ).pack(padx=12, pady=6, anchor='w')
+
         # ABAS PRINCIPAIS
         tabs = ctk.CTkTabview(self, fg_color=self.COLORS['bg_card'],
                               segmented_button_fg_color=self.COLORS['bg_sidebar'],

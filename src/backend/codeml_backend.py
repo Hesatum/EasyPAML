@@ -2460,9 +2460,48 @@ class CodemlBatchAnalysis:
         # Converter para DataFrame e salvar
         df = pd.DataFrame(list(data.values()))
         df.to_csv(summary_file, sep='\t', index=False, float_format='%.6f')
-        
+
+        # Alertar sobre genes com .ctl mas sem resultado (worker crash / sessão interrompida)
+        CodemlBatchAnalysis._find_orphaned_analyses(results_folder)
+
         return summary_file
     
+    @staticmethod
+    def _find_orphaned_analyses(results_folder: Path) -> dict:
+        """Detecta genes com arquivo .ctl mas sem resultado (_results.txt).
+
+        Retorna dict  { gene_name: [model, ...] }  listando, para cada gene,
+        os modelos cujo CODEML foi iniciado (ctl gravado) mas nunca concluiu.
+        Causas típicas: worker paralelo morreu por pressão de memória ou
+        crash numérico do CODEML, sessão interrompida pelo usuário.
+
+        Use _regenerate_analysis_summary() depois de corrigir os órfãos para
+        atualizar o TSV.
+        """
+        results_folder = Path(results_folder)
+        _legacy = CodemlBatchAnalysis._LEGACY_MODEL_NAMES
+        _reverse = {v: k for k, v in _legacy.items()}
+
+        orphaned: dict = {}
+        for item in results_folder.iterdir():
+            if not item.is_dir() or item.name in {'reports'}:
+                continue
+            model = _legacy.get(item.name, item.name)
+            folder_name = item.name  # nome real da pasta
+
+            for ctl_file in item.glob(f"*_{folder_name}.ctl"):
+                gene_name = ctl_file.stem.replace(f"_{folder_name}", "")
+                result_file = item / f"{gene_name}_{folder_name}_results.txt"
+                if not result_file.exists():
+                    orphaned.setdefault(gene_name, []).append(model)
+
+        if orphaned:
+            print(f"  [WARN] {len(orphaned)} gene(s) with .ctl but no result "
+                  f"(worker crash / interrupted session):")
+            for gene, models in sorted(orphaned.items()):
+                print(f"    {gene}: {', '.join(sorted(models))}")
+        return orphaned
+
     @staticmethod
     def _regenerate_batch_log(results_folder: Path) -> Optional[Path]:
         """Regenera batch_analysis_log.txt"""
