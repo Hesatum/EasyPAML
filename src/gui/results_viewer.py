@@ -2238,6 +2238,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     )
 
         out['2Δℓ']         = lrt_vals.values.round(4)
+        # For Branch model: show the per-gene df so the user can verify the correction.
+        # df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
+        # e.g. 7 tags → raw_df=7, ntime_diff=1 → df=6
+        if branch_df_series is not None:
+            out['df'] = branch_df_series.astype(int).values
         out['p-value']     = p_vals.values.round(8)
         out['Sig. p<0.05'] = p_vals.apply(lambda p: 'yes' if p < 0.05 else 'no').values
         out['Sig. p<0.01'] = p_vals.apply(lambda p: 'yes' if p < 0.01 else 'no').values
