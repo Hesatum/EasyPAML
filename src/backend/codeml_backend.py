@@ -312,7 +312,6 @@ class CodemlBatchAnalysis:
                              cleandata: int = 1,
                              model_name: str = None,
                              kappa: float = None,
-                             fix_kappa_heuristic: bool = False,
                              fix_blength: int = 0) -> str:
         """Gera conteúdo do arquivo .ctl baseado no modelo.
 
@@ -322,11 +321,7 @@ class CodemlBatchAnalysis:
         - omega                      : valor inicial de ω
         - cleandata                  : 0/1 — remover sítios ambíguos
         - model_name                 : nome do modelo (para verificar modelos neutros)
-        - kappa                      : κ estimado pelo M0 (warm-start ou fixado)
-        - fix_kappa_heuristic        : se True, insere fix_kappa=1 (modo heurístico —
-                                       κ fixado no valor do M0; acelera otimização mas
-                                       é uma aproximação.  LRT ainda válido se ambos os
-                                       modelos do par usarem o mesmo κ fixado.)
+        - kappa                      : κ estimado pelo M0 (warm-start)
         - fix_blength                : 0=estimar do zero  2=warm-start do M0 (safe —
                                        branch lengths re-estimados livremente a partir
                                        de valores iniciais melhores; sem impacto nos
@@ -345,19 +340,11 @@ class CodemlBatchAnalysis:
             final_omega = omega
 
         # ── Bloco de kappa ────────────────────────────────────────────────────
-        # fix_kappa_heuristic=True  → fix_kappa=1, kappa=<valor M0>  (modo rápido)
-        # fix_kappa_heuristic=False → fix_kappa=0, kappa=<warm-start> (padrão)
         if kappa is not None and 0.1 <= kappa <= 20:
-            if fix_kappa_heuristic:
-                kappa_block = (
-                    f"\n    fix_kappa = 1              * κ fixado no valor M0 (modo heurístico)"
-                    f"\n        kappa = {kappa:.4f}     * ts/tv ratio estimado pelo M0"
-                )
-            else:
-                kappa_block = (
-                    f"\n    fix_kappa = 0              * κ livre (re-estimado)"
-                    f"\n        kappa = {kappa:.4f}     * ts/tv warm-start do M0 (ponto de partida)"
-                )
+            kappa_block = (
+                f"\n    fix_kappa = 0              * κ livre (re-estimado)"
+                f"\n        kappa = {kappa:.4f}     * ts/tv warm-start do M0 (ponto de partida)"
+            )
         else:
             kappa_block = ""
 
@@ -793,11 +780,6 @@ class CodemlBatchAnalysis:
             gene_kappa:       Optional[float] = None   # κ estimado pelo M0 → warm-start
             gene_fitted_tree: Optional[str]   = None   # árvore ajustada M0 → warm-start branch lengths
 
-            # Modo heurístico (opcional, ativado pela GUI):
-            # fix_kappa=1 fixa κ no valor do M0 em vez de apenas usá-lo como ponto de partida.
-            # Economiza ~20-30 % de iterações por modelo mas é uma aproximação.
-            heuristic_mode = bool(self.config.get('heuristic_mode', False))
-
             # Sempre rodar M0 primeiro (se selecionado):
             #  • κ estimado pelo M0 é usado como warm-start ou fixado nos modelos seguintes
             #  • árvore ajustada pelo M0 (branch lengths ML) é usada como warm-start via fix_blength=2
@@ -817,37 +799,15 @@ class CodemlBatchAnalysis:
             _needs_warmup = bool(set(models_ordered) & _SITE_WARMUP)
             _m0_absent    = 'M0' not in models_ordered and _needs_warmup
 
-            if _m0_absent and not heuristic_mode:
-                # Sem heurístico e sem M0: avisar que não haverá warm-start
+            if _m0_absent:
                 _nows_msg = (
                     f"  [INFO] M0 nao selecionado: branch lengths e kappa serao "
                     f"estimados do zero em cada modelo (sem warm-start). "
-                    f"Selecione M0 ou ative o Modo Heuristico para acelerar."
+                    f"Selecione M0 para ativar warm-start automatico."
                 )
                 print(_nows_msg)
                 with open(log_file, 'a', encoding='utf-8') as _log:
                     _log.write(_nows_msg.strip() + '\n')
-
-            elif _m0_absent and heuristic_mode:
-                # Modo heurístico ativo mas M0 ausente: rodar M0 para warm-start
-                print(f"  [warm-up] M0 implicito (extraindo kappa + branch lengths)...",
-                      end=" ", flush=True)
-                _ws_result = self._run_single_analysis(
-                    fas_file=fas_file,
-                    model_name='M0',
-                    log_file=log_file,
-                    warm_start_kappa=None,
-                    fitted_tree=None,
-                    fix_kappa_heuristic=False,
-                )
-                if _ws_result and _ws_result.get('output_file'):
-                    _wsp = Path(_ws_result['output_file'])
-                    if _wsp.exists():
-                        gene_kappa        = self._extract_kappa(_wsp)        or gene_kappa
-                        gene_fitted_tree  = self._extract_fitted_tree(_wsp)  or gene_fitted_tree
-                _wk  = f"k={gene_kappa:.3f}"  if gene_kappa       is not None else "k=?"
-                _wbl = "bl=ok"                 if gene_fitted_tree is not None else "bl=?"
-                print(f"[OK]  {_wk}  {_wbl}")
 
             for model_name in models_ordered:
                 if stop_event is not None and stop_event.is_set():
@@ -858,7 +818,6 @@ class CodemlBatchAnalysis:
                 # M0 não usa warm-start (ele É a fonte)
                 kappa_for_this       = None if model_name == 'M0' else gene_kappa
                 fitted_tree_for_this = None if model_name == 'M0' else gene_fitted_tree
-                fix_kappa_for_this   = heuristic_mode and (model_name != 'M0') and (kappa_for_this is not None)
 
                 print(f"  - Running {model_name}...", end=" ", flush=True)
                 result = self._run_single_analysis(
@@ -867,7 +826,6 @@ class CodemlBatchAnalysis:
                     log_file=log_file,
                     warm_start_kappa=kappa_for_this,
                     fitted_tree=fitted_tree_for_this,
-                    fix_kappa_heuristic=fix_kappa_for_this,
                 )
                 if result:
                     gene_results[model_name] = result
@@ -895,7 +853,7 @@ class CodemlBatchAnalysis:
                     else:
                         tags = []
                         if kappa_for_this is not None:
-                            tags.append(f"k0={'fix' if fix_kappa_for_this else 'warm'}={kappa_for_this:.3f}")
+                            tags.append(f"k0=warm={kappa_for_this:.3f}")
                         if fitted_tree_for_this is not None:
                             tags.append("bl=warm")
                         ws = ("  (" + ", ".join(tags) + ")") if tags else ""
@@ -1004,8 +962,7 @@ class CodemlBatchAnalysis:
     def _run_single_analysis(self, fas_file: Path, model_name: str,
                             log_file: Path,
                             warm_start_kappa: float = None,
-                            fitted_tree: str = None,
-                            fix_kappa_heuristic: bool = False) -> Optional[Dict]:
+                            fitted_tree: str = None) -> Optional[Dict]:
         """Executa análise CODEML para um arquivo e modelo.
 
         Parâmetros de otimização de velocidade (sem impacto nos resultados):
@@ -1016,9 +973,6 @@ class CodemlBatchAnalysis:
                               de forma que o otimizador parte de valores já próximos
                               do ótimo.  Os branch lengths são re-estimados livremente;
                               os resultados finais são matematicamente idênticos.
-          fix_kappa_heuristic: se True, insere fix_kappa=1 no .ctl (modo heurístico —
-                              κ fixado no valor M0; acelera ~20-30 % por modelo mas
-                              é uma aproximação.  Ativado pelo toggle na GUI.)
         """
         base_name = fas_file.stem
         # start from default config and allow GUI-provided custom overrides
@@ -1395,7 +1349,6 @@ class CodemlBatchAnalysis:
                         cleandata=cleandata_val,
                         model_name=model_name,
                         kappa=warm_start_kappa,
-                        fix_kappa_heuristic=fix_kappa_heuristic,
                         fix_blength=fix_bl,
                     )
             else:
@@ -1408,7 +1361,6 @@ class CodemlBatchAnalysis:
                     cleandata=cleandata_val,
                     model_name=model_name,
                     kappa=warm_start_kappa,
-                    fix_kappa_heuristic=fix_kappa_heuristic,
                     fix_blength=fix_bl,
                 )
 
@@ -1686,6 +1638,7 @@ class CodemlBatchAnalysis:
             if output_path.exists():
                 lnL = self._extract_likelihood(output_path)
                 np_params = self._extract_np(output_path)
+                ntime_params = self._extract_ntime(output_path)
                 omega = self._extract_omega(output_path)
             else:
                 with open(log_file, 'a', encoding='utf-8') as log:
@@ -1706,6 +1659,7 @@ class CodemlBatchAnalysis:
                 'results_file': str(output_path) if output_path.exists() else None,  # Alias para compatibilidade
                 'lnL': lnL,
                 'np': np_params,
+                'ntime': ntime_params,
                 'omega': omega,
                 'execution_time': execution_time,
                 'status': 'success' if rc == 0 and output_path.exists() else 'partial',
@@ -1774,6 +1728,24 @@ class CodemlBatchAnalysis:
             pass
         return None
 
+    def _extract_ntime(self, output_file: Path) -> Optional[int]:
+        """Extrai ntime (número de branch lengths estimados) da linha lnL do CODEML.
+
+        ntime difere entre M0 (árvore não-enraizada, 2n-3 ramos) e Branch
+        (árvore rotulada/enraizada, 2n-2 ramos).  Essa diferença de 1 deve ser
+        subtraída ao calcular df = np_Branch − np_M0 para o LRT M0 vs Branch.
+        """
+        try:
+            with open(output_file, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    if 'lnL' in line and 'ntime:' in line:
+                        match = re.search(r'ntime:\s*(\d+)', line)
+                        if match:
+                            return int(match.group(1))
+        except Exception:
+            pass
+        return None
+
     def _extract_omega(self, output_file: Path) -> Optional[float]:
         """Extrai omega usando SitesParser (suporta Branch/Branch-Site/Site models)"""
         try:
@@ -1790,7 +1762,7 @@ class CodemlBatchAnalysis:
             # Header
             header = ["Gene"]
             for model in self.config['models']:
-                header.extend([f"{model}_lnL", f"{model}_np", f"{model}_omega", f"{model}_time", f"{model}_stops"])
+                header.extend([f"{model}_lnL", f"{model}_np", f"{model}_ntime", f"{model}_omega", f"{model}_time", f"{model}_stops"])
             
             # Adicionar colunas de LRT
             selected_models = self.config['models']
@@ -1837,6 +1809,7 @@ class CodemlBatchAnalysis:
                         row.extend([
                             f"{result.get('lnL', 'NA'):.6f}" if result.get('lnL') else 'NA',
                             str(result.get('np', 'NA')),
+                            str(result.get('ntime', 'NA')),
                             f"{omega_value:.6f}" if omega_value is not None and omega_value != 'NA' else 'NA',
                             f"{result.get('execution_time', 0):.2f}",
                             str(result.get('stop_count', 0))
@@ -1962,12 +1935,14 @@ class CodemlBatchAnalysis:
                     
                     lnL_null = null_res.get('lnL')
                     lnL_alt = alt_res.get('lnL')
-                    np_null = null_res.get('np')
-                    np_alt = alt_res.get('np')
-                    
+                    np_null     = null_res.get('np')
+                    np_alt      = alt_res.get('np')
+                    ntime_null  = null_res.get('ntime')
+                    ntime_alt   = alt_res.get('ntime')
+
                     if lnL_null is None or lnL_alt is None:
                         continue
-                    
+
                     # Calcular LRT
                     lrt_stat = 2 * (lnL_alt - lnL_null)
 
@@ -1976,20 +1951,27 @@ class CodemlBatchAnalysis:
                     # NSsites (M1a/M2a/M7/M8 — branch lengths fixados pelo M0 e não
                     # contados como df).  Isso faz abs(np_alt - np_null) dar df=14
                     # para M0 vs M1a em vez de 2.  Usamos df fixos para esses pares.
-                    # Para M0 vs Branch: ambos têm ntime>0 (estimam branch lengths
-                    # livremente), então abs(np_alt - np_null) = n_grupos_foreground
-                    # e está correto diretamente — suporta 1, 2, 3... grupos marcados.
+                    # Para M0 vs Branch: ambos estimam branch lengths livremente, mas
+                    # M0 usa árvore NÃO-enraizada (ntime = 2n-3) enquanto Branch usa
+                    # a árvore rotulada/enraizada (ntime = 2n-2).  A diferença de 1
+                    # em ntime inflaciona abs(np_Branch − np_M0) para k+1 em vez de k
+                    # (onde k = número de grupos foreground).
+                    # Correção: df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
                     _CANONICAL_DF = {
                         ('M0',  'M1a'): 2,  # M1a adds p0 + ω0 vs M0's single ω
                         ('M1a', 'M2a'): 2,  # M2a adds ω2 + one proportion vs M1a
                         ('M7',  'M8'):  2,  # M8  adds ω2 + one proportion vs M7
-                        # M0 vs Branch: NÃO fixo — df = abs(np_Branch - np_M0)
-                        # = número de grupos foreground marcados (1, 2, 3…)
+                        # M0 vs Branch: NÃO fixo — veja correção ntime abaixo
                     }
                     df = _CANONICAL_DF.get(
                         (null_model, alt_model),
                         abs(np_alt - np_null) if (np_alt and np_null) else 0
                     )
+
+                    # Corrigir df para M0 vs Branch quando as árvores têm ntime diferente
+                    if null_model == 'M0' and alt_model == 'Branch' and df > 0:
+                        if ntime_null is not None and ntime_alt is not None:
+                            df = max(1, df - (ntime_alt - ntime_null))
 
                     if df == 0:
                         continue
@@ -2377,10 +2359,11 @@ class CodemlBatchAnalysis:
                     lnL_match = re.search(r'lnL\(ntime:.*?\):\s+([-\d.]+)', content)
                     lnL = float(lnL_match.group(1)) if lnL_match else None
                     
-                    # Extrair np
+                    # Extrair np e ntime
                     np_match = re.search(r'lnL\(ntime:\s*(\d+)\s+np:\s*(\d+)\)', content)
-                    np_val = int(np_match.group(2)) if np_match else None
-                    
+                    np_val    = int(np_match.group(2)) if np_match else None
+                    ntime_val = int(np_match.group(1)) if np_match else None
+
                     # Extrair omega
                     omega = SitesParser.extract_omega_robust(results_file)
                     
@@ -2396,12 +2379,21 @@ class CodemlBatchAnalysis:
                     stop_count = content.count('***')
                     
                     # Guardar dados
-                    data[gene_name][f'{model}_lnL'] = lnL
-                    data[gene_name][f'{model}_np'] = np_val
+                    data[gene_name][f'{model}_lnL']   = lnL
+                    data[gene_name][f'{model}_np']    = np_val
+                    data[gene_name][f'{model}_ntime'] = ntime_val
                     data[gene_name][f'{model}_omega'] = omega
                     data[gene_name][f'{model}_time'] = exec_time
                     data[gene_name][f'{model}_stops'] = stop_count
-                    
+
+                    # Para Branch model: guardar omegas por tag (#1, #2, ... e background)
+                    # A linha "w (dN/dS) for branches:" lista os grupos na ordem:
+                    #   [0]=background, [1]=#1, [2]=#2, ... conforme definido no PAML
+                    if model == 'Branch':
+                        tag_omegas = SitesParser.extract_omega_by_tags(results_file)
+                        for tag, tag_omega in tag_omegas.items():
+                            data[gene_name][f'{model}_{tag}_omega'] = tag_omega
+
                     # Se é Branch-site ou Branch-site_null, extrair dados de classes de sítios
                     if 'Branch-site' in model:
                         class_data = SitesParser.extract_branchsite_class_data(results_file)
@@ -2640,17 +2632,19 @@ class CodemlBatchAnalysis:
                         # Calcular LRT
                         lrt_stat = 2 * (lnL_alt - lnL_null)
 
-                        # Para M0 vs Branch: df depende do número de grupos foreground
-                        # marcados pelo usuário (1 grupo → df=1, 2 grupos → df=2, …).
-                        # Como ambos os modelos têm ntime>0 (Branch lengths livres),
-                        # abs(np_alt - np_null) dá o número correto de ω extras.
+                        # Para M0 vs Branch: df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
+                        # M0 usa árvore não-enraizada (ntime = 2n-3); Branch usa a árvore
+                        # rotulada/enraizada (ntime = 2n-2).  Sem a correção, df = k+1.
                         gene_df = df
                         if null_model == 'M0' and alt_model == 'Branch':
-                            np_null_m = re.search(r'np:\s*(\d+)', null_content)
-                            np_alt_m  = re.search(r'np:\s*(\d+)', alt_content)
+                            np_null_m    = re.search(r'lnL\(ntime:\s*(\d+)\s+np:\s*(\d+)\)', null_content)
+                            np_alt_m     = re.search(r'lnL\(ntime:\s*(\d+)\s+np:\s*(\d+)\)', alt_content)
                             if np_null_m and np_alt_m:
-                                gene_df = abs(int(np_alt_m.group(1)) - int(np_null_m.group(1)))
-                            if gene_df == 0:
+                                raw_df       = abs(int(np_alt_m.group(2)) - int(np_null_m.group(2)))
+                                ntime_null_v = int(np_null_m.group(1))
+                                ntime_alt_v  = int(np_alt_m.group(1))
+                                gene_df      = max(1, raw_df - (ntime_alt_v - ntime_null_v))
+                            elif gene_df == 0:
                                 gene_df = 1  # fallback seguro
 
                         # Branch-site usa distribuição nula 50:50 de χ²(0)+χ²(1),

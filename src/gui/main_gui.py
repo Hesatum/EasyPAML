@@ -23,7 +23,7 @@ _FONT_MONO = "Cascadia Code" if _ON_WIN else "DejaVu Sans Mono"
 
 from backend.codeml_backend import CodemlBatchAnalysis
 from .results_viewer import ResultsViewerWindow
-from .gui_texts import TEXTS
+from .gui_texts import TEXTS, set_language, get_language
 
 try:
     from Bio import Phylo
@@ -101,10 +101,10 @@ class ModelConfigWindow(ctk.CTkToplevel):
             lbl_frame = ctk.CTkFrame(form_frame, fg_color='transparent')
             lbl_frame.pack(fill="x", padx=12, pady=(12, 4))
             
-            ctk.CTkLabel(lbl_frame, text=f"{label}:", font=(_FONT_UI, 11, "bold"),
+            ctk.CTkLabel(lbl_frame, text=f"{label}:", font=(_FONT_UI, 13, "bold"),
                         text_color=self.COLORS['text_primary']).pack(anchor="w")
 
-            ctk.CTkLabel(lbl_frame, text=placeholder, font=(_FONT_UI, 9),
+            ctk.CTkLabel(lbl_frame, text=placeholder, font=(_FONT_UI, 13),
                         text_color='#999999').pack(anchor="w", pady=(0, 4))
             
             # Entry com estilo premium
@@ -128,13 +128,13 @@ class ModelConfigWindow(ctk.CTkToplevel):
         btn_cancel = ctk.CTkButton(btn_frame, text=TEXTS["model_config_btn_cancel"],
                                    fg_color='#3d3d3d',
                                    hover_color='#4d4d4d', command=self.destroy,
-                                   font=(_FONT_UI, 11, "bold"), corner_radius=6)
+                                   font=(_FONT_UI, 13, "bold"), corner_radius=6)
         btn_cancel.pack(side="left", fill="x", expand=True, padx=(0, 8))
 
         btn_save = ctk.CTkButton(btn_frame, text=TEXTS["model_config_btn_save"],
                                  fg_color=self.COLORS['success'],
                                  hover_color=self.COLORS['success_hover'],
-                                 command=self._on_save, font=(_FONT_UI, 11, "bold"), corner_radius=6)
+                                 command=self._on_save, font=(_FONT_UI, 13, "bold"), corner_radius=6)
         btn_save.pack(side="left", fill="x", expand=True)
 
     def _initial_val(self, name, initial):
@@ -195,7 +195,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
         self.marked_clades = {}
         
         if Phylo is None:
-            ctk.CTkLabel(self, text="[!] Biopython não instalado. Execute: pip install biopython",
+            ctk.CTkLabel(self, text=TEXTS["tree_err_no_biopython"],
                         text_color=self.TEXT_SECONDARY).pack(padx=20, pady=20)
             return
 
@@ -220,7 +220,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
             instructions = TEXTS["tree_labeler_instructions_branch"]
         
         inst_label = ctk.CTkLabel(left_frame, text=instructions, wraplength=240, justify="left", 
-                                 font=(_FONT_UI, 10), text_color=self.TEXT_SECONDARY)
+                                 font=(_FONT_UI, 12), text_color=self.TEXT_SECONDARY)
         inst_label.pack(pady=10, padx=15)
 
         legend_header = ctk.CTkLabel(left_frame, text=TEXTS["tree_labeler_legend_title"], font=(_FONT_UI, 12, "bold"),
@@ -242,13 +242,13 @@ class TreeLabelWindow(ctk.CTkToplevel):
 
         # Gráfico
         if self.tree_path is None:
-            ctk.CTkLabel(plot_frame, text="[!] Nenhuma arvore selecionada.", font=("Arial", 14)).pack(pady=50)
+            ctk.CTkLabel(plot_frame, text=TEXTS["tree_err_no_tree"], font=("Arial", 14)).pack(pady=50)
             return
 
         try:
             self.tree = Phylo.read(str(self.tree_path), 'newick')
         except Exception as e:
-            ctk.CTkLabel(plot_frame, text=f"[Erro] Erro ao carregar arvore:\n{e}", font=("Arial", 12)).pack(pady=50)
+            ctk.CTkLabel(plot_frame, text=TEXTS["tree_err_load"].format(error=e), font=("Arial", 12)).pack(pady=50)
             return
 
         # Matplotlib
@@ -289,23 +289,38 @@ class TreeLabelWindow(ctk.CTkToplevel):
         
         def calc_depth_with_lengths(clade, accumulated_depth=0.0):
             depths[clade] = accumulated_depth
-            
+
             for child in clade.clades:
-                child_length = child.branch_length if child.branch_length else 1.0
-                calc_depth_with_lengths(child, accumulated_depth + child_length)
+                # Cladograma: passo uniforme independente dos branch lengths reais.
+                # Branch lengths reais distorcem muito a visualização quando as
+                # sequências têm taxas de evolução heterogêneas — para o propósito
+                # de etiquetagem, topologia importa; comprimento, não.
+                calc_depth_with_lengths(child, accumulated_depth + 1.0)
         
         calc_depth_with_lengths(self.tree.root, 0.0)
-        
+
+        # Profundidade máxima entre todos os terminais — todos serão alinhados neste X.
+        # Isso cria o visual clássico de cladograma retangular onde todos os tips
+        # ficam na mesma coluna da direita, independente de sua profundidade real.
+        max_depth = max(
+            (depths[t] for t in terminals if t in depths),
+            default=1.0
+        )
+        # Guardado como atributo para que _draw_tree possa usar o offset de label correto
+        self._cladogram_depth = max_depth
+
         for clade in self.tree.find_clades(order='postorder'):
-            x = depths.get(clade, 0.0)
-            
             if clade.is_terminal():
+                # Alinhar todos os tips na coluna máxima
+                x = max_depth
                 y = terminal_y_map[clade]
             else:
-                child_ys = [self.clade_positions[child][1] for child in clade.clades 
-                           if child in self.clade_positions]
+                # Nós internos: profundidade real (posição topológica na árvore)
+                x = depths.get(clade, 0.0)
+                child_ys = [self.clade_positions[child][1] for child in clade.clades
+                            if child in self.clade_positions]
                 y = sum(child_ys) / len(child_ys) if child_ys else 0.0
-            
+
             self.clade_positions[clade] = (x, y)
 
     def _draw_tree(self):
@@ -477,11 +492,13 @@ class TreeLabelWindow(ctk.CTkToplevel):
                 weight = 'normal'
                 fontsize = 10
             
-            self.ax.text(x + 0.002, y, name, 
+            # Offset proporcional à profundidade do cladograma para não sobrepor o círculo
+            label_offset = getattr(self, '_cladogram_depth', 10) * 0.03
+            self.ax.text(x + label_offset, y, name,
                         va='center', ha='left',
-                        fontsize=fontsize, 
-                        color=text_color, 
-                        weight=weight, 
+                        fontsize=fontsize,
+                        color=text_color,
+                        weight=weight,
                         zorder=20,
                         family='monospace')
 
@@ -532,8 +549,8 @@ class TreeLabelWindow(ctk.CTkToplevel):
             
             if current_tag:
                 response = simpledialog.askstring(
-                    "Editar Tag",
-                    f"Ramo atual: {current_tag}\n\nDigite novo número ou 'remover':",
+                    TEXTS["tag_dialog_edit_title"],
+                    TEXTS["tag_dialog_edit_prompt"].format(tag=current_tag),
                     parent=self
                 )
                 
@@ -550,8 +567,8 @@ class TreeLabelWindow(ctk.CTkToplevel):
                         self.parent.append_log(f"[edit] Tag alterada para {new_tag} em {clade_name}\n")
             else:
                 response = simpledialog.askstring(
-                    "Número da Tag",
-                    f"Digite o número da tag:\n(ex: 1 para #1, 2 para #2)",
+                    TEXTS["tag_dialog_new_title"],
+                    TEXTS["tag_dialog_new_prompt"],
                     parent=self
                 )
                 
@@ -633,7 +650,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
 
         if not active_tags:
             ctk.CTkLabel(self.legend_frame, text=TEXTS["tree_labeler_no_tags"],
-                         text_color="#888888", font=(_FONT_UI, 11, "italic")
+                         text_color="#888888", font=(_FONT_UI, 13, "italic")
                          ).pack(anchor='w', padx=15, pady=10)
         else:
             for tag in active_tags:
@@ -657,7 +674,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
 
                 count = sum(1 for t in self.clade_tags.values() if t == tag)
                 ctk.CTkLabel(row_frame, text=f"({count})",
-                             font=(_FONT_UI, 10),
+                             font=(_FONT_UI, 12),
                              text_color="#888888").pack(side='left')
 
                 del_btn = ctk.CTkButton(
@@ -667,7 +684,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
                     text_color='#888888',
                     border_width=0,
                     corner_radius=4,
-                    font=(_FONT_UI, 9, "bold"),
+                    font=(_FONT_UI, 13, "bold"),
                     command=lambda t=tag: self._delete_tag(t)
                 )
                 del_btn.pack(side='right', padx=(0, 4))
@@ -836,7 +853,7 @@ class App(ctk.CTk):
                      font=(_FONT_UI, 17, "bold"),
                      text_color=self.COLORS['text_primary']).pack(anchor='w')
         ctk.CTkLabel(title_col, text=TEXTS["app_sidebar_subtitle"],
-                     font=(_FONT_UI, 9),
+                     font=(_FONT_UI, 13),
                      text_color=self.COLORS['text_tertiary']).pack(anchor='w')
 
         ctk.CTkFrame(logo_frame, fg_color=self.COLORS['border'],
@@ -844,9 +861,12 @@ class App(ctk.CTk):
 
         # ── Scrollable section container ─────────────────────────────
         _sb = ctk.CTkScrollableFrame(self.sidebar, fg_color='transparent',
-                                     scrollbar_button_color=self.COLORS['border'],
-                                     scrollbar_button_hover_color=self.COLORS['border_hover'])
-        _sb.pack(fill='both', expand=True, padx=0, pady=(4, 4))
+                                     scrollbar_button_color='#52526a',
+                                     scrollbar_button_hover_color='#6366f1')
+        _sb.pack(fill='both', expand=True, padx=0, pady=(4, 0))
+
+        # ── Rodapé de idioma (fixo, fora do scroll) ──────────────────────
+        self._build_lang_footer()
 
         def _sec(parent, title, icon=""):
             """Labeled card section with inner content frame."""
@@ -861,7 +881,7 @@ class App(ctk.CTk):
                          width=3, height=13, corner_radius=2).pack(side='left', padx=(0, 7), anchor='center')
             ctk.CTkLabel(hdr,
                          text=title,
-                         font=(_FONT_UI, 10, "bold"),
+                         font=(_FONT_UI, 12, "bold"),
                          text_color=self.COLORS['text_secondary']).pack(side='left', anchor='w')
             ctk.CTkFrame(card, fg_color=self.COLORS['border'],
                          height=1, corner_radius=0).pack(fill='x', padx=12, pady=(6, 0))
@@ -885,10 +905,10 @@ class App(ctk.CTk):
         self.btn_input = _obtn(fi, TEXTS["btn_input_folder"],
                                self.select_input_folder,
                                self.COLORS['accent_blue'],
-                               font=(_FONT_UI, 11, "bold"), height=36)
+                               font=(_FONT_UI, 13, "bold"), height=36)
         self.btn_input.pack(fill='x', pady=(0, 2))
         self.label_input = ctk.CTkLabel(fi, text=TEXTS["label_not_selected"],
-                                        font=(_FONT_UI, 9),
+                                        font=(_FONT_UI, 13),
                                         wraplength=230,
                                         text_color=self.COLORS['text_tertiary'])
         self.label_input.pack(anchor='w', padx=4, pady=(0, 8))
@@ -896,10 +916,10 @@ class App(ctk.CTk):
         self.btn_tree = _obtn(fi, TEXTS["btn_tree_file"],
                               self.select_tree_file,
                               self.COLORS['accent_blue'],
-                              font=(_FONT_UI, 11, "bold"), height=36)
+                              font=(_FONT_UI, 13, "bold"), height=36)
         self.btn_tree.pack(fill='x', pady=(0, 2))
         self.label_tree = ctk.CTkLabel(fi, text=TEXTS["label_not_selected"],
-                                       font=(_FONT_UI, 9),
+                                       font=(_FONT_UI, 13),
                                        wraplength=230,
                                        text_color=self.COLORS['text_tertiary'])
         self.label_tree.pack(anchor='w', padx=4, pady=(0, 8))
@@ -907,10 +927,10 @@ class App(ctk.CTk):
         self.btn_output = _obtn(fi, TEXTS["btn_output_folder"],
                                 self.select_output_folder,
                                 self.COLORS['accent_blue'],
-                                font=(_FONT_UI, 11, "bold"), height=36)
+                                font=(_FONT_UI, 13, "bold"), height=36)
         self.btn_output.pack(fill='x', pady=(0, 2))
         self.label_output = ctk.CTkLabel(fi, text=TEXTS["label_not_selected"],
-                                         font=(_FONT_UI, 9),
+                                         font=(_FONT_UI, 13),
                                          wraplength=230,
                                          text_color=self.COLORS['text_tertiary'])
         self.label_output.pack(anchor='w', padx=4)
@@ -921,18 +941,18 @@ class App(ctk.CTk):
         self.btn_results = _obtn(ri, TEXTS["btn_view_results"],
                                   self._open_results_viewer,
                                   self.COLORS['accent_blue'],
-                                  font=(_FONT_UI, 11, "bold"), height=36)
+                                  font=(_FONT_UI, 13, "bold"), height=36)
         self.btn_results.pack(fill='x', pady=(0, 6))
         self.btn_results.configure(state="disabled")
 
         self.btn_update_results = _obtn(ri, TEXTS["btn_update_results"],
                                          self._update_results_files,
                                          self.COLORS['success'],
-                                         font=(_FONT_UI, 11, "bold"), height=36)
+                                         font=(_FONT_UI, 13, "bold"), height=36)
         self.btn_update_results.pack(fill='x', pady=(0, 2))
         self.label_update_results = ctk.CTkLabel(ri,
                                                   text=TEXTS["label_update_results_hint"],
-                                                  font=(_FONT_UI, 9, "italic"),
+                                                  font=(_FONT_UI, 13, "italic"),
                                                   wraplength=230,
                                                   text_color=self.COLORS['text_muted'])
         self.label_update_results.pack(anchor='w', padx=4)
@@ -941,7 +961,7 @@ class App(ctk.CTk):
         ci = _sec(_sb, TEXTS["section_config"])
 
         ctk.CTkLabel(ci, text=TEXTS["label_omega_initial"],
-                     font=(_FONT_UI, 9, "bold"), anchor='w',
+                     font=(_FONT_UI, 13, "bold"), anchor='w',
                      text_color=self.COLORS['text_secondary']).pack(anchor='w')
         self.omega_label = ctk.CTkLabel(ci, text="")  # kept for compat, unused
         self.entry_omega = ctk.CTkEntry(ci, placeholder_text="0.5",
@@ -959,7 +979,7 @@ class App(ctk.CTk):
         row_g = ctk.CTkFrame(ci, fg_color='transparent')
         row_g.pack(fill='x', pady=(0, 8))
         ctk.CTkLabel(row_g, text=TEXTS["label_remove_gaps"],
-                     font=(_FONT_UI, 10),
+                     font=(_FONT_UI, 12),
                      text_color=self.COLORS['text_secondary']).pack(side='left')
         self.cb_cleandata = ctk.CTkSwitch(
             row_g, text="",
@@ -972,7 +992,7 @@ class App(ctk.CTk):
             fg_color=self.COLORS['border'])
         self.cb_cleandata.pack(side='right')
         ctk.CTkButton(row_g, text="?", width=18, height=18, corner_radius=9,
-                      font=(_FONT_UI, 9, "bold"), fg_color=self.COLORS['border'],
+                      font=(_FONT_UI, 13, "bold"), fg_color=self.COLORS['border'],
                       hover_color=self.COLORS['border_hover'],
                       text_color=self.COLORS['text_muted'],
                       command=lambda: self._show_help(
@@ -981,7 +1001,7 @@ class App(ctk.CTk):
 
         # CPU slider
         ctk.CTkLabel(ci, text=TEXTS["label_cpus"],
-                     font=(_FONT_UI, 9, "bold"), anchor='w',
+                     font=(_FONT_UI, 13, "bold"), anchor='w',
                      text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(0, 4))
         cores_row = ctk.CTkFrame(ci, fg_color='transparent')
         cores_row.pack(fill='x', pady=(0, 2))
@@ -996,49 +1016,19 @@ class App(ctk.CTk):
         self.cores_slider.pack(fill='x', side='left', expand=True)
         self.cores_disp = ctk.CTkLabel(
             cores_row, text=f"{_max}×",
-            font=(_FONT_UI, 10, "bold"),
+            font=(_FONT_UI, 12, "bold"),
             text_color=self.COLORS['accent_blue'],
             width=32)
         self.cores_disp.pack(side='right', padx=(6, 0))
-        ctk.CTkLabel(ci, text=f"(detectado: {_max} núcleos)",
-                     font=(_FONT_UI, 9),
+        ctk.CTkLabel(ci, text=TEXTS["label_cpus_detected"].format(n=_max),
+                     font=(_FONT_UI, 13),
                      text_color=self.COLORS['text_muted']).pack(anchor='w')
-
-        # ── Modo Heurístico (fix_kappa do M0) ────────────────────────────────
-        # fix_kappa=1: fixa κ (ts/tv) no valor estimado pelo M0, em vez de
-        # re-estimá-lo livremente em cada modelo.  Economiza ~20-30 % de
-        # iterações por modelo complexo (M1a, M2a, M7, M8, Branch-site).
-        # NOTA: é uma aproximação — κ real de M1a/M2a pode diferir levemente do M0.
-        # O LRT permanece válido desde que AMBOS os modelos do par usem o mesmo κ.
-        self.heuristic_mode_var = ctk.BooleanVar(value=False)
-        row_h = ctk.CTkFrame(ci, fg_color='transparent')
-        row_h.pack(fill='x', pady=(10, 0))
-        ctk.CTkLabel(row_h, text=TEXTS["label_heuristic_mode"],
-                     font=(_FONT_UI, 10),
-                     text_color=self.COLORS['text_secondary']).pack(side='left')
-        self.cb_heuristic = ctk.CTkSwitch(
-            row_h, text="",
-            variable=self.heuristic_mode_var,
-            onvalue=True, offvalue=False,
-            switch_width=36, switch_height=18,
-            progress_color='#f59e0b',   # âmbar — indica modo de aproximação
-            button_color='#fffbeb',
-            button_hover_color='#fef3c7',
-            fg_color=self.COLORS['border'])
-        self.cb_heuristic.pack(side='right')
-        ctk.CTkButton(row_h, text="?", width=18, height=18, corner_radius=9,
-                      font=(_FONT_UI, 9, "bold"), fg_color=self.COLORS['border'],
-                      hover_color=self.COLORS['border_hover'],
-                      text_color=self.COLORS['text_muted'],
-                      command=lambda: self._show_help(
-                          TEXTS["label_heuristic_mode"], TEXTS["label_heuristic_hint"])
-                      ).pack(side='right', padx=(0, 4))
 
         # Ignorar Stop Codons toggle
         row_stops = ctk.CTkFrame(ci, fg_color='transparent')
         row_stops.pack(fill='x', pady=(10, 0))
         ctk.CTkLabel(row_stops, text=TEXTS["label_ignore_stops"],
-                     font=(_FONT_UI, 10),
+                     font=(_FONT_UI, 12),
                      text_color=self.COLORS['text_secondary']).pack(side='left')
         self.cb_ignore_stops = ctk.CTkSwitch(
             row_stops, text="",
@@ -1051,7 +1041,7 @@ class App(ctk.CTk):
             fg_color=self.COLORS['border'])
         self.cb_ignore_stops.pack(side='right')
         ctk.CTkButton(row_stops, text="?", width=18, height=18, corner_radius=9,
-                      font=(_FONT_UI, 9, "bold"), fg_color=self.COLORS['border'],
+                      font=(_FONT_UI, 13, "bold"), fg_color=self.COLORS['border'],
                       hover_color=self.COLORS['border_hover'],
                       text_color=self.COLORS['text_muted'],
                       command=lambda: self._show_help(
@@ -1062,7 +1052,7 @@ class App(ctk.CTk):
         row_prune = ctk.CTkFrame(ci, fg_color='transparent')
         row_prune.pack(fill='x', pady=(10, 0))
         ctk.CTkLabel(row_prune, text=TEXTS["label_auto_prune"],
-                     font=(_FONT_UI, 10),
+                     font=(_FONT_UI, 12),
                      text_color=self.COLORS['text_secondary']).pack(side='left')
         self.cb_auto_prune = ctk.CTkSwitch(
             row_prune, text="",
@@ -1075,7 +1065,7 @@ class App(ctk.CTk):
             fg_color=self.COLORS['border'])
         self.cb_auto_prune.pack(side='right')
         ctk.CTkButton(row_prune, text="?", width=18, height=18, corner_radius=9,
-                      font=(_FONT_UI, 9, "bold"), fg_color=self.COLORS['border'],
+                      font=(_FONT_UI, 13, "bold"), fg_color=self.COLORS['border'],
                       hover_color=self.COLORS['border_hover'],
                       text_color=self.COLORS['text_muted'],
                       command=lambda: self._show_help(
@@ -1113,14 +1103,14 @@ class App(ctk.CTk):
 
         self.status_indicator = ctk.CTkLabel(
             status_bar, text=TEXTS["status_ready"],
-            font=(_FONT_UI, 11, "bold"),
+            font=(_FONT_UI, 13, "bold"),
             text_color=self.COLORS['text_tertiary']
         )
         self.status_indicator.pack(side="left", padx=(14, 20), pady=8)
 
         self.stop_label = ctk.CTkLabel(
             status_bar, text=TEXTS["status_stops_template"].format(n=0),
-            font=(_FONT_UI, 11, "bold"),
+            font=(_FONT_UI, 13, "bold"),
             text_color=self.COLORS['danger']
         )
         self.stop_label.pack(side="left")
@@ -1128,7 +1118,7 @@ class App(ctk.CTk):
         neutral_row = ctk.CTkFrame(status_bar, fg_color='transparent')
         neutral_row.pack(side="right", padx=(0, 6))
         ctk.CTkLabel(neutral_row, text=TEXTS["label_neutral_models"],
-                     font=(_FONT_UI, 9),
+                     font=(_FONT_UI, 13),
                      text_color=self.COLORS['text_secondary']).pack(side='left', padx=(0, 8))
         neutral_sw = ctk.CTkSwitch(
             neutral_row, text="",
@@ -1190,14 +1180,14 @@ class App(ctk.CTk):
         log_header = ctk.CTkFrame(log_container, fg_color='transparent')
         log_header.pack(fill="x", padx=0, pady=(10, 0))
         
-        ctk.CTkLabel(log_header, text=TEXTS["log_header_title"], font=(_FONT_UI, 11, "bold"),
+        ctk.CTkLabel(log_header, text=TEXTS["log_header_title"], font=(_FONT_UI, 13, "bold"),
                     text_color=self.COLORS['text_secondary']).pack(side="left", padx=0)
 
         ctk.CTkLabel(log_header, text="·",
                     font=(_FONT_UI, 13), text_color=self.COLORS['text_muted']).pack(side="left", padx=8)
 
         ctk.CTkLabel(log_header, text=TEXTS["log_header_subtitle"],
-                    font=(_FONT_UI, 9), text_color=self.COLORS['text_muted']).pack(side="left", padx=0)
+                    font=(_FONT_UI, 13), text_color=self.COLORS['text_muted']).pack(side="left", padx=0)
 
         self.log = ctk.CTkTextbox(log_container, font=(_FONT_MONO, 11),
                                   fg_color=self.COLORS['bg_dark'],
@@ -1225,9 +1215,9 @@ class App(ctk.CTk):
         win.resizable(False, False)
         win.grab_set()
         win.focus_set()
-        ctk.CTkLabel(win, text=title, font=(_FONT_UI, 11, "bold"),
+        ctk.CTkLabel(win, text=title, font=(_FONT_UI, 13, "bold"),
                      text_color=self.COLORS['text_primary']).pack(padx=18, pady=(16, 4), anchor='w')
-        ctk.CTkLabel(win, text=body, font=(_FONT_UI, 10), wraplength=290,
+        ctk.CTkLabel(win, text=body, font=(_FONT_UI, 12), wraplength=290,
                      justify='left',
                      text_color=self.COLORS['text_secondary']).pack(padx=18, pady=(0, 12))
         ctk.CTkButton(win, text="OK", width=80, command=win.destroy,
@@ -1327,7 +1317,7 @@ class App(ctk.CTk):
                     text_color=accent,
                     corner_radius=4,
                     border_width=1, border_color=self.COLORS['border_hover'],
-                    font=(_FONT_UI, 9, "bold"),
+                    font=(_FONT_UI, 13, "bold"),
                     command=lambda c=code: self._show_model_info(c)
                 )
                 info_btn.pack(pady=(0, 2))
@@ -1367,7 +1357,7 @@ class App(ctk.CTk):
                 cb.pack(anchor='w')
 
                 lbl = ctk.CTkLabel(content, text=TEXTS["model_status_default"],
-                                   font=(_FONT_UI, 9),
+                                   font=(_FONT_UI, 13),
                                    text_color=self.COLORS['text_tertiary'])
                 lbl.pack(anchor='w', padx=(2, 0))
 
@@ -1386,7 +1376,7 @@ class App(ctk.CTk):
             hover_color=self.COLORS['accent_blue'],
             command=lambda: self._open_tree_labeler(mode='branch'),
             height=40,
-            font=(_FONT_UI, 11, "bold"),
+            font=(_FONT_UI, 13, "bold"),
             text_color=self.COLORS['accent_blue'],
             border_width=1, border_color=self.COLORS['border_hover'],
             corner_radius=8
@@ -1403,7 +1393,7 @@ class App(ctk.CTk):
             hover_color=self.COLORS['accent_blue'],
             command=lambda: self._open_tree_labeler(mode='branchsite'),
             height=40,
-            font=(_FONT_UI, 11, "bold"),
+            font=(_FONT_UI, 13, "bold"),
             text_color=self.COLORS['accent_blue'],
             border_width=1, border_color=self.COLORS['border_hover'],
             corner_radius=8
@@ -1416,7 +1406,7 @@ class App(ctk.CTk):
 
     def _open_tree_labeler(self, mode: str = 'branchsite'):
         if self.tree_file is None:
-            self.append_log("[!] Selecione uma arvore (.nwk) primeiro.\n")
+            self.append_log(TEXTS["log_no_tree_selected"])
             return
 
         try:
@@ -1465,7 +1455,7 @@ class App(ctk.CTk):
                      text="Quando ativado, o EasyPAML adiciona automaticamente o modelo nulo de cada par LRT "
                           "— sem precisar marcá-lo manualmente. Cada comparação usa o Teste da Razão de "
                           "Verossimilhança (LRT): 2ΔlnL comparado ao χ² com os graus de liberdade corretos.",
-                     font=(_FONT_UI, 10),
+                     font=(_FONT_UI, 12),
                      wraplength=690, justify='left',
                      text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(4, 0))
 
@@ -1549,25 +1539,25 @@ class App(ctk.CTk):
                          text_color=info['color']).pack(side='left')
             ctk.CTkLabel(title_row,
                          text=f"   null: {info['null']}  →  alternativo: {info['alt']}",
-                         font=(_FONT_UI, 10),
+                         font=(_FONT_UI, 12),
                          text_color=self.COLORS['text_secondary']).pack(side='left')
 
             # Test label
             ctk.CTkLabel(content, text=f"  {info['test']}",
-                         font=(_FONT_UI, 10, "bold"),
+                         font=(_FONT_UI, 12, "bold"),
                          text_color=self.COLORS['text_primary'],
                          anchor='w').pack(anchor='w', pady=(4, 2))
 
             # Detail
             ctk.CTkLabel(content, text=info['detail'],
-                         font=(_FONT_UI, 10),
+                         font=(_FONT_UI, 12),
                          text_color=self.COLORS['text_secondary'],
                          wraplength=590, justify='left',
                          anchor='w').pack(anchor='w', pady=(0, 3))
 
             # Implementation note
             ctk.CTkLabel(content, text=f"  Nota: {info['note']}",
-                         font=(_FONT_UI, 9, "italic"),
+                         font=(_FONT_UI, 13, "italic"),
                          text_color=self.COLORS['text_tertiary'],
                          wraplength=590, justify='left',
                          anchor='w').pack(anchor='w')
@@ -1578,7 +1568,7 @@ class App(ctk.CTk):
         ctk.CTkLabel(info_window,
                      text="[OK]  Com a opcao ATIVADA, o modelo nulo de cada par selecionado e "
                           "adicionado automaticamente — voce nao precisa marca-lo.",
-                     font=(_FONT_UI, 10),
+                     font=(_FONT_UI, 12),
                      text_color=self.COLORS['success'],
                      wraplength=690).pack(padx=18, pady=12)
 
@@ -1611,79 +1601,157 @@ class App(ctk.CTk):
         
         # Tipo de teste
         test_type_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_test_type"],
-                                      font=(_FONT_UI, 11, "bold"),
+                                      font=(_FONT_UI, 13, "bold"),
                                       text_color=self.COLORS['accent_purple'])
         test_type_label.pack(anchor="w", padx=8, pady=(8, 2))
         
         test_type_value = ctk.CTkLabel(scroll_frame, text=model_info.get('test_type', ''),
-                                      font=(_FONT_UI, 10),
+                                      font=(_FONT_UI, 12),
                                       text_color=self.COLORS['text_primary'],
                                       wraplength=700, justify="left")
         test_type_value.pack(anchor="w", padx=25, pady=(0, 8))
         
         # Parâmetros
         params_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_params"],
-                                   font=(_FONT_UI, 11, "bold"),
+                                   font=(_FONT_UI, 13, "bold"),
                                    text_color=self.COLORS['accent_purple'])
         params_label.pack(anchor="w", padx=8, pady=(8, 2))
         
         params_value = ctk.CTkLabel(scroll_frame, text=model_info.get('parameters', ''),
-                                   font=(_FONT_UI, 10),
+                                   font=(_FONT_UI, 12),
                                    text_color=self.COLORS['text_primary'],
                                    wraplength=700, justify="left")
         params_value.pack(anchor="w", padx=25, pady=(0, 8))
         
         # Propósito
         purpose_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_purpose"],
-                                    font=(_FONT_UI, 11, "bold"),
+                                    font=(_FONT_UI, 13, "bold"),
                                     text_color=self.COLORS['accent_cyan'])
         purpose_label.pack(anchor="w", padx=8, pady=(8, 2))
         
         purpose_value = ctk.CTkLabel(scroll_frame, text=model_info.get('purpose', ''),
-                                    font=(_FONT_UI, 10),
+                                    font=(_FONT_UI, 12),
                                     text_color=self.COLORS['text_primary'],
                                     wraplength=700, justify="left")
         purpose_value.pack(anchor="w", padx=25, pady=(0, 8))
         
         # Interpretação
         interp_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_interpretation"],
-                                   font=(_FONT_UI, 11, "bold"),
+                                   font=(_FONT_UI, 13, "bold"),
                                    text_color=self.COLORS['success'])
         interp_label.pack(anchor="w", padx=8, pady=(8, 2))
 
         interp_value = ctk.CTkLabel(scroll_frame, text=model_info.get('interpretation', ''),
-                                   font=(_FONT_UI, 10),
+                                   font=(_FONT_UI, 12),
                                    text_color=self.COLORS['text_primary'],
                                    wraplength=700, justify="left")
         interp_value.pack(anchor="w", padx=25, pady=(0, 8))
 
         # Caso de uso
         use_case_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_use_case"],
-                                     font=(_FONT_UI, 11, "bold"),
+                                     font=(_FONT_UI, 13, "bold"),
                                      text_color=self.COLORS['warning'])
         use_case_label.pack(anchor="w", padx=8, pady=(8, 2))
 
         use_case_value = ctk.CTkLabel(scroll_frame, text=model_info.get('use_case', ''),
-                                     font=(_FONT_UI, 10),
+                                     font=(_FONT_UI, 12),
                                      text_color=self.COLORS['text_primary'],
                                      wraplength=700, justify="left")
         use_case_value.pack(anchor="w", padx=25, pady=(0, 8))
 
         # Referências
         refs_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_references"],
-                                 font=(_FONT_UI, 11, "bold"),
+                                 font=(_FONT_UI, 13, "bold"),
                                  text_color='#eab308')   # amarelo — não tem par no COLORS
         refs_label.pack(anchor="w", padx=8, pady=(8, 2))
         
         refs_value = ctk.CTkLabel(scroll_frame, text=model_info.get('references', ''),
-                                 font=(_FONT_UI, 10, "italic"),
+                                 font=(_FONT_UI, 12, "italic"),
                                  text_color=self.COLORS['text_secondary'],
                                  wraplength=700, justify="left")
         refs_value.pack(anchor="w", padx=25, pady=(0, 8))
 
+    # ── Idioma ───────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _lang_pref_path() -> Path:
+        """Caminho do arquivo de preferência de idioma."""
+        return Path.home() / '.easypml_lang'
+
+    @staticmethod
+    def load_language_pref() -> None:
+        """Lê o idioma salvo e ativa antes da janela ser construída."""
+        try:
+            p = App._lang_pref_path()
+            if p.exists():
+                lang = p.read_text(encoding='utf-8').strip()
+                set_language(lang)
+        except Exception:
+            pass
+
+    def _save_language_pref(self, lang: str) -> None:
+        try:
+            self._lang_pref_path().write_text(lang, encoding='utf-8')
+        except Exception:
+            pass
+
+    def _build_lang_footer(self) -> None:
+        """Rodapé fixo da sidebar com botões PT / EN."""
+        footer = ctk.CTkFrame(self.sidebar,
+                              fg_color=self.COLORS['bg_card'],
+                              corner_radius=0,
+                              border_width=1,
+                              border_color=self.COLORS['border'])
+        footer.pack(fill='x', side='bottom', padx=0, pady=0)
+
+        inner = ctk.CTkFrame(footer, fg_color='transparent')
+        inner.pack(fill='x', padx=10, pady=6)
+
+        ctk.CTkLabel(inner, text="🌐", font=(_FONT_UI, 13),
+                     text_color=self.COLORS['text_tertiary']).pack(side='left', padx=(0, 6))
+
+        current = get_language()
+
+        def _make_btn(code: str, label: str):
+            active = (code == current)
+            btn = ctk.CTkButton(
+                inner, text=label, width=46, height=24,
+                font=(_FONT_UI, 12, "bold" if active else "normal"),
+                corner_radius=6,
+                fg_color=self.COLORS['accent_blue'] if active else self.COLORS['border'],
+                hover_color=self.COLORS['accent_blue_hover'],
+                text_color='#ffffff',
+                command=lambda c=code: self._switch_language(c)
+            )
+            btn.pack(side='left', padx=2)
+
+        _make_btn('pt', 'PT')
+        _make_btn('en', 'EN')
+
+    def _switch_language(self, lang: str) -> None:
+        """Salva preferência e reinicia o app para aplicar o idioma."""
+        import subprocess
+        current = get_language()
+        if lang == current:
+            return
+        self._save_language_pref(lang)
+        set_language(lang)
+
+        from tkinter import messagebox
+        restart = messagebox.askyesno(
+            "EasyPAML",
+            f"{TEXTS['lang_switch_message']}\n\n{TEXTS['lang_switch_confirm']}"
+        )
+        if restart:
+            try:
+                subprocess.Popen([sys.executable] + sys.argv)
+                self.destroy()
+            except Exception as exc:
+                messagebox.showerror("EasyPAML", TEXTS["lang_switch_err"].format(error=exc))
+
     def _open_results_viewer(self):
         if not self.output_folder:
-            self.append_log("[!] Selecione uma pasta de saida primeiro.\n")
+            self.append_log(TEXTS["log_no_output_folder"])
             return
         try:
             ResultsViewerWindow(self, self.output_folder)
@@ -1694,7 +1762,7 @@ class App(ctk.CTk):
     def _regenerate_summary_files(self):
         """Abre diálogo para selecionar pasta e regenera os 3 arquivos de síntese"""
         results_folder = filedialog.askdirectory(
-            title="Selecione a pasta com resultados para atualizar síntese",
+            title=TEXTS["dialog_select_results_folder"],
             initialdir=str(Path.home() / "Desktop")
         )
         
@@ -1704,56 +1772,56 @@ class App(ctk.CTk):
         results_folder = Path(results_folder)
         
         self.append_log("\n" + "="*80 + "\n")
-        self.append_log(">> ATUALIZANDO RESULTADOS\n")
+        self.append_log(TEXTS["log_updating_results"])
         self.append_log("="*80 + "\n")
         self.append_log(f"Pasta de resultados: {results_folder}\n\n")
         
         # Executar em thread separada para não travar GUI
         def _update_thread():
             try:
-                self.append_log("Detectando modelos presentes...\n")
-                
+                self.append_log(TEXTS["log_detecting_models"])
+
                 # Descobrir quais modelos estão presentes
                 models = set()
                 for item in results_folder.iterdir():
                     if item.is_dir() and item.name not in ['reports']:
                         models.add(item.name)
-                
+
                 models = sorted(models)
-                self.append_log(f"[OK] Modelos encontrados: {', '.join(models)}\n\n")
-                
+                self.append_log(f"[OK] Models found: {', '.join(models)}\n\n")
+
                 # Determinar comparações disponíveis
-                self.append_log("Determinando comparações para LRT:\n")
+                self.append_log(TEXTS["log_lrt_comparisons"])
                 comparisons = []
-                
+
                 if 'M0' in models and 'M1a' in models:
                     comparisons.append("M0 vs M1a")
-                    self.append_log("  • M0 (null) vs M1a (alt) - Variação de ω entre sítios\n")
-                
+                    self.append_log(TEXTS["log_lrt_M0_M1a"])
+
                 if 'M1a' in models and 'M2a' in models:
                     comparisons.append("M1a vs M2a")
-                    self.append_log("  • M1a (null) vs M2a (alt) - Seleção positiva\n")
-                
+                    self.append_log(TEXTS["log_lrt_M1a_M2a"])
+
                 if 'M7' in models and 'M8' in models:
                     comparisons.append("M7 vs M8")
-                    self.append_log("  • M7 (null) vs M8 (alt) - Seleção positiva (Beta)\n")
-                
+                    self.append_log(TEXTS["log_lrt_M7_M8"])
+
                 if 'M0' in models and 'Branch' in models:
                     comparisons.append("M0 vs Branch")
-                    self.append_log("  • M0 (null) vs Branch (alt) - Seleção por ramo\n")
-                
+                    self.append_log(TEXTS["log_lrt_M0_Branch"])
+
                 if 'Branch-site_null' in models and 'Branch-site' in models:
                     comparisons.append("Branch-site_null vs Branch-site")
-                    self.append_log("  • Branch-site_null (null) vs Branch-site (alt) - Seleção branch-site\n")
-                
-                self.append_log(f"\nTotal de {len(comparisons)} comparações encontradas.\n\n")
-                
+                    self.append_log(TEXTS["log_lrt_BranchSite"])
+
+                self.append_log(TEXTS["log_lrt_total"].format(n=len(comparisons)))
+
                 # Regenerar arquivos
-                self.append_log("Regenerando arquivos de síntese...\n")
+                self.append_log(TEXTS["log_regenerating"])
                 generated_files = CodemlBatchAnalysis.regenerate_summary_files(results_folder)
                 
                 if generated_files:
-                    self.append_log("\n[OK] ATUALIZACAO CONCLUIDA COM SUCESSO!\n")
+                    self.append_log(TEXTS["log_update_done"])
                     self.append_log("="*80 + "\n")
                     for file_type, file_path in generated_files.items():
                         filepath = Path(file_path)
@@ -1843,7 +1911,7 @@ class App(ctk.CTk):
             self.manual_all_event.set()
             if self.manual_event: 
                 self.manual_event.set()
-            self.append_log("▶ Resolvendo todos os stops deste Exon automaticamente...\n")
+            self.append_log(TEXTS["log_resolving_stops"])
 
     def _toggle_pause(self):
         if not self.pause_event:
@@ -2017,7 +2085,6 @@ class App(ctk.CTk):
                 'timeout': 1600,
                 'run_lrt': True,
                 'n_workers': int(self.cores_var.get()),
-                'heuristic_mode': self.heuristic_mode_var.get(),
                 'auto_continue_stop_codons': self.ignore_stop_codons_var.get(),
                 'auto_prune_tree': self.auto_prune_tree_var.get(),
                 'pause_event': self.pause_event,
@@ -2027,9 +2094,9 @@ class App(ctk.CTk):
             }
             
             self.append_log("╔" + "═"*58 + "╗\n")
-            self.append_log("║     INICIANDO ANALISE DE SELECAO POSITIVA     " + " "*10 + "║\n")
+            self.append_log("║     STARTING POSITIVE SELECTION ANALYSIS      " + " "*10 + "║\n")
             self.append_log("╚" + "═"*58 + "╝\n\n")
-            self.append_log("▶ INICIANDO ANALISE BATCH\n")
+            self.append_log(TEXTS["log_analysis_start"])
             self.append_log("="*60 + "\n")
             
             analysis.run_batch_analysis()
@@ -2042,11 +2109,11 @@ class App(ctk.CTk):
 
             if self.stop_event.is_set():
                 self.append_log("\n" + "="*60 + "\n")
-                self.append_log("■ ANALISE INTERROMPIDA\n")
+                self.append_log(TEXTS["log_analysis_stopped"])
                 self.append_log("="*60 + "\n")
             else:
                 self.append_log("\n" + "="*60 + "\n")
-                self.append_log("[OK] ANALISE CONCLUIDA\n")
+                self.append_log(TEXTS["log_analysis_done"])
                 self.append_log("="*60 + "\n")
 
             def _reset_ui():

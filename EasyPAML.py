@@ -22,6 +22,7 @@ from src.gui.main_gui import App
 
 
 def main():
+    App.load_language_pref()   # carrega idioma salvo ANTES de construir a janela
     app = App()
     app.mainloop()
 

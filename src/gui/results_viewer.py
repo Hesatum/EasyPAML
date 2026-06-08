@@ -81,6 +81,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         self.geometry(f"{w}x{h}+{x}+{y}")
         
         self.configure(fg_color=self.COLORS['bg_dark'])
+        self.after(100, self.lift)
+        self.after(150, self.focus_force)
         self.output_folder = output_folder
         self.df = None
         self.tag_columns = {}
@@ -97,18 +99,42 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         tsv_file = self.output_folder / "analysis_summary.tsv"
         if not tsv_file.exists():
             return False
-        
+
         try:
+            # ── 1. Detect model subfolders not yet in the TSV ──────────────────
+            _legacy = {'BranchSite_A': 'Branch-site', 'BranchSite_A_null': 'Branch-site_null'}
+            _exclude = {'reports'}
+            found_models = set()
+            for _item in self.output_folder.iterdir():
+                if _item.is_dir() and _item.name not in _exclude:
+                    found_models.add(_legacy.get(_item.name, _item.name))
+
+            # Models already described in the TSV (read header only)
+            import csv
+            with open(tsv_file, newline='', encoding='utf-8', errors='ignore') as _f:
+                _header = next(csv.reader(_f, delimiter='\t'), [])
+            known_models = {col.rsplit('_', 1)[0] for col in _header
+                            if col.endswith('_lnL')}
+
+            missing_models = found_models - known_models
+            if missing_models:
+                print(f"[INFO] Models in subfolders missing from TSV: {missing_models}")
+                print("[INFO] Regenerating analysis_summary.tsv to include all models...")
+                from src.backend.codeml_backend import CodemlBatchAnalysis
+                CodemlBatchAnalysis._regenerate_analysis_summary(self.output_folder)
+                print("[OK] analysis_summary.tsv regenerated successfully.")
+
+            # ── 2. Load (possibly updated) TSV ────────────────────────────────
             self.df = pd.read_csv(tsv_file, sep='\t')
             self.df = self.df.replace(['NA', 'nan', '', 'None'], np.nan)
-            
+
             numeric_cols = [col for col in self.df.columns if col != 'Gene']
             for col in numeric_cols:
                 self.df[col] = pd.to_numeric(self.df[col], errors='coerce')
-            
+
             # Tentar recuperar omegas faltantes dos arquivos de resultados
             self._recover_missing_omegas()
-            
+
             print(f"[OK] Dados carregados: {len(self.df)} genes")
             print(f"[OK] Colunas: {list(self.df.columns)}")
             return True
@@ -294,7 +320,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         right = ctk.CTkFrame(header, fg_color='transparent')
         right.pack(side="right", padx=24, pady=16, fill='y')
-        ctk.CTkLabel(right, text=f"{len(self.df)} genes carregados",
+        ctk.CTkLabel(right, text=TEXTS["viewer_genes_loaded"].format(n=len(self.df)),
                      font=("Roboto", 10), text_color=self.COLORS['accent_blue']).pack()
         
         # PAINEL DE ESTATÍSTICAS
@@ -666,7 +692,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                      font=("Roboto", 13, "bold"),
                      text_color=self.COLORS['text_primary']).pack(anchor="w")
         ctk.CTkLabel(banner_left,
-                     text=f"Modelo: {model_name}  ·  Análise: {method}  ·  {omega_text}",
+                     text=TEXTS["viewer_sites_subtitle"].format(model=model_name, method=method, omega=omega_text),
                      font=("Roboto", 9),
                      text_color=self.COLORS['text_tertiary']).pack(anchor="w")
 
@@ -674,7 +700,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                              corner_radius=8, width=80)
         badge.pack(side="right", padx=14, pady=10)
         badge.pack_propagate(False)
-        ctk.CTkLabel(badge, text=f"{len(df_filtered)} sítios",
+        ctk.CTkLabel(badge, text=TEXTS["viewer_sites_count"].format(n=len(df_filtered)),
                      font=("Roboto", 11, "bold"),
                      text_color="white").pack(expand=True)
 
@@ -999,10 +1025,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         def _export_png():
             if current_fig[0] is None:
-                messagebox.showwarning("Aviso", "Nenhuma figura para exportar.")
+                messagebox.showwarning(TEXTS["msg_warning"], TEXTS["msg_no_figure"])
                 return
             fp = filedialog.asksaveasfilename(
-                title="Exportar cladograma",
+                title=TEXTS["dialog_export_cladogram"],
                 defaultextension=".png",
                 filetypes=[("PNG", "*.png"), ("Todos os arquivos", "*.*")]
             )
@@ -1010,9 +1036,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 try:
                     current_fig[0].savefig(fp, dpi=200, bbox_inches='tight',
                                            facecolor='#111115')
-                    messagebox.showinfo("Sucesso", f"Exportado para:\n{fp}")
+                    messagebox.showinfo(TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=fp))
                 except Exception as e:
-                    messagebox.showerror("Erro ao exportar", str(e))
+                    messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_export_err"].format(error=e))
 
         btn_bar = ctk.CTkFrame(parent, fg_color='transparent')
         btn_bar.pack(fill='x', padx=10, pady=(0, 4))
@@ -1144,7 +1170,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
             row_data = self.df[self.df['Gene'] == gene_name]
             if row_data.empty:
-                ctk.CTkLabel(chart_frame, text="Gene nao encontrado.",
+                ctk.CTkLabel(chart_frame, text=TEXTS["viewer_gene_not_found"],
                              text_color=self.COLORS['text_tertiary']).pack(expand=True)
                 return
             row = row_data.iloc[0]
@@ -1152,12 +1178,19 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             if has_lrt:
                 lrt_val = row.get(lrt_col, np.nan)
                 if pd.notna(lrt_val):
-                    # df = n grupos foreground = np_Branch - np_M0
-                    # (ambos têm ntime>0, então a diferença é exatamente o n de ω extras)
-                    m0_np_val     = row.get('M0_np', np.nan)
-                    branch_np_val = row.get('Branch_np', np.nan)
+                    # df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
+                    # Correção necessária porque M0 usa árvore não-enraizada (ntime=2n-3)
+                    # enquanto Branch usa a árvore rotulada/enraizada (ntime=2n-2).
+                    m0_np_val        = row.get('M0_np', np.nan)
+                    branch_np_val    = row.get('Branch_np', np.nan)
+                    m0_ntime_val     = row.get('M0_ntime', np.nan)
+                    branch_ntime_val = row.get('Branch_ntime', np.nan)
                     if pd.notna(m0_np_val) and pd.notna(branch_np_val):
-                        df_branch = max(1, abs(int(branch_np_val) - int(m0_np_val)))
+                        raw_df = abs(int(branch_np_val) - int(m0_np_val))
+                        if pd.notna(m0_ntime_val) and pd.notna(branch_ntime_val):
+                            df_branch = max(1, raw_df - (int(branch_ntime_val) - int(m0_ntime_val)))
+                        else:
+                            df_branch = max(1, raw_df)
                     else:
                         df_branch = 1
                     p   = 1 - stats.chi2.cdf(lrt_val, df=df_branch) if lrt_val > 0 else 1.0
@@ -1170,18 +1203,18 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             results_file = self._find_results_file(gene_name, 'Branch')
             if not results_file:
                 ctk.CTkLabel(chart_frame,
-                             text="Arquivo de resultados Branch nao encontrado.",
+                             text=TEXTS["viewer_branch_no_file"],
                              text_color=self.COLORS['text_tertiary']).pack(expand=True)
                 return
             try:
                 df_br = BranchExtractor.extract_branch_table(results_file)
             except Exception as exc:
-                ctk.CTkLabel(chart_frame, text=f"Erro ao ler tabela: {exc}",
+                ctk.CTkLabel(chart_frame, text=TEXTS["viewer_branch_read_err"].format(error=exc),
                              text_color=self.COLORS['text_tertiary']).pack(expand=True)
                 return
             if df_br.empty:
                 ctk.CTkLabel(chart_frame,
-                             text="Tabela dN & dS nao encontrada no arquivo.",
+                             text=TEXTS["viewer_branch_no_table"],
                              text_color=self.COLORS['text_tertiary']).pack(expand=True)
                 return
 
@@ -1223,7 +1256,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 children_set.add(c_node)
 
             if not all_nodes:
-                ctk.CTkLabel(chart_frame, text="Dados invalidos.",
+                ctk.CTkLabel(chart_frame, text=TEXTS["viewer_branch_invalid"],
                              text_color=self.COLORS['text_tertiary']).pack(expand=True)
                 return
 
@@ -1634,6 +1667,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
            descriptions = {col_name → null-hyp text shown below the combo}
         """
         KNOWN = {
+            'lrt_M0_vs_M1a': (
+                'M0 → M1a   (neutralidade)',
+                'H₀  M0 — taxa ω única para todos os sítios  ·  '
+                'H₁  M1a — ω₀ < 1 e ω₁ = 1 (neutralidade quase-neutra)   ·   df = 2   ·  '
+                'Pré-teste; M1a vs M2a é o teste principal de seleção positiva',
+            ),
             'lrt_M1a_vs_M2a': (
                 'M1a → M2a   (sítios positivos)',
                 'H₀  M1a — apenas purificação/neutralidade (ω ≤ 1)  ·  '
@@ -1697,7 +1736,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         # not from comparison_name (which may use → and extra text).
         col_parts = lrt_col.replace('lrt_', '').split('_vs_')
         if len(col_parts) != 2:
-            ctk.CTkLabel(parent, text="[Erro] Erro ao parsear comparacao").pack()
+            ctk.CTkLabel(parent, text=TEXTS["viewer_lrt_parse_err"]).pack()
             return
 
         model1_raw = col_parts[0].lower()
@@ -1901,12 +1940,18 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 df_chi2 = 2
                 p_val = 1 - stats.chi2.cdf(lrt_val, df=2) if lrt_val > 0 else 1.0
             elif is_branch_model:
-                # df = número de grupos foreground; ambos Branch e M0 têm ntime>0,
-                # portanto abs(np_Branch - np_M0) dá o n de ω extras directamente.
-                m0_np_val     = row.get('M0_np', np.nan)
-                branch_np_val = row.get('Branch_np', np.nan)
+                # df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
+                # Necessário pois M0 usa árvore não-enraizada e Branch usa enraizada.
+                m0_np_val        = row.get('M0_np', np.nan)
+                branch_np_val    = row.get('Branch_np', np.nan)
+                m0_ntime_val     = row.get('M0_ntime', np.nan)
+                branch_ntime_val = row.get('Branch_ntime', np.nan)
                 if pd.notna(m0_np_val) and pd.notna(branch_np_val):
-                    df_chi2 = max(1, abs(int(branch_np_val) - int(m0_np_val)))
+                    raw_df = abs(int(branch_np_val) - int(m0_np_val))
+                    if pd.notna(m0_ntime_val) and pd.notna(branch_ntime_val):
+                        df_chi2 = max(1, raw_df - (int(branch_ntime_val) - int(m0_ntime_val)))
+                    else:
+                        df_chi2 = max(1, raw_df)
                 else:
                     df_chi2 = 1
                 p_val = 1 - stats.chi2.cdf(lrt_val, df=df_chi2) if lrt_val > 0 else 1.0
@@ -2060,6 +2105,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
     # ── df_chi2 per comparison ────────────────────────────────
     _DF_CHI2 = {
+        'lrt_M0_vs_M1a':                           2,
         'lrt_M1a_vs_M2a':                          2,
         'lrt_M7_vs_M8':                            2,
         'lrt_M0_vs_Branch':                        1,   # approximation
@@ -2084,44 +2130,153 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         # df for chi2
         df_chi2 = self._DF_CHI2.get(lrt_col, 1)
-        # Adaptive df: if lrt_col contains 'Branch' but not 'site', use Δnp
-        if 'vs_Branch' in lrt_col and 'site' not in lrt_col.lower():
-            np_col_alt = 'Branch_np'
-            np_col_null = 'M0_np'
-            if np_col_alt in df_f.columns and np_col_null in df_f.columns:
-                # df per row is Δnp; use row-level p-values below
-                pass
 
-        p_vals = lrt_vals.apply(
-            lambda x: float(1 - stats.chi2.cdf(x, df=df_chi2)) if pd.notna(x) and x > 0 else 1.0
-        )
+        # Para M0 vs Branch: df per-row via ntime correction
+        # df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
+        branch_df_series = None
+        if 'vs_Branch' in lrt_col and 'site' not in lrt_col.lower():
+            if ('Branch_np' in df_f.columns and 'M0_np' in df_f.columns):
+                raw_dfs = (
+                    pd.to_numeric(df_f['Branch_np'], errors='coerce') -
+                    pd.to_numeric(df_f['M0_np'],    errors='coerce')
+                ).abs()
+                if 'Branch_ntime' in df_f.columns and 'M0_ntime' in df_f.columns:
+                    ntime_diff = (
+                        pd.to_numeric(df_f['Branch_ntime'], errors='coerce') -
+                        pd.to_numeric(df_f['M0_ntime'],    errors='coerce')
+                    )
+                    branch_df_series = (raw_dfs - ntime_diff).clip(lower=1)
+                else:
+                    branch_df_series = raw_dfs.clip(lower=1)
+
+        if branch_df_series is not None:
+            p_vals = pd.Series([
+                float(1 - stats.chi2.cdf(x, df=int(d))) if pd.notna(x) and x > 0 else 1.0
+                for x, d in zip(lrt_vals, branch_df_series)
+            ], index=lrt_vals.index)
+        else:
+            p_vals = lrt_vals.apply(
+                lambda x: float(1 - stats.chi2.cdf(x, df=df_chi2)) if pd.notna(x) and x > 0 else 1.0
+            )
 
         # Build output columns
         out = pd.DataFrame({'Gene': df_f['Gene'].values})
 
-        # Add ω columns for both models in the comparison (skip _np/_lnL/_time/_stops)
         parts = lrt_col.replace('lrt_', '').split('_vs_')
         model_names = parts if len(parts) == 2 else []
+
+        # ── ω columns ────────────────────────────────────────────────────
+        # For M0 vs Branch: skip generic Branch_omega (replaced by per-tag below).
+        # For all other models: add the generic omega column normally.
+        _is_branch_lrt = (lrt_col == 'lrt_M0_vs_Branch')
+
         for mn in model_names:
+            if _is_branch_lrt and mn == 'Branch':
+                continue  # per-tag columns added below
             omega_col = f'{mn}_omega'
             if omega_col in df_f.columns:
-                out[f'ω ({mn})'] = pd.to_numeric(df_f[omega_col].values, errors='coerce').round(5)
+                out[f'ω ({mn})'] = pd.to_numeric(df_f[omega_col].values, errors='coerce').round(4)
 
-        # Also add any per-tag ω columns (e.g. Branch_#1_omega)
+        # ── Per-tag ω columns for Branch model ───────────────────────────
+        # PAML's "w (dN/dS) for branches:" lists groups as [bg, #1, #2, ...]
+        # matching the user's branch labels in order of first appearance in tree.
+        if _is_branch_lrt:
+            from src.backend.sites_parser import SitesParser as _SP
+
+            # 1) Try to get per-tag omegas from TSV columns (post-regeneration)
+            _tag_cols_in_tsv = sorted(
+                [c for c in df_f.columns
+                 if re.match(r'^Branch_(background|#\d+)_omega$', c)],
+                key=lambda c: (c != 'Branch_background_omega',
+                               int(re.search(r'#(\d+)', c).group(1))
+                               if re.search(r'#(\d+)', c) else 0)
+            )
+            if _tag_cols_in_tsv:
+                for col in _tag_cols_in_tsv:
+                    tag = col.replace('Branch_', '').replace('_omega', '')
+                    label = 'ω (bg)' if tag == 'background' else f'ω ({tag})'
+                    out[label] = pd.to_numeric(df_f[col].values, errors='coerce').round(4)
+            else:
+                # 2) Fallback: parse on-the-fly from result files
+                _tag_data: dict = {}   # tag -> {gene -> omega}
+                for gene in df_f['Gene'].values:
+                    rf = self.output_folder / 'Branch' / f"{gene}_Branch_results.txt"
+                    if not rf.exists():
+                        continue
+                    try:
+                        for tag, omega in _SP.extract_omega_by_tags(rf).items():
+                            _tag_data.setdefault(tag, {})[gene] = omega
+                    except Exception:
+                        pass
+
+                # Sort: background first, then #1, #2, ... by number
+                sorted_tags = sorted(
+                    _tag_data.keys(),
+                    key=lambda t: (t != 'background',
+                                   int(re.search(r'(\d+)', t).group(1))
+                                   if re.search(r'(\d+)', t) else 0)
+                )
+                for tag in sorted_tags:
+                    label = 'ω (bg)' if tag == 'background' else f'ω ({tag})'
+                    out[label] = [
+                        round(float(_tag_data[tag][g]), 4) if g in _tag_data[tag] else float('nan')
+                        for g in df_f['Gene'].values
+                    ]
+
+        # ── Other per-tag ω columns (non-Branch models, e.g. Branch-site) ─
         tag_re = re.compile(r'^([A-Za-z0-9\-]+)_(.+)_omega$')
         for col in df_f.columns:
-            m = tag_re.match(col)
-            if m and col not in [f'{mn}_omega' for mn in model_names]:
-                model_part, tag = m.group(1), m.group(2)
+            m_col = tag_re.match(col)
+            if m_col and col not in [f'{mn}_omega' for mn in model_names]:
+                model_part, tag = m_col.group(1), m_col.group(2)
+                # Skip Branch per-tag columns — already handled above
+                if model_part == 'Branch' and re.match(r'^(background|#\d+)$', tag):
+                    continue
                 if any(mn.lower() == model_part.lower() for mn in model_names):
                     out[f'ω ({model_part}/{tag})'] = (
-                        pd.to_numeric(df_f[col].values, errors='coerce').round(5)
+                        pd.to_numeric(df_f[col].values, errors='coerce').round(4)
                     )
 
         out['2Δℓ']         = lrt_vals.values.round(4)
-        out['p-valor']     = p_vals.values.round(8)
-        out['Sig. p<0.05'] = p_vals.apply(lambda p: 'sim' if p < 0.05 else 'não').values
-        out['Sig. p<0.01'] = p_vals.apply(lambda p: 'sim' if p < 0.01 else 'não').values
+        out['p-value']     = p_vals.values.round(8)
+        out['Sig. p<0.05'] = p_vals.apply(lambda p: 'yes' if p < 0.05 else 'no').values
+        out['Sig. p<0.01'] = p_vals.apply(lambda p: 'yes' if p < 0.01 else 'no').values
+
+        # ── BEB positive sites (M2a and M8 only) ─────────────────────────
+        # Format: "32 R* (8.200 ± 2.238); 91 G** (8.444 ± 1.804)"
+        # Separator is ";" to avoid conflicts with CSV field delimiters.
+        _SITES_MODELS = {'M1a_vs_M2a': 'M2a', 'M7_vs_M8': 'M8'}
+        _lrt_key = lrt_col.replace('lrt_', '')
+        if _lrt_key in _SITES_MODELS:
+            sites_model = _SITES_MODELS[_lrt_key]
+            from src.backend.sites_parser import SitesParser as _SP2
+            sites_col = []
+            for gene in df_f['Gene'].values:
+                rf = self.output_folder / sites_model / f"{gene}_{sites_model}_results.txt"
+                if not rf.exists():
+                    sites_col.append('')
+                    continue
+                try:
+                    beb_df = _SP2.parse_sites_from_file(rf, method='BEB')
+                    if beb_df.empty:
+                        sites_col.append('')
+                        continue
+                    sig = beb_df[beb_df['pr_w_gt_1'] >= 0.95].sort_values('position')
+                    if sig.empty:
+                        sites_col.append('')
+                        continue
+                    parts_list = []
+                    for _, sr in sig.iterrows():
+                        star = sr['significance'] if sr['significance'] else (
+                            '**' if sr['pr_w_gt_1'] >= 0.99 else '*')
+                        parts_list.append(
+                            f"{int(sr['position'])} {sr['amino_acid']}{star} "
+                            f"({sr['post_mean']:.3f} ± {sr['post_se']:.3f})"
+                        )
+                    sites_col.append('; '.join(parts_list))  # ";" avoids CSV conflicts
+                except Exception:
+                    sites_col.append('')
+            out['Positive Sites (BEB)'] = sites_col
 
         return out.reset_index(drop=True)
 
@@ -2142,7 +2297,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             # fallback: plain pandas export (no formatting)
             lrt_cols = [c for c in self.df.columns if c.startswith('lrt_')]
             if not lrt_cols:
-                messagebox.showwarning("Aviso", "Nenhum resultado LRT encontrado.", parent=self)
+                messagebox.showwarning(TEXTS["msg_warning"], TEXTS["msg_no_lrt"], parent=self)
                 return
             with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
                 for lrt_col in lrt_cols:
@@ -2152,16 +2307,17 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     df_out = self._build_export_df(lrt_col)
                     if not df_out.empty:
                         df_out.to_excel(writer, sheet_name=sheet_name, index=False)
-            messagebox.showinfo("Sucesso", f"Exportado para:\n{filepath}", parent=self)
+            messagebox.showinfo(TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=filepath), parent=self)
             return
 
         lrt_cols = [c for c in self.df.columns if c.startswith('lrt_')]
         if not lrt_cols:
-            messagebox.showwarning("Aviso", "Nenhum resultado LRT encontrado.", parent=self)
+            messagebox.showwarning(TEXTS["msg_warning"], TEXTS["msg_no_lrt"], parent=self)
             return
 
         # ── known sheet labels ──────────────────────────────────────────
         SHEET_LABELS = {
+            'lrt_M0_vs_M1a':                       'M0 vs M1a',
             'lrt_M1a_vs_M2a':                      'M1a vs M2a',
             'lrt_M7_vs_M8':                        'M7 vs M8',
             'lrt_M0_vs_Branch':                    'M0 vs Branch',
@@ -2169,16 +2325,18 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             'lrt_M0_vs_Branch-site':               'M0 vs Branch-site',
         }
 
-        # Style helpers
-        HEADER_FILL   = PatternFill('solid', fgColor='1E3A5F')
-        SIG_FILL      = PatternFill('solid', fgColor='0B3320')
-        ALT_FILL      = PatternFill('solid', fgColor='1A1A26')
+        # Style helpers — clean light-background professional theme
+        HEADER_FILL   = PatternFill('solid', fgColor='1F3864')  # deep navy
+        SIG01_FILL    = PatternFill('solid', fgColor='D6F0E8')  # pale teal  (p<0.01)
+        SIG05_FILL    = PatternFill('solid', fgColor='EBF5E0')  # pale green (p<0.05 only)
+        ALT_FILL      = PatternFill('solid', fgColor='F5F7FB')  # very light blue-gray
         HEADER_FONT   = Font(bold=True, color='FFFFFF', size=11)
-        SIG_FONT      = Font(color='6EE7B7', size=10)
-        NORMAL_FONT   = Font(color='CCCCDD', size=10)
-        CENTER        = Alignment(horizontal='center', vertical='center')
-        thin          = Side(style='thin', color='333344')
-        border        = Border(bottom=thin)
+        SIG01_FONT    = Font(color='0E5E4A', size=10, bold=True)
+        SIG05_FONT    = Font(color='2D6A1F', size=10)
+        NORMAL_FONT   = Font(color='1A1A2E', size=10)
+        CENTER        = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        thin          = Side(style='thin', color='CCCCCC')
+        border        = Border(bottom=thin, left=thin, right=thin)
 
         try:
             with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
@@ -2200,76 +2358,115 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         cell.alignment = CENTER
 
                     # ── style data rows ───────────────────────────────
-                    sig_col_idx = None
+                    sig05_col_idx = sig01_col_idx = sites_col_idx = None
                     for i, col in enumerate(df_out.columns, 1):
                         if col == 'Sig. p<0.05':
-                            sig_col_idx = i
-                            break
+                            sig05_col_idx = i
+                        elif col == 'Sig. p<0.01':
+                            sig01_col_idx = i
+                        elif col == 'Positive Sites (BEB)':
+                            sites_col_idx = i
 
                     for row_idx, row in enumerate(ws.iter_rows(min_row=2), 1):
-                        is_sig = (sig_col_idx and
-                                  row[sig_col_idx - 1].value == 'sim')
-                        fill = SIG_FILL if is_sig else (
-                               ALT_FILL if row_idx % 2 == 0 else None)
-                        for cell in row:
-                            cell.font      = SIG_FONT if is_sig else NORMAL_FONT
-                            cell.alignment = CENTER
+                        is_sig01 = (sig01_col_idx and
+                                    row[sig01_col_idx - 1].value == 'yes')
+                        is_sig05 = (sig05_col_idx and
+                                    row[sig05_col_idx - 1].value == 'yes')
+                        if is_sig01:
+                            fill = SIG01_FILL
+                            font = SIG01_FONT
+                        elif is_sig05:
+                            fill = SIG05_FILL
+                            font = SIG05_FONT
+                        else:
+                            fill = ALT_FILL if row_idx % 2 == 0 else None
+                            font = NORMAL_FONT
+                        for col_i, cell in enumerate(row, 1):
+                            cell.font      = font
                             cell.border    = border
+                            # sites column: left-align, wrap
+                            if col_i == sites_col_idx:
+                                cell.alignment = Alignment(
+                                    horizontal='left', vertical='top', wrap_text=True)
+                            else:
+                                cell.alignment = CENTER
                             if fill:
                                 cell.fill = fill
 
                     # ── auto-fit column widths ────────────────────────
                     for col_cells in ws.columns:
-                        max_len = max(
-                            len(str(c.value)) if c.value is not None else 0
-                            for c in col_cells
-                        )
-                        ws.column_dimensions[
-                            get_column_letter(col_cells[0].column)
-                        ].width = min(max_len + 4, 40)
+                        header_val = col_cells[0].value or ''
+                        # Sites column: fixed wide + row height
+                        if header_val == 'Positive Sites (BEB)':
+                            ws.column_dimensions[
+                                get_column_letter(col_cells[0].column)
+                            ].width = 60
+                        else:
+                            max_len = max(
+                                len(str(c.value)) if c.value is not None else 0
+                                for c in col_cells
+                            )
+                            ws.column_dimensions[
+                                get_column_letter(col_cells[0].column)
+                            ].width = min(max_len + 4, 35)
+
+                    # Set row heights: header taller, data rows auto
+                    ws.row_dimensions[1].height = 22
+                    for r in range(2, ws.max_row + 1):
+                        ws.row_dimensions[r].height = 18
 
                     sheets_written += 1
 
-                # ── Resumo sheet ──────────────────────────────────────
-                positive_genes = self._detect_positive_selection()
+                # ── Summary sheet ─────────────────────────────────────
                 summary_rows = []
                 for lrt_col in lrt_cols:
                     df_out = self._build_export_df(lrt_col)
                     if df_out.empty:
                         continue
-                    n_sig = (df_out['Sig. p<0.05'] == 'sim').sum()
+                    n_sig05 = (df_out['Sig. p<0.05'] == 'yes').sum()
+                    n_sig01 = (df_out['Sig. p<0.01'] == 'yes').sum()
                     sheet_name = SHEET_LABELS.get(lrt_col,
                                     lrt_col.replace('lrt_', '').replace('_vs_', ' vs ')
                                            .replace('_', ' '))
                     summary_rows.append({
-                        'Comparação':            sheet_name,
-                        'Genes analisados':      len(df_out),
-                        'Significantes (p<0.05)': int(n_sig),
-                        '% Significantes':       f"{100*n_sig/len(df_out):.1f}%",
+                        'Comparison':         sheet_name,
+                        'Genes analyzed':     len(df_out),
+                        'Significant (p<0.05)': int(n_sig05),
+                        'Significant (p<0.01)': int(n_sig01),
+                        '% Sig. (p<0.05)':    f"{100*n_sig05/max(len(df_out),1):.1f}%",
                     })
                 if summary_rows:
                     pd.DataFrame(summary_rows).to_excel(
-                        writer, sheet_name='Resumo', index=False)
-                    ws_r = writer.sheets['Resumo']
+                        writer, sheet_name='Summary', index=False)
+                    ws_r = writer.sheets['Summary']
                     for cell in ws_r[1]:
                         cell.fill = HEADER_FILL
                         cell.font = HEADER_FONT
                         cell.alignment = CENTER
+                    for col_cells in ws_r.columns:
+                        max_len = max(
+                            len(str(c.value)) if c.value is not None else 0
+                            for c in col_cells
+                        )
+                        ws_r.column_dimensions[
+                            get_column_letter(col_cells[0].column)
+                        ].width = min(max_len + 4, 30)
 
-            messagebox.showinfo("Sucesso",
-                f"Excel exportado com {sheets_written} aba(s):\n{filepath}",
+            messagebox.showinfo(TEXTS["msg_success"],
+                TEXTS["msg_excel_exported"].format(n=sheets_written, path=filepath),
                 parent=self)
         except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao exportar Excel: {e}", parent=self)
+            messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_excel_err"].format(error=e), parent=self)
 
     def _export_csv(self):
         """Exporta para CSV — um arquivo por modelo LRT, genes sem dados omitidos"""
         lrt_cols = [c for c in self.df.columns if c.startswith('lrt_')]
         if not lrt_cols:
-            messagebox.showwarning("Aviso", "Nenhum resultado LRT encontrado.", parent=self)
+            messagebox.showwarning(TEXTS["msg_warning"], TEXTS["msg_no_lrt"], parent=self)
             return
 
         SHEET_LABELS = {
+            'lrt_M0_vs_M1a':                       'M0_vs_M1a',
             'lrt_M1a_vs_M2a':                      'M1a_vs_M2a',
             'lrt_M7_vs_M8':                        'M7_vs_M8',
             'lrt_M0_vs_Branch':                    'M0_vs_Branch',
@@ -2280,7 +2477,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         # Ask for base path (files will be named <base>_<model>.csv)
         base_path = filedialog.asksaveasfilename(
             parent=self,
-            title="Salvar CSVs — escolha o nome base (sem extensão)",
+            title=TEXTS["dialog_save_csv"],
             defaultextension=".csv",
             filetypes=[("CSV", "*.csv")]
         )
@@ -2302,14 +2499,13 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 files_written.append(out_path)
 
             if files_written:
-                msg = f"{len(files_written)} arquivo(s) exportado(s):\n" + \
-                      "\n".join(files_written)
-                messagebox.showinfo("Sucesso", msg, parent=self)
+                messagebox.showinfo(TEXTS["msg_success"],
+                    TEXTS["msg_csv_exported"].format(n=len(files_written), files="\n".join(files_written)),
+                    parent=self)
             else:
-                messagebox.showwarning("Aviso",
-                    "Nenhum dado disponível para exportar.", parent=self)
+                messagebox.showwarning(TEXTS["msg_warning"], TEXTS["msg_no_csv_data"], parent=self)
         except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao exportar CSV: {e}", parent=self)
+            messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_csv_err"].format(error=e), parent=self)
 
     def _export_charts(self):
         """Exporta gráficos"""
@@ -2335,9 +2531,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 
                 if omega_data:
                     axes[0, 0].hist(omega_data, bins=30, color='#10b981', alpha=0.7, edgecolor='white')
-                    axes[0, 0].set_title('Distribuição de ω', color='white', fontsize=12)
+                    axes[0, 0].set_title(TEXTS["chart_omega_dist"], color='white', fontsize=12)
                     axes[0, 0].set_xlabel('ω', color='white')
-                    axes[0, 0].set_ylabel('Frequência', color='white')
+                    axes[0, 0].set_ylabel(TEXTS["chart_freq"], color='white')
                     axes[0, 0].set_facecolor('#1e1e1e')
                     axes[0, 0].tick_params(colors='white')
             
@@ -2347,9 +2543,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 lrt_data = pd.to_numeric(self.df[lrt_cols[0]], errors='coerce').dropna()
                 if not lrt_data.empty:
                     axes[0, 1].hist(lrt_data, bins=20, color='#3b82f6', alpha=0.7, edgecolor='white')
-                    axes[0, 1].set_title('Distribuição de 2Δℓ', color='white', fontsize=12)
+                    axes[0, 1].set_title('2Δℓ Distribution', color='white', fontsize=12)
                     axes[0, 1].set_xlabel('2Δℓ', color='white')
-                    axes[0, 1].set_ylabel('Frequência', color='white')
+                    axes[0, 1].set_ylabel(TEXTS["chart_freq"], color='white')
                     axes[0, 1].set_facecolor('#1e1e1e')
                     axes[0, 1].tick_params(colors='white')
             
@@ -2382,9 +2578,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             plt.savefig(filepath, dpi=300, facecolor='#0f0f0f')
             plt.close()
             
-            messagebox.showinfo("Sucesso", f"Graficos exportados em:\n{filepath}", parent=self)
+            messagebox.showinfo(TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=filepath), parent=self)
         except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao exportar: {e}", parent=self)
+            messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_export_err"].format(error=e), parent=self)
     
     def _export_html(self):
         """Exporta relatório HTML — uma seção por modelo LRT, genes sem dados omitidos"""
@@ -2397,6 +2593,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             return
 
         SHEET_LABELS = {
+            'lrt_M0_vs_M1a':                       ('M0 → M1a',  'Nearly neutral pre-test (M1a vs M0)'),
             'lrt_M1a_vs_M2a':                      ('M1a → M2a', 'Sítios positivos (M2a vs M1a)'),
             'lrt_M7_vs_M8':                        ('M7 → M8',   'Beta + ω > 1 (M8 vs M7)'),
             'lrt_M0_vs_Branch':                    ('M0 → Branch','Ramos livres (Branch vs M0)'),
@@ -2544,6 +2741,6 @@ section{{margin-bottom:48px}}
 """
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(html_content)
-            messagebox.showinfo("Sucesso", f"Relatório HTML exportado:\n{filepath}", parent=self)
+            messagebox.showinfo(TEXTS["msg_success"], TEXTS["msg_html_exported"].format(path=filepath), parent=self)
         except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao exportar HTML: {e}", parent=self)
+            messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_html_err"].format(error=e), parent=self)
