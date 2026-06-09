@@ -2,6 +2,18 @@
 LIKELIHOOD RATIO TEST (LRT) RESULTS
 ================================================================================
 
+NOTA METODOLOGICA:
+  Graus de liberdade canonicos (Yang & Nielsen 2002, PAML manual):
+    M0  vs M1a  : df = 2  (M1a adiciona p0 e omega0 vs omega unico do M0)
+    M1a vs M2a  : df = 2  (M2a adiciona omega2 e uma proporcao vs M1a)
+    M7  vs M8   : df = 2  (M8  adiciona omega2 e uma proporcao vs M7)
+    M0  vs Branch : df = 1  (modelo dois-omega: 1 omega extra de foreground)
+    Branch-site : distribuicao mista 0.5*chi2(0) + 0.5*chi2(1)
+                  Valor critico alpha=0.05: 2.706  alpha=0.01: 5.412
+  NOTA: o CODEML reporta ntime>0 no np do M0 mas ntime=0 nos modelos
+  NSsites (M1a, M2a, M7, M8) pois usa branch lengths do M0 como partida.
+  Por isso df e calculado com valores fixos por par, nao por np_alt - np_null.
+
 
 ================================================================================
 COMPARISON: M1a (null) vs M2a (alternative)
@@ -9,49 +21,49 @@ Description: Tests for positive selection
 ================================================================================
 
 Gene: 01_PEPC1__phosphoenolpyruvate_carboxylase_CAM
-  lnL M1a: -9592.050278 (np=20)
-  lnL M2a: -9591.816803 (np=22)
-  2Δl = 0.466950
+  lnL M1a: -7811.954257 (np=19)
+  lnL M2a: -7811.958650 (np=21)
+  2Δl = 0.000000
   df = 2
-  p-value = 7.917774e-01
+  p-value = 1.000000e+00
   Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
 Gene: 02_PPCK1__PEPC_kinase_CAM_regulator
-  lnL M1a: -7590.564732 (np=30)
-  lnL M2a: -7569.623078 (np=32)
-  2Δl = 41.883308
+  lnL M1a: -6795.897701 (np=29)
+  lnL M2a: -6772.480342 (np=31)
+  2Δl = 46.834718
   df = 2
-  p-value = 8.038133e-10
+  p-value = 6.760370e-11
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
 
 Gene: 03_ALMT2__malate_transporter_CAM
-  lnL M1a: -6910.494612 (np=44)
-  lnL M2a: -6861.204379 (np=46)
-  2Δl = 98.580466
+  lnL M1a: -6708.225301 (np=43)
+  lnL M2a: -6679.587582 (np=45)
+  2Δl = 57.275438
   df = 2
-  p-value = 0.000000e+00
+  p-value = 3.653744e-13
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
 
 Gene: 04_AQP_PIP1-4__aquaporin_water_channel
-  lnL M1a: -6323.197580 (np=44)
-  lnL M2a: -6293.152666 (np=46)
-  2Δl = 60.089828
+  lnL M1a: -5375.371941 (np=43)
+  lnL M2a: -5377.171949 (np=45)
+  2Δl = 0.000000
   df = 2
-  p-value = 8.948398e-14
-  Result: [OK][OK] M2a significantly better (p < 0.01)
+  p-value = 1.000000e+00
+  Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
 Gene: 05_OSCA4__hyperosmolality_calcium_channel
-  lnL M1a: -9816.526621 (np=44)
-  lnL M2a: -9778.365707 (np=46)
-  2Δl = 76.321828
+  lnL M1a: -9405.557279 (np=43)
+  lnL M2a: -9359.442751 (np=45)
+  2Δl = 92.229056
   df = 2
   p-value = 0.000000e+00
   Result: [OK][OK] M2a significantly better (p < 0.01)
@@ -59,59 +71,59 @@ Gene: 05_OSCA4__hyperosmolality_calcium_channel
 ------------------------------------------------------------
 
 Gene: 06_P5CS__proline_synthesis_drought_stress
-  lnL M1a: -6780.076657 (np=26)
-  lnL M2a: -6772.577047 (np=28)
-  2Δl = 14.999220
+  lnL M1a: -5396.022706 (np=25)
+  lnL M2a: -5389.862337 (np=27)
+  2Δl = 12.320738
   df = 2
-  p-value = 5.533001e-04
+  p-value = 2.111474e-03
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
 
 Gene: 07_RBCS6__RuBisCO_small_subunit
-  lnL M1a: -2890.497687 (np=42)
-  lnL M2a: -2882.014294 (np=44)
-  2Δl = 16.966786
+  lnL M1a: -2563.075868 (np=41)
+  lnL M2a: -2561.892903 (np=43)
+  2Δl = 2.365930
   df = 2
-  p-value = 2.068756e-04
-  Result: [OK][OK] M2a significantly better (p < 0.01)
+  p-value = 3.063690e-01
+  Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
 Gene: 08_RBCL__RuBisCO_large_chain
-  lnL M1a: -4967.394495 (np=44)
-  lnL M2a: -4955.395289 (np=46)
-  2Δl = 23.998412
+  lnL M1a: -4421.217799 (np=43)
+  lnL M2a: -4420.601270 (np=45)
+  2Δl = 1.233058
   df = 2
-  p-value = 6.149093e-06
-  Result: [OK][OK] M2a significantly better (p < 0.01)
+  p-value = 5.398149e-01
+  Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
 Gene: 09_PSBD__photosystem_II_D1_reaction_center
-  lnL M1a: -3448.381389 (np=42)
-  lnL M2a: -3432.302582 (np=44)
-  2Δl = 32.157614
+  lnL M1a: -3253.006816 (np=41)
+  lnL M2a: -3253.006834 (np=43)
+  2Δl = 0.000000
   df = 2
-  p-value = 1.040071e-07
-  Result: [OK][OK] M2a significantly better (p < 0.01)
+  p-value = 1.000000e+00
+  Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
 Gene: 10_CERK1__chitin_receptor_kinase_immunity
-  lnL M1a: -5191.344419 (np=26)
-  lnL M2a: -5164.654187 (np=28)
-  2Δl = 53.380464
+  lnL M1a: -4633.178073 (np=25)
+  lnL M2a: -4607.152217 (np=27)
+  2Δl = 52.051712
   df = 2
-  p-value = 2.561951e-12
+  p-value = 4.978684e-12
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
 
 Gene: 11_CRK5__cysteine_rich_receptor_kinase
-  lnL M1a: -9517.694267 (np=30)
-  lnL M2a: -9468.337727 (np=32)
-  2Δl = 98.713080
+  lnL M1a: -9160.442786 (np=29)
+  lnL M2a: -9116.475560 (np=31)
+  2Δl = 87.934452
   df = 2
   p-value = 0.000000e+00
   Result: [OK][OK] M2a significantly better (p < 0.01)
@@ -119,48 +131,48 @@ Gene: 11_CRK5__cysteine_rich_receptor_kinase
 ------------------------------------------------------------
 
 Gene: 12_GSTU7__glutathione_S_transferase_defense
-  lnL M1a: -7015.810638 (np=42)
-  lnL M2a: -7000.527616 (np=44)
-  2Δl = 30.566044
+  lnL M1a: -6527.644859 (np=41)
+  lnL M2a: -6520.278549 (np=43)
+  2Δl = 14.732620
   df = 2
-  p-value = 2.304984e-07
+  p-value = 6.321967e-04
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
 
 Gene: 13_VLS__valencene_synthase_terpenoids
-  lnL M1a: -3862.545902 (np=36)
-  lnL M2a: -3853.702164 (np=38)
-  2Δl = 17.687476
+  lnL M1a: -2852.586864 (np=35)
+  lnL M2a: -2852.580399 (np=37)
+  2Δl = 0.012930
   df = 2
-  p-value = 1.442824e-04
-  Result: [OK][OK] M2a significantly better (p < 0.01)
+  p-value = 9.935559e-01
+  Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
 Gene: 14_CHS__chalcone_synthase_flavonoids
-  lnL M1a: -2353.685780 (np=26)
-  lnL M2a: -2346.502683 (np=28)
-  2Δl = 14.366194
+  lnL M1a: -1682.701465 (np=25)
+  lnL M2a: -1679.663558 (np=27)
+  2Δl = 6.075814
   df = 2
-  p-value = 7.593126e-04
-  Result: [OK][OK] M2a significantly better (p < 0.01)
+  p-value = 4.793511e-02
+  Result: [OK] M2a significantly better (p < 0.05)
 
 ------------------------------------------------------------
 
 Gene: 15_GCR1__G_protein_coupled_receptor
-  lnL M1a: -4030.622776 (np=42)
-  lnL M2a: -4024.614592 (np=44)
-  2Δl = 12.016368
+  lnL M1a: -3575.479103 (np=41)
+  lnL M2a: -3574.245965 (np=43)
+  2Δl = 2.466276
   df = 2
-  p-value = 2.458549e-03
-  Result: [OK][OK] M2a significantly better (p < 0.01)
+  p-value = 2.913768e-01
+  Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
 Gene: 16_ABP19a__auxin_binding_protein
-  lnL M1a: -1775.183035 (np=20)
-  lnL M2a: -1775.183034 (np=22)
+  lnL M1a: -1732.163681 (np=19)
+  lnL M2a: -1732.163680 (np=21)
   2Δl = 0.000002
   df = 2
   p-value = 9.999990e-01
@@ -169,9 +181,9 @@ Gene: 16_ABP19a__auxin_binding_protein
 ------------------------------------------------------------
 
 Gene: 17_GLR2.5__glutamate_receptor_calcium
-  lnL M1a: -5676.595957 (np=40)
-  lnL M2a: -5616.760059 (np=42)
-  2Δl = 119.671796
+  lnL M1a: -5351.711085 (np=39)
+  lnL M2a: -5300.032541 (np=41)
+  2Δl = 103.357088
   df = 2
   p-value = 0.000000e+00
   Result: [OK][OK] M2a significantly better (p < 0.01)
@@ -179,81 +191,81 @@ Gene: 17_GLR2.5__glutamate_receptor_calcium
 ------------------------------------------------------------
 
 Gene: 18_FAR__fatty_acyl_reductase_wax_cuticle
-  lnL M1a: -2255.300127 (np=44)
-  lnL M2a: -2242.899761 (np=46)
-  2Δl = 24.800732
+  lnL M1a: -1781.111932 (np=43)
+  lnL M2a: -1769.775789 (np=45)
+  2Δl = 22.672286
   df = 2
-  p-value = 4.117082e-06
+  p-value = 1.193371e-05
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
 
 Gene: 19_CESA3__cellulose_synthase
-  lnL M1a: -8024.716902 (np=44)
-  lnL M2a: -8023.234617 (np=46)
-  2Δl = 2.964570
+  lnL M1a: -7192.087787 (np=43)
+  lnL M2a: -7192.087472 (np=45)
+  2Δl = 0.000630
   df = 2
-  p-value = 2.271181e-01
+  p-value = 9.996850e-01
   Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
 Gene: 20_DMC1__meiotic_recombination
-  lnL M1a: -6563.856502 (np=44)
-  lnL M2a: -6549.613943 (np=46)
-  2Δl = 28.485118
+  lnL M1a: -6135.651394 (np=43)
+  lnL M2a: -6129.481784 (np=45)
+  2Δl = 12.339220
   df = 2
-  p-value = 6.524319e-07
+  p-value = 2.092052e-03
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
 
 Gene: 21_CYT_B6F__cytochrome_b6f_iron_sulfur_Rieske
-  lnL M1a: -5392.310139 (np=22)
-  lnL M2a: -5385.394322 (np=24)
-  2Δl = 13.831634
+  lnL M1a: -4700.763344 (np=21)
+  lnL M2a: -4695.700592 (np=23)
+  2Δl = 10.125504
   df = 2
-  p-value = 9.919707e-04
+  p-value = 6.328121e-03
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
 
 Gene: 22_CYTF__cytochrome_f_electron_donor_to_PSI
-  lnL M1a: -1661.279855 (np=44)
-  lnL M2a: -1660.724448 (np=46)
-  2Δl = 1.110814
+  lnL M1a: -1483.597401 (np=43)
+  lnL M2a: -1483.597377 (np=45)
+  2Δl = 0.000048
   df = 2
-  p-value = 5.738387e-01
+  p-value = 9.999760e-01
   Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
 Gene: 23_PRX2F__peroxiredoxin_mitochondrial_ROS
-  lnL M1a: -1209.717849 (np=32)
-  lnL M2a: -1206.193937 (np=34)
-  2Δl = 7.047824
+  lnL M1a: -1039.865560 (np=31)
+  lnL M2a: -1039.865557 (np=33)
+  2Δl = 0.000006
   df = 2
-  p-value = 2.948387e-02
-  Result: [OK] M2a significantly better (p < 0.05)
+  p-value = 9.999970e-01
+  Result: [ERROR] No significant difference
 
 ------------------------------------------------------------
 
 Gene: 24_FRO7__ferric_reduction_oxidase_iron_rocky_substrate
-  lnL M1a: -6686.855045 (np=18)
-  lnL M2a: -6669.287019 (np=20)
-  2Δl = 35.136052
+  lnL M1a: -6486.774157 (np=17)
+  lnL M2a: -6470.537383 (np=19)
+  2Δl = 32.473548
   df = 2
-  p-value = 2.345866e-08
+  p-value = 8.880934e-08
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
 
 Gene: 25_PHOT2__phototropin2_chloroplast_avoidance_high_light
-  lnL M1a: -2949.382258 (np=28)
-  lnL M2a: -2926.337606 (np=30)
-  2Δl = 46.089304
+  lnL M1a: -2493.618375 (np=27)
+  lnL M2a: -2477.143907 (np=29)
+  2Δl = 32.948936
   df = 2
-  p-value = 9.813750e-11
+  p-value = 7.002118e-08
   Result: [OK][OK] M2a significantly better (p < 0.01)
 
 ------------------------------------------------------------
@@ -261,6 +273,6 @@ Gene: 25_PHOT2__phototropin2_chloroplast_avoidance_high_light
 
 RESUMO:
   Total de genes analisados: 25
-  Significativo em p < 0.05: 21 (84.0%)
-  Significativo em p < 0.01: 20 (80.0%)
+  Significativo em p < 0.05: 14 (56.0%)
+  Significativo em p < 0.01: 13 (52.0%)
 
