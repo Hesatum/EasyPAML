@@ -677,14 +677,22 @@ class CodemlBatchAnalysis:
             _m0_absent    = 'M0' not in models_ordered and _needs_warmup
 
             if _m0_absent:
-                _nows_msg = (
-                    f"  [INFO] M0 nao selecionado: branch lengths e kappa serao "
-                    f"estimados do zero em cada modelo (sem warm-start). "
-                    f"Selecione M0 para ativar warm-start automatico."
+                # M0 implicito: roda uma vez so pra extrair kappa/branch-lengths
+                # como warm-start dos modelos de sitio pedidos -- nao entra em
+                # gene_results nem no summary (usuario nao pediu M0).
+                print("  - Running M0 (implicit warm-start)...", end=" ", flush=True)
+                _warmup = self._run_single_analysis(
+                    fas_file=fas_file, model_name='M0', log_file=log_file,
+                    warm_start_kappa=None, fitted_tree=None,
                 )
-                print(_nows_msg)
+                if _warmup and _warmup.get('output_file'):
+                    _wpath = Path(_warmup['output_file'])
+                    gene_kappa = self._extract_kappa(_wpath)
+                    gene_fitted_tree = self._extract_fitted_tree(_wpath)
+                _ws_tag = f"k={gene_kappa:.3f}" if gene_kappa is not None else "falhou"
+                print(f"[OK] {_ws_tag}" if gene_kappa is not None else "[FALHOU]")
                 with open(log_file, 'a', encoding='utf-8') as _log:
-                    _log.write(_nows_msg.strip() + '\n')
+                    _log.write(f"[M0-implicit] {fas_file.stem}: warm-start {_ws_tag}\n")
 
             for model_name in models_ordered:
                 if stop_event is not None and stop_event.is_set():
@@ -1454,8 +1462,11 @@ class CodemlBatchAnalysis:
                         except Exception:
                             pass
                         break
-                    # Aguardar; checar a cada 0.5 s para responsividade
-                    time.sleep(0.5)
+                    # Aguardar; checar a cada 0.05s (era 0.5s -- em lote grande,
+                    # 0.5s de atraso medio de deteccao x milhares de execucoes
+                    # vira hora de espera morta por nada; 0.05s mantem a
+                    # responsividade do stop_event sem custo de CPU real).
+                    time.sleep(0.05)
             finally:
                 with self._processes_lock:
                     self._active_processes.discard(process)
