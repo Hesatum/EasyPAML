@@ -440,138 +440,15 @@ class CodemlBatchAnalysis:
             pass
         return None
 
-    def interactive_setup(self):
-        """Configuração interativa via input do usuário"""
-        
-        print("\n" + "="*80)
-        print("CODEML INTERACTIVE BATCH ANALYSIS")
-        print("="*80 + "\n")
-        
-        # 1. Pasta com arquivos .fas / .fasta / .phy / .phylip
-        while True:
-            input_folder = input("Enter path to folder with .fas/.fasta/.phy/.phylip files: ").strip().strip('"')
-            input_path = Path(input_folder)
-            if input_path.exists() and input_path.is_dir():
-                fas_files = (
-                    list(input_path.glob("*.fas"))
-                    + list(input_path.glob("*.fasta"))
-                    + list(input_path.glob("*.phy"))
-                    + list(input_path.glob("*.phylip"))
-                )
-                if fas_files:
-                    print(f"   [OK] Found {len(fas_files)} sequence files (.fas/.fasta/.phy/.phylip)")
-                    self.config['input_folder'] = input_path
-                    break
-                else:
-                    print("   [ERROR] No .fas/.fasta/.phy/.phylip files found in this folder. Try again.")
-            else:
-                print("   [ERROR] Folder not found. Try again.")
-        
-        # 2. Arquivo de árvore
-        while True:
-            tree_file = input("\nEnter path to tree file (.tree or .txt): ").strip().strip('"')
-            tree_path = Path(tree_file)
-            if tree_path.exists() and tree_path.is_file():
-                print(f"   [OK] Tree file loaded: {tree_path.name}")
-                self.config['tree_file'] = tree_path
-                break
-            else:
-                print("   [ERROR] Tree file not found. Try again.")
-        
-        # 3. Pasta de saída
-        output_folder = input("\nEnter path for output folder: ").strip().strip('"')
-        output_path = Path(output_folder)
-        output_path.mkdir(parents=True, exist_ok=True)
-        print(f"   [OK] Output folder: {output_path}")
-        self.config['output_folder'] = output_path
-        
-        # 4. Selecionar modelos
-        print("\n" + "="*80)
-        print("AVAILABLE MODELS")
-        print("="*80 + "\n")
-        
-        print("SITE MODELS (variation among sites):")
-        for i, (code, info) in enumerate([
-            ('M0', self.MODEL_CONFIGS['M0']),
-            ('M1a', self.MODEL_CONFIGS['M1a']),
-            ('M2a', self.MODEL_CONFIGS['M2a']),
-            ('M7', self.MODEL_CONFIGS['M7']),
-            ('M8', self.MODEL_CONFIGS['M8'])
-        ], 1):
-            print(f"  {i}. {code:5s} - {info['description']}")
-        
-        print("\nBRANCH MODEL (variation among branches):")
-        print(f"  7. Branch - {self.MODEL_CONFIGS['Branch']['description']}")
-        
-        print("\nBRANCH-SITE MODELS (variation in both):")
-        print(f"  8. Branch-site      - {self.MODEL_CONFIGS['Branch-site']['description']}")
-        print(f"  9. Branch-site_null - {self.MODEL_CONFIGS['Branch-site_null']['description']}")
-        
-        print("\nEnter model numbers separated by spaces (e.g., '1 4 5' for M0, M7, M8)")
-        print("Or enter 'all' for all site models (recommended for testing positive selection)")
-        
-        model_input = input("\nSelect models: ").strip().lower()
-        
-        model_map = {
-            '1': 'M0', '2': 'M1a', '3': 'M2a', '4': 'M7',
-            '5': 'M8', '6': 'Branch',
-            '7': 'Branch-site', '8': 'Branch-site_null'
-        }
-        
-        if model_input == 'all':
-            selected_models = ['M0', 'M1a', 'M2a', 'M7', 'M8']
-            print("   [OK] Selected all site models")
-        else:
-            numbers = model_input.split()
-            selected_models = [model_map[n] for n in numbers if n in model_map]
-            if not selected_models:
-                print("   [WARN] No valid models selected. Using M0 and M8 as default.")
-                selected_models = ['M0', 'M8']
-        
-        self.config['models'] = selected_models
-        print(f"   [OK] Models to run: {', '.join(selected_models)}")
-        
-        # 5. Timeout
-        print("\nSet timeout per analysis (in seconds)")
-        print("   Recommended: 1600 (≈27 minutes)")
-        timeout_input = input("   Timeout [1600]: ").strip()
-        self.config['timeout'] = int(timeout_input) if timeout_input else 1600
-        print(f"   [OK] Timeout set to {self.config['timeout']} seconds")
-        
-        # 6. LRT
-        print("\nPerform Likelihood Ratio Tests (LRT)?")
-        lrt_input = input("   Run LRT? [Y/n]: ").strip().lower()
-        self.config['run_lrt'] = lrt_input != 'n'
-        print(f"   [OK] LRT: {'Yes' if self.config['run_lrt'] else 'No'}")
-        
-        # Resumo da configuração
-        print("\n" + "="*80)
-        print("CONFIGURATION SUMMARY")
-        print("="*80)
-        print(f"Input folder:  {self.config['input_folder']}")
-        print(f"Tree file:     {self.config['tree_file']}")
-        print(f"Output folder: {self.config['output_folder']}")
-        print(f"Models:        {', '.join(self.config['models'])}")
-        print(f"Timeout:       {self.config['timeout']}s")
-        print(f"Run LRT:       {self.config['run_lrt']}")
-        print(f"Total genes:   {len(fas_files)}")
-        print(f"Total runs:    {len(fas_files) * len(self.config['models'])}")
-        print("="*80 + "\n")
-        
-        confirm = input("Proceed with analysis? [Y/n]: ").strip().lower()
-        if confirm == 'n':
-            print("Analysis cancelled.")
-            return False
-        
-        return True
-    
     def run_batch_analysis(self):
         """Executa análise em batch"""
-        
+
         if not self.config:
-            if not self.interactive_setup():
-                return
-        
+            raise ValueError(
+                "self.config vazio -- defina input_folder/tree_file/output_folder/models "
+                "antes de chamar run_batch_analysis() (ver easypaml_cli.py ou a GUI)."
+            )
+
         output_folder = self.config['output_folder']
         log_file = output_folder / "batch_analysis_log.txt"
         
@@ -1692,13 +1569,16 @@ class CodemlBatchAnalysis:
             # Extrair informações
             lnL = None
             np_params = None
+            ntime_params = None
             omega = None
 
             if output_path.exists():
-                lnL = self._extract_likelihood(output_path)
-                np_params = self._extract_np(output_path)
-                ntime_params = self._extract_ntime(output_path)
-                omega = self._extract_omega(output_path)
+                stats = self._extract_model_stats(output_path)
+                lnL, np_params, ntime_params = stats['lnL'], stats['np'], stats['ntime']
+                try:
+                    omega = SitesParser.extract_omega_robust(output_path)
+                except Exception:
+                    omega = None
             else:
                 with open(log_file, 'a', encoding='utf-8') as log:
                     log.write(f"[{model_name}] {base_name}: expected output file not found: {output_path}\n")
@@ -1755,68 +1635,55 @@ class CodemlBatchAnalysis:
                     with open(log_file, 'a', encoding='utf-8') as log:
                         log.write(f"Cleanup: failed to remove {temp_dir} after retries; leaving it in place.\n")
     
-    def _extract_likelihood(self, output_file: Path) -> Optional[float]:
-        """Extrai log-likelihood"""
-        try:
-            with open(output_file, 'r', encoding='utf-8', errors='ignore') as f:
-                for line in f:
-                    if 'lnL' in line:
-                        # Try a few regex patterns to capture common CODEML formats
-                        patterns = [
-                            r'lnL[^:]*:\s*([+-]?\d+\.\d+)',
-                            r'lnL\([^)]*\):\s*([+-]?\d+\.\d+)',
-                            r'lnL\s*[:=]\s*([+-]?\d+\.\d+)'
-                        ]
-                        for pat in patterns:
-                            match = re.search(pat, line)
-                            if match:
-                                try:
-                                    return float(match.group(1))
-                                except Exception:
-                                    continue
-        except Exception:
-            pass
-        return None
-    
-    def _extract_np(self, output_file: Path) -> Optional[int]:
-        """Extrai número de parâmetros"""
-        try:
-            with open(output_file, 'r', encoding='utf-8', errors='ignore') as f:
-                for line in f:
-                    if 'lnL' in line and 'np:' in line:
-                        match = re.search(r'np:\s*(\d+)', line)
-                        if match:
-                            return int(match.group(1))
-        except Exception:
-            pass
-        return None
+    # Padroes que identificam a linha de resultado final do CODEML, em ordem
+    # de preferencia -- cobre as variantes de formato conhecidas ("lnL(ntime:
+    # X np: Y): valor" eh a forma padrao; as outras sao formatos mais antigos/
+    # alternativos). So essa linha (nunca a "lnL0 = ..." pre-otimizacao) tem
+    # lnL, ntime e np juntos.
+    _LNL_LINE_PATTERNS = (
+        r'lnL[^:]*:\s*([+-]?\d+\.\d+)',
+        r'lnL\([^)]*\):\s*([+-]?\d+\.\d+)',
+        r'lnL\s*[:=]\s*([+-]?\d+\.\d+)',
+    )
 
-    def _extract_ntime(self, output_file: Path) -> Optional[int]:
-        """Extrai ntime (número de branch lengths estimados) da linha lnL do CODEML.
+    def _extract_model_stats(self, output_file: Path) -> Dict[str, Optional[float]]:
+        """Le o outfile do CODEML uma unica vez e extrai lnL, np e ntime da
+        mesma linha de resultado final ("lnL(ntime: X  np: Y): valor").
 
-        ntime difere entre M0 (árvore não-enraizada, 2n-3 ramos) e Branch
-        (árvore rotulada/enraizada, 2n-2 ramos).  Essa diferença de 1 deve ser
-        subtraída ao calcular df = np_Branch − np_M0 para o LRT M0 vs Branch.
+        Substitui os antigos _extract_likelihood/_extract_np/_extract_ntime,
+        que abriam e varriam o arquivo tres vezes separadas pra ler tres
+        valores que sempre estao na mesma linha.
         """
+        lnL = np_params = ntime_params = None
         try:
             with open(output_file, 'r', encoding='utf-8', errors='ignore') as f:
                 for line in f:
-                    if 'lnL' in line and 'ntime:' in line:
-                        match = re.search(r'ntime:\s*(\d+)', line)
-                        if match:
-                            return int(match.group(1))
+                    if 'lnL' not in line:
+                        continue
+                    for pat in self._LNL_LINE_PATTERNS:
+                        match = re.search(pat, line)
+                        if not match:
+                            continue
+                        try:
+                            lnL = float(match.group(1))
+                        except Exception:
+                            continue
+                        if 'np:' in line:
+                            m_np = re.search(r'np:\s*(\d+)', line)
+                            if m_np:
+                                np_params = int(m_np.group(1))
+                        if 'ntime:' in line:
+                            m_nt = re.search(r'ntime:\s*(\d+)', line)
+                            if m_nt:
+                                ntime_params = int(m_nt.group(1))
+                        break
+                    if lnL is not None:
+                        break
         except Exception:
             pass
-        return None
+        return {'lnL': lnL, 'np': np_params, 'ntime': ntime_params}
 
-    def _extract_omega(self, output_file: Path) -> Optional[float]:
-        """Extrai omega usando SitesParser (suporta Branch/Branch-Site/Site models)"""
-        try:
-            omega = SitesParser.extract_omega_robust(output_file)
-            return omega
-        except Exception:
-            return None
-    
+
     def _save_summary(self):
         """Salva sumário em TSV com colunas de LRT e omegas extraídos robustamente"""
         summary_file = self.config['output_folder'] / "analysis_summary.tsv"
@@ -2146,170 +2013,6 @@ class CodemlBatchAnalysis:
             padded = name[:10].ljust(10)
             block_lines.append(f"{padded}  {sequences[name]}")
         return '\n'.join(block_lines) + '\n'
-
-    def run_wgs_analysis(self) -> None:
-        """Modo WGS: combina todos os .fas em um único arquivo PHYLIP e executa
-        CODEML com  ndata = N maintree 1  para analisar todos os genes de uma vez.
-
-        Suporta apenas modelos de sítios (site models) sem marcação de ramos.
-        Para modelos de ramo use o modo batch padrão.
-
-        Configuração esperada em self.config (além das chaves padrão):
-          - 'wgs_nsites': lista/string de NSsites, ex: [0, 1, 2, 7, 8]
-          - 'wgs_model' : valor de model=, default 0 (site models)
-        """
-        output_folder = Path(self.config['output_folder'])
-        output_folder.mkdir(parents=True, exist_ok=True)
-        log_file = output_folder / "wgs_analysis_log.txt"
-
-        _wgs_input = Path(self.config['input_folder'])
-        fas_files = sorted(
-            list(_wgs_input.glob("*.fas"))
-            + list(_wgs_input.glob("*.fasta"))
-            + list(_wgs_input.glob("*.phy"))
-            + list(_wgs_input.glob("*.phylip")),
-            key=lambda p: p.name.lower()
-        )
-        if not fas_files:
-            print("[WGS] Nenhum arquivo .fas / .fasta / .phy / .phylip encontrado.")
-            return
-
-        print(f"\n[WGS] Convertendo {len(fas_files)} genes para PHYLIP combinado...")
-
-        # Combinar todos em um único arquivo
-        combined_phy = output_folder / "wgs_combined.phy"
-        gene_names = []
-        n_valid = 0
-        with open(combined_phy, 'w', encoding='utf-8') as out:
-            for fas in fas_files:
-                block = self._fasta_to_phylip_block(fas)
-                if block is None:
-                    print(f"  [SKIP] {fas.name}")
-                    continue
-                out.write(block)
-                out.write('\n')
-                gene_names.append(fas.stem)
-                n_valid += 1
-
-        if n_valid == 0:
-            print("[WGS] Nenhum arquivo válido para converter.")
-            return
-        print(f"[WGS] {n_valid} genes combinados → {combined_phy.name}")
-
-        # Salvar lista de genes na ordem
-        (output_folder / "wgs_gene_order.txt").write_text('\n'.join(gene_names), encoding='utf-8')
-
-        # Construir NSsites
-        nsites_raw = self.config.get('wgs_nsites', [0, 1, 2, 7, 8])
-        if isinstance(nsites_raw, (list, tuple)):
-            nsites_str = ' '.join(str(n) for n in nsites_raw)
-        else:
-            nsites_str = str(nsites_raw)
-
-        model_val = int(self.config.get('wgs_model', 0))
-        omega_val = float(self.config.get('omega', 0.5))
-        cleandata_val = int(self.config.get('cleandata', 0))
-        codon_freq = int(self.config.get('wgs_codonfreq', 7))
-
-        tree_path = Path(self.config['tree_file'])
-        outfile_name = "wgs_results.txt"
-
-        ctl_content = (
-            f"      seqfile = {combined_phy.name}\n"
-            f"     treefile = {tree_path.name}\n"
-            f"      outfile = {outfile_name}\n\n"
-            f"        noisy = 1\n"
-            f"      verbose = 1\n"
-            f"      seqtype = 1\n"
-            f"        ndata = {n_valid} maintree 1\n"
-            f"        icode = 0\n"
-            f"    cleandata = {cleandata_val}\n\n"
-            f"        model = {model_val}\n"
-            f"      NSsites = {nsites_str}\n"
-            f"    CodonFreq = {codon_freq}\n"
-            f"      estFreq = 0\n"
-            f"        clock = 0\n"
-            f"    fix_omega = 0\n"
-            f"        omega = {omega_val}\n"
-        )
-
-        ctl_path = output_folder / "wgs_analysis.ctl"
-        ctl_path.write_text(ctl_content, encoding='utf-8')
-        print(f"[WGS] .ctl gerado: {ctl_path.name}")
-        print(f"[WGS] ndata = {n_valid} maintree 1  |  NSsites = {nsites_str}")
-
-        # Copiar arquivos para temp_dir e executar
-        temp_dir = output_folder / "wgs_temp"
-        if temp_dir.exists():
-            shutil.rmtree(temp_dir, ignore_errors=True)
-        temp_dir.mkdir()
-
-        shutil.copy(combined_phy, temp_dir)
-        shutil.copy(tree_path, temp_dir)
-        shutil.copy(ctl_path, temp_dir)
-
-        cmd = [str(_CODEML_BIN), ctl_path.name] if _CODEML_BIN.exists() else ['codeml', ctl_path.name]
-
-        print(f"\n[WGS] Executando: {' '.join(cmd)}")
-        print(f"[WGS] Isso pode demorar muito para grandes datasets WGS...\n")
-
-        stop_event = self.config.get('stop_event')
-        with open(log_file, 'w', encoding='utf-8') as log:
-            log.write(f"WGS Analysis started: {datetime.now()}\n")
-            log.write(f"ndata = {n_valid}  NSsites = {nsites_str}\n")
-            log.write(f"Genes: {', '.join(gene_names)}\n\n")
-
-        try:
-            process = subprocess.Popen(
-                cmd, cwd=temp_dir,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True, encoding='utf-8', bufsize=1
-            )
-            self.current_process = process
-
-            with open(log_file, 'a', encoding='utf-8') as log:
-                for line in iter(process.stdout.readline, ''):
-                    if stop_event and stop_event.is_set():
-                        process.terminate()
-                        break
-                    stripped = line.rstrip()
-                    log.write(stripped + '\n')
-                    if stripped:
-                        print(f"  {stripped}")
-                    # Auto-responder stop codons
-                    if 'stop' in stripped.lower() and 'codon' in stripped.lower():
-                        try:
-                            process.stdin.write('\n')
-                            process.stdin.flush()
-                        except Exception:
-                            pass
-
-            process.wait(timeout=7200)
-
-        except subprocess.TimeoutExpired:
-            process.kill()
-            print("[WGS] TIMEOUT após 2h — processo encerrado.")
-        except Exception as e:
-            print(f"[WGS] ERRO: {e}")
-        finally:
-            self.current_process = None
-
-        # Mover resultados
-        results_file = temp_dir / outfile_name
-        if results_file.exists():
-            dest = output_folder / outfile_name
-            shutil.copy(results_file, dest)
-            print(f"\n[WGS] Resultado salvo: {dest}")
-        else:
-            print("[WGS] Arquivo de resultado não encontrado.")
-
-        # Limpeza
-        try:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-        except Exception:
-            pass
 
     @staticmethod
     def regenerate_summary_files(results_folder: Path) -> Dict[str, str]:
@@ -2796,19 +2499,3 @@ class CodemlBatchAnalysis:
                     f.write("\n")
         
         return lrt_file
-
-
-def main():
-    """Função principal"""
-    try:
-        analysis = CodemlBatchAnalysis()
-        analysis.run_batch_analysis()
-    except KeyboardInterrupt:
-        print("\n\n[WARN]  Analysis interrupted by user")
-    except Exception as e:
-        print(f"\n\n[ERRO] {str(e)}")
-        traceback.print_exc()
-
-
-if __name__ == "__main__":
-    main()
