@@ -1401,6 +1401,9 @@ class CodemlBatchAnalysis:
             stop_count = [0]
             stop_details = []
 
+            skip_beb = bool(self.config.get('skip_beb', False)) and model_name in ('M2a', 'M8')
+            beb_was_skipped = [False]  # mutavel p/ ser setado de dentro de read_stream (thread)
+
             def read_stream(stream, storage):
                 try:
                     for line in iter(stream.readline, ''):
@@ -1408,6 +1411,30 @@ class CodemlBatchAnalysis:
                             continue
                         text_line = line.rstrip()
                         storage.append(text_line)
+
+                        # ── Interromper antes do BEB (opcional, skip_beb=True) ────────
+                        # BEB (Bayes Empirical Bayes) é a etapa mais cara do M2a/M8 --
+                        # o proprio CODEML avisa "This may take several minutes" -- e so
+                        # serve para classificar sitios individuais; o lnL/np/omega que o
+                        # LRT (M1a vs M2a, M7 vs M8) precisa ja foi escrito no outfile ANTES
+                        # do BEB comecar (verificado: NEB tambem roda antes do BEB e fica
+                        # preservado, entao o parser de sitios cai para NEB automaticamente
+                        # -- ver sites_parser.parse_sites_from_results_folder). Matar o
+                        # processo aqui preserva o LRT e so sacrifica a classificacao BEB
+                        # por sitio, que fica disponivel via NEB (menos robusto, mas nao
+                        # ausente). Default False -- BEB roda normalmente, como sempre.
+                        if skip_beb and 'BEBing' in text_line:
+                            beb_was_skipped[0] = True
+                            with open(log_file, 'a', encoding='utf-8') as log:
+                                log.write(
+                                    f"[{model_name}] {base_name}: skip_beb ativo -- "
+                                    f"interrompendo antes do BEB (lnL/NEB ja escritos no outfile)\n"
+                                )
+                            try:
+                                process.terminate()
+                            except Exception:
+                                pass
+                            continue
 
                         # Detect possible stop-codon prompt or pause requiring Enter
                         lower = text_line.lower()
@@ -1630,6 +1657,38 @@ class CodemlBatchAnalysis:
 
             output_path = model_output_dir / output_filename
 
+            # ── Truncar secoes incompletas apos o kill (skip_beb) ─────────────────
+            # O CODEML imprime "BEBing..." no stdout como aviso ANTES de terminar de
+            # escrever o NEB no outfile (as duas saidas -- console e arquivo -- nao
+            # sao sincronizadas), entao o kill pode chegar no meio da escrita do NEB
+            # tambem, nao so do BEB. Sem tratar isso, o parser de resultados acharia
+            # um cabecalho (BEB ou ate NEB) sem nenhuma linha de sitio, e devolveria
+            # "nenhum sitio sob selecao" -- silenciosamente errado, parece real.
+            # Estrategia defensiva: corta sempre a partir do cabecalho BEB (nunca eh
+            # dado completo quando skip_beb mata o processo); se o NEB que sobrar nao
+            # tiver nenhuma linha de sitio real (padrao "<posicao> <aminoacido> ...")
+            # depois do cabecalho, corta o NEB tambem -- fica so lnL/np/omega, que e
+            # o que o LRT precisa de qualquer forma.
+            if beb_was_skipped[0] and output_path.exists():
+                try:
+                    text = output_path.read_text(encoding='utf-8', errors='ignore')
+                    beb_idx = text.find('Bayes Empirical Bayes (BEB) analysis')
+                    if beb_idx != -1:
+                        text = text[:beb_idx].rstrip() + '\n'
+
+                    neb_marker = 'Naive Empirical Bayes (NEB) analysis'
+                    neb_idx = text.find(neb_marker)
+                    if neb_idx != -1:
+                        after_neb = text[neb_idx + len(neb_marker):]
+                        has_site_row = re.search(r'^\s*\d+\s+[A-Za-z]\s', after_neb, re.MULTILINE)
+                        if not has_site_row:
+                            text = text[:neb_idx].rstrip() + '\n'
+
+                    output_path.write_text(text, encoding='utf-8')
+                except Exception as _trunc_err:
+                    with open(log_file, 'a', encoding='utf-8') as log:
+                        log.write(f"[{model_name}] {base_name}: falha ao truncar secao incompleta: {_trunc_err}\n")
+
             # Extrair informações
             lnL = None
             np_params = None
@@ -1654,6 +1713,9 @@ class CodemlBatchAnalysis:
                     for d in stop_details:
                         log.write(f"    {d}\n")
 
+            # skip_beb termina o processo de proposito (rc != 0 por SIGTERM) -- isso
+            # e sucesso, nao falha parcial, desde que lnL tenha sido extraido.
+            _run_ok = output_path.exists() and (rc == 0 or beb_was_skipped[0])
             return {
                 'output_file': str(output_path) if output_path.exists() else None,
                 'results_file': str(output_path) if output_path.exists() else None,  # Alias para compatibilidade
@@ -1662,8 +1724,9 @@ class CodemlBatchAnalysis:
                 'ntime': ntime_params,
                 'omega': omega,
                 'execution_time': execution_time,
-                'status': 'success' if rc == 0 and output_path.exists() else 'partial',
-                'stop_count': stop_count[0]
+                'status': 'success' if _run_ok and lnL is not None else 'partial',
+                'stop_count': stop_count[0],
+                'beb_skipped': beb_was_skipped[0],
             }
 
         except Exception as e:
