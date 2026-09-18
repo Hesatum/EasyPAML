@@ -394,10 +394,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         tabs.add(TEXTS["viewer_tab_branch"])
         tabs.add(TEXTS["viewer_tab_export"])
+        tabs.add(TEXTS["viewer_tab_interpretation"])
 
         self._create_lrt_stats_tab(tabs.tab(TEXTS["viewer_tab_lrt"]))
         self._create_positive_selection_tab(tabs.tab(TEXTS["viewer_tab_omega"]))
         self._create_sites_tab(tabs.tab(TEXTS["viewer_tab_sites"]))
+        self._create_go_interpretation_tab(tabs.tab(TEXTS["viewer_tab_interpretation"]))
 
         if branchsite_cols:
             self._create_branchsite_class_tab(tabs.tab(TEXTS["viewer_tab_branchsite_classes"]))
@@ -555,6 +557,90 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                          font=("Roboto", 9, "bold"),
                          text_color="white").pack(expand=True)
     
+    def _create_go_interpretation_tab(self, parent):
+        """Candidatos com LRT significativo ranqueados + enriquecimento de GO.
+
+        Reduz "leia N tabelas BEB" pra "leia uma lista curta ranqueada" --
+        toda a logica (Fisher exato, parse de GO) mora em
+        src.backend.go_enrichment, testavel sem Tkinter; esta aba so chama
+        e desenha o resultado.
+        """
+        info = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=8)
+        info.pack(fill='x', padx=10, pady=(10, 2))
+        ctk.CTkLabel(info, text=TEXTS["go_tab_title"], font=("Roboto", 11, "bold"),
+                     text_color=self.COLORS['accent_blue']).pack(side="left", padx=14, pady=(10, 2))
+        ctk.CTkLabel(info, text=TEXTS["go_tab_criterion"], font=("Roboto", 9),
+                     text_color=self.COLORS['text_tertiary'], wraplength=900,
+                     justify='left').pack(anchor='w', padx=14, pady=(0, 10))
+
+        body = ctk.CTkFrame(parent, fg_color='transparent')
+        body.pack(fill='both', expand=True, padx=10, pady=(0, 10))
+
+        def render(annotation_path=None):
+            for w in body.winfo_children():
+                w.destroy()
+
+            if annotation_path is None:
+                empty = ctk.CTkFrame(body, fg_color='transparent')
+                empty.pack(expand=True)
+                ctk.CTkLabel(empty, text=TEXTS["go_tab_none_loaded"], font=("Roboto", 13, "bold"),
+                             text_color=self.COLORS['text_tertiary']).pack(pady=(40, 4))
+                ctk.CTkLabel(empty, text=TEXTS["go_tab_none_loaded_sub"], font=("Roboto", 10),
+                             text_color=self.COLORS['text_muted'], wraplength=700).pack(pady=(0, 14))
+                ctk.CTkButton(empty, text=TEXTS["go_tab_load_button"], width=220, height=36,
+                              fg_color=self.COLORS['accent_blue'], font=("Roboto", 10, "bold"),
+                              corner_radius=8, command=pick_file).pack()
+                return
+
+            try:
+                from src.backend.go_enrichment import rank_candidates
+                candidates, go_table = rank_candidates(self.output_folder / 'analysis_summary.tsv', annotation_path)
+            except Exception as e:
+                ctk.CTkLabel(body, text=f"{TEXTS['go_tab_load_error']}: {e}", font=("Roboto", 10),
+                             text_color='#f87171', wraplength=900).pack(pady=30)
+                return
+
+            if candidates.empty:
+                ctk.CTkLabel(body, text=TEXTS["go_tab_no_candidates"], font=("Roboto", 12, "bold"),
+                             text_color=self.COLORS['text_tertiary']).pack(pady=40)
+                return
+
+            scroll = ctk.CTkScrollableFrame(body, fg_color='transparent', corner_radius=8)
+            scroll.pack(fill='both', expand=True)
+
+            if not go_table.empty:
+                ctk.CTkLabel(scroll, text=TEXTS["go_tab_enrichment_header"], font=("Roboto", 11, "bold"),
+                             text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(4, 4))
+                for _, row in go_table.head(15).iterrows():
+                    line = (f"{row['description']}  ({row['go_id']})  ·  "
+                            f"{row['n_candidates']}/{len(candidates)} candidatos  ·  p = {self._fmt_pval(row['p_value'])}")
+                    ctk.CTkLabel(scroll, text=line, font=("Roboto", 9),
+                                 text_color=self.COLORS['text_tertiary'], anchor='w').pack(anchor='w', pady=1)
+
+            ctk.CTkLabel(scroll, text=TEXTS["go_tab_candidates_header"], font=("Roboto", 11, "bold"),
+                         text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(16, 6))
+
+            for _, row in candidates.iterrows():
+                card = ctk.CTkFrame(scroll, fg_color='#0b2016', corner_radius=12,
+                                     border_width=1, border_color='#10b981')
+                card.pack(fill='x', pady=4, padx=4)
+                ctk.CTkFrame(card, fg_color='#10b981', width=5, corner_radius=2).pack(
+                    side="left", fill="y", padx=(6, 0), pady=8)
+                content = ctk.CTkFrame(card, fg_color='transparent')
+                content.pack(side="left", fill="both", expand=True, padx=14, pady=10)
+                ctk.CTkLabel(content, text=f"{row['Gene']}   ·   p = {self._fmt_pval(row['p_value'])}",
+                             font=("Roboto", 12, "bold"), text_color='#6ee7b7').pack(anchor='w')
+                ctk.CTkLabel(content, text=row['go_terms'], font=("Roboto", 9),
+                             text_color='#a7f3d0', wraplength=850, justify='left').pack(anchor='w', pady=(3, 0))
+
+        def pick_file():
+            path = filedialog.askopenfilename(title=TEXTS["go_tab_load_button"],
+                                               filetypes=[("TSV", "*.tsv"), ("All files", "*.*")])
+            if path:
+                render(Path(path))
+
+        render(None)
+
     def _create_sites_tab(self, parent):
         """Aba de visualização de sítios sob seleção positiva"""
         ctrl_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'],

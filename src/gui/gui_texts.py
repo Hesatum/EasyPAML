@@ -194,6 +194,21 @@ TEXTS_PT: dict[str, object] = {
     "pos_sel_criterion_short": "Critério: ω > 1.0  AND  p-valor < 0.05",
     "pos_sel_badge":           "* Positivo",
 
+    "viewer_tab_interpretation": "Interpretação",
+    "go_tab_title":              "Candidatos e enriquecimento de GO",
+    "go_tab_criterion": (
+        "Genes com LRT significativo (M1a×M2a e/ou M7×M8, p < 0.05), ranqueados por "
+        "significância, cruzados com anotação funcional GO. Enriquecimento de GO: "
+        "Fisher exato, candidatos vs. todos os genes testados."
+    ),
+    "go_tab_load_button":    "Carregar anotação GO (.tsv)",
+    "go_tab_none_loaded":    "Nenhuma anotação carregada",
+    "go_tab_none_loaded_sub": "Carregue o TSV de anotação (colunas: gene_id_full, go_biological_process, go_cellular_component, go_molecular_function)",
+    "go_tab_no_candidates":  "Nenhum gene com LRT significativo neste resultado",
+    "go_tab_enrichment_header": "Termos GO enriquecidos entre os candidatos",
+    "go_tab_candidates_header": "Genes candidatos (ranqueados por p-valor)",
+    "go_tab_load_error":     "Falha ao carregar/processar a anotação",
+
     "sites_label_model":    "Modelo:",
     "sites_label_gene":     "Gene:",
     "sites_label_analysis": "Análise:",
@@ -492,6 +507,21 @@ TEXTS_EN: dict[str, object] = {
     "pos_sel_none_found":      "No positive selection signal detected",
     "pos_sel_criterion_short": "Criterion: ω > 1.0  AND  p-value < 0.05",
     "pos_sel_badge":           "* Positive",
+
+    "viewer_tab_interpretation": "Interpretation",
+    "go_tab_title":              "Candidates and GO enrichment",
+    "go_tab_criterion": (
+        "Genes with significant LRT (M1a×M2a and/or M7×M8, p < 0.05), ranked by "
+        "significance, cross-referenced with GO functional annotation. GO "
+        "enrichment: Fisher exact test, candidates vs. all tested genes."
+    ),
+    "go_tab_load_button":    "Load GO annotation (.tsv)",
+    "go_tab_none_loaded":    "No annotation loaded",
+    "go_tab_none_loaded_sub": "Load the annotation TSV (columns: gene_id_full, go_biological_process, go_cellular_component, go_molecular_function)",
+    "go_tab_no_candidates":  "No gene with significant LRT in this result",
+    "go_tab_enrichment_header": "GO terms enriched among candidates",
+    "go_tab_candidates_header": "Candidate genes (ranked by p-value)",
+    "go_tab_load_error":     "Failed to load/process the annotation",
 
     "sites_label_model":    "Model:",
     "sites_label_gene":     "Gene:",
