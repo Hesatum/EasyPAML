@@ -672,12 +672,14 @@ class CodemlBatchAnalysis:
             # silenciosamente apenas para extrair κ e branch lengths como ponto de
             # partida — os resultados do M0 implícito NÃO são salvos na saída.
             # Sem esse passo, fix_kappa e fix_blength=2 nunca seriam ativados.
-            # Default False: medido (2026-09-18) 1 caso em 3 loci de teste onde
-            # o ponto de partida do M0 levou o otimizador a um otimo local pior
-            # (lnL ~1.6 unidades acima do resultado do zero) -- ganho de
-            # velocidade e real (~7x agregado) mas nao e garantia matematica de
-            # mesmo resultado. Ligar via config['warm_start_m0'] = True sabendo
-            # do trade-off.
+            # Default False. Com multistart de omega (default quando ligado --
+            # ver warm_start_multistart / _run_model_multistart), medido em 20
+            # loci reais: 17.6x mais rapido (M1a isolado), 2/20 genes com lnL
+            # levemente pior que from-scratch (pior caso: -1.47), 2/20 MELHOR
+            # (multistart escapou de otimo que o from-scratch nao escapou).
+            # Ainda nao e garantia matematica de resultado identico -- so
+            # estatisticamente raro de divergir. Ligar via
+            # config['warm_start_m0'] = True sabendo do trade-off.
             _SITE_WARMUP = {'M1a', 'M2a', 'M7', 'M8'}
             _needs_warmup = bool(set(models_ordered) & _SITE_WARMUP) and self.config.get('warm_start_m0', False)
             _m0_absent    = 'M0' not in models_ordered and _needs_warmup
@@ -711,13 +713,18 @@ class CodemlBatchAnalysis:
                 fitted_tree_for_this = None if model_name == 'M0' else gene_fitted_tree
 
                 print(f"  - Running {model_name}...", end=" ", flush=True)
-                result = self._run_single_analysis(
-                    fas_file=fas_file,
-                    model_name=model_name,
-                    log_file=log_file,
-                    warm_start_kappa=kappa_for_this,
-                    fitted_tree=fitted_tree_for_this,
-                )
+                if fitted_tree_for_this is not None and self.config.get('warm_start_multistart', True):
+                    result = self._run_model_multistart(
+                        fas_file, model_name, log_file, kappa_for_this, fitted_tree_for_this,
+                    )
+                else:
+                    result = self._run_single_analysis(
+                        fas_file=fas_file,
+                        model_name=model_name,
+                        log_file=log_file,
+                        warm_start_kappa=kappa_for_this,
+                        fitted_tree=fitted_tree_for_this,
+                    )
                 if result:
                     gene_results[model_name] = result
                     lnL = result.get('lnL')
@@ -850,10 +857,37 @@ class CodemlBatchAnalysis:
 
         return 'mixed' if c1_fg != c2_fg else 'same'
 
+    # Espectro purificadora / neutra / diversificadora -- cobre os regimes
+    # onde um otimo local costuma prender a busca de omega. So testado com
+    # branch lengths/kappa ja warm-started (o multistart de omega puro e
+    # barato; refazer a busca de branch length e que seria caro de repetir).
+    _WARM_START_OMEGA_TRIALS = (0.2, 1.0, 2.5)
+
+    def _run_model_multistart(self, fas_file: Path, model_name: str, log_file: Path,
+                               warm_start_kappa: float, fitted_tree: str) -> Optional[Dict]:
+        """Roda o mesmo modelo com warm-start de branch length/kappa varias
+        vezes, cada uma com omega inicial diferente, e fica com o de maior
+        lnL. Mitiga o risco medido do warm-start (2026-09-18: em teste com
+        loci reais, ~1/3 convergiu pra otimo local pior partindo so de
+        omega=0.5) sem pagar o custo total de reotimizar branch length do
+        zero em cada tentativa -- so a parte barata (omega) e repetida.
+        """
+        best = None
+        for omega0 in self._WARM_START_OMEGA_TRIALS:
+            r = self._run_single_analysis(
+                fas_file=fas_file, model_name=model_name, log_file=log_file,
+                warm_start_kappa=warm_start_kappa, fitted_tree=fitted_tree,
+                omega_override=omega0,
+            )
+            if r and r.get('lnL') is not None and (best is None or r['lnL'] > best['lnL']):
+                best = r
+        return best
+
     def _run_single_analysis(self, fas_file: Path, model_name: str,
                             log_file: Path,
                             warm_start_kappa: float = None,
-                            fitted_tree: str = None) -> Optional[Dict]:
+                            fitted_tree: str = None,
+                            omega_override: float = None) -> Optional[Dict]:
         """Executa análise CODEML para um arquivo e modelo.
 
         Parâmetros de otimização de velocidade (sem impacto nos resultados):
@@ -864,6 +898,11 @@ class CodemlBatchAnalysis:
                               de forma que o otimizador parte de valores já próximos
                               do ótimo.  Os branch lengths são re-estimados livremente;
                               os resultados finais são matematicamente idênticos.
+          omega_override    : ignora config['omega']/default do modelo pra esta
+                              chamada especifica -- usado pelo multi-start de
+                              omega (ver _run_model_multistart) pra tentar varios
+                              pontos de partida sem mutar self.config (que e
+                              compartilhado entre threads/genes em paralelo).
         """
         base_name = fas_file.stem
         # start from default config and allow GUI-provided custom overrides
@@ -1211,7 +1250,10 @@ class CodemlBatchAnalysis:
             # ── Gerar conteúdo do .ctl ────────────────────────────────────────
             custom_paths  = self.config.get('model_ctl_paths', {}) or {}
             provided_ctl  = custom_paths.get(model_name)
-            omega_initial = float(self.config.get('omega', model_config.get('omega', 0.5) or 0.5))
+            omega_initial = (
+                float(omega_override) if omega_override is not None
+                else float(self.config.get('omega', model_config.get('omega', 0.5) or 0.5))
+            )
             cleandata_val = int(self.config.get('cleandata', 1))
 
             if provided_ctl:

@@ -9,14 +9,16 @@ LRT com grau de liberdade errado.
 
 ```bash
 python3 easypaml_cli.py --input PASTA --tree ARVORE.nwk --output SAIDA \
-    --models M1a,M2a,M7,M8 --workers N [--skip-beb] [--timeout 1600]
+    --models M1a,M2a,M7,M8 --workers N [--skip-beb] [--warm-start-m0] \
+    [--two-pass] [--timeout 1600]
 ```
 
 Ou via `--config config.json` com as mesmas chaves em formato JSON
 (`input`, `tree`, `output`, `models`, `workers`, `timeout`, `run_lrt`,
-`skip_beb`, `auto_prune_tree`). O comando efetivamente usado sempre é
-gravado em `SAIDA/run_config.json` -- se precisar reproduzir ou entender uma
-run já feita, comece lendo esse arquivo, não adivinhe pelos flags.
+`skip_beb`, `auto_prune_tree`, `warm_start_m0`, `two_pass`,
+`sig_threshold`). O comando efetivamente usado sempre é gravado em
+`SAIDA/run_config.json` -- se precisar reproduzir ou entender uma run já
+feita, comece lendo esse arquivo, não adivinhe pelos flags.
 
 **`--input`**: pasta com um `.fasta`/`.phy` por gene (todas as amostras
 daquele gene num arquivo só, alinhadas). **`--tree`**: Newick, enraizada ou
@@ -62,6 +64,15 @@ ramo), use as classes já prontas em vez de regex no outfile cru:
   `filter_sites_by_pvalue`).
 - `src.backend.branch_extractor.BranchExtractor` -- omega por ramo, árvore
   anotada em JSON (modelos Branch/Branch-site).
+- `src.backend.go_enrichment.rank_candidates(summary_tsv, go_annotation_tsv)`
+  -- genes com LRT significativo ranqueados por p-valor + termos GO
+  enriquecidos (Fisher exato, candidatos vs. todos os genes testados).
+  Pensado pra escala de genoma inteiro: reduz "leia N tabelas BEB" pra
+  "leia uma lista curta". TSV de anotação esperado: colunas
+  `gene_id_full`, `go_biological_process`, `go_cellular_component`,
+  `go_molecular_function`, cada uma com `"descrição [GO:XXXXXXX]; ..."`.
+  Também acessível na GUI, aba "Interpretação"/"Interpretation" do
+  results viewer.
 
 ## Coisas que já foram resolvidas, não precisa reimplementar
 
@@ -74,11 +85,21 @@ ramo), use as classes já prontas em vez de regex no outfile cru:
   (mais confiável). Ligando, o LRT continua valendo -- lnL/np são escritos
   antes do BEB começar -- só a tabela de sítio some (cai pra NEB, que fica
   disponível quando não foi cortado a tempo).
-- **Warm-start implícito via M0**: se você pede só modelos de sítio (sem
-  M0 na lista), o backend roda M0 escondido uma vez por gene só pra extrair
-  κ e branch lengths iniciais, e reusa isso nos modelos pedidos --
-  resultado final idêntico (branch lengths são reestimados livremente),
-  só converge mais rápido. Não aparece no `analysis_summary.tsv`.
+- **`--two-pass`**: roda tudo sem BEB primeiro (rápido), calcula LRT, e só
+  reroda com BEB completo os genes com p < `--sig-threshold` (default
+  0.05). Saída em `SAIDA/pass1_screen/` (todos os genes) e
+  `SAIDA/pass2_beb/` (só os significativos). Bom pra escala de genoma
+  inteiro, onde a maioria dos genes não rejeita o nulo.
+- **`--warm-start-m0`** (opt-in, desligado por padrão): roda M0 escondido
+  uma vez por gene pra usar κ/branch-lengths como ponto de partida nos
+  modelos de sítio pedidos, com multi-start automático de ômega (3 pontos:
+  0.2/1.0/2.5) pra reduzir risco de ótimo local. **Não é garantia
+  matemática de resultado idêntico ao from-scratch** -- medido em 20 loci
+  reais: 17.6x mais rápido, 2/20 genes com lnL levemente pior (pior caso:
+  -1.47), 2/20 com lnL *melhor* (o multistart escapou de ótimo que o
+  from-scratch não escapou). Ligue sabendo do trade-off; pra publicação,
+  considere rodar uma amostra com e sem pra confirmar que não muda
+  conclusões antes de aplicar no dataset inteiro.
 
 ## Antes de "otimizar" ou "consertar" algo aqui
 

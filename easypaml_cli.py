@@ -68,10 +68,15 @@ def parse_args():
     ap.add_argument('--two-pass', action='store_true', help="passada 1 sem BEB em todos os genes, passada 2 com BEB so nos LRT-significativos (ver docstring)")
     ap.add_argument('--sig-threshold', type=float, default=0.05, help="p-valor de corte pro --two-pass (default: 0.05)")
     ap.add_argument('--warm-start-m0', action='store_true',
-                     help="roda M0 escondido por gene pra usar como ponto de partida nos modelos de sitio "
-                          "(~7x mais rapido agregado, medido). Desligado por padrao: em pelo menos 1/3 loci "
-                          "de teste o otimizador convergiu pra um otimo local pior (~1.6 lnL) partindo do M0 "
-                          "em vez do zero. Ligue sabendo do trade-off.")
+                     help="roda M0 escondido por gene pra usar como ponto de partida nos modelos de sitio, "
+                          "com multi-start automatico de omega (3 pontos de partida, warm_start_multistart=True "
+                          "por default) pra reduzir risco de otimo local. Medido em 20 loci reais (M1a): "
+                          "17.6x mais rapido; 2/20 genes com lnL levemente pior que o from-scratch (maior "
+                          "diferenca: 1.47), 2/20 genes com lnL MELHOR (multistart escapou de otimo que o "
+                          "from-scratch nao escapou). Sem multi-start (so omega=0.5) o risco era maior: "
+                          "~1/3 dos loci de um teste anterior menor. Desligado por padrao mesmo assim -- "
+                          "nao e garantia matematica de resultado identico, so estatisticamente muito mais "
+                          "raro de divergir. Ligue sabendo do trade-off.")
     args = ap.parse_args()
 
     if args.config:
