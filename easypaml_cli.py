@@ -67,6 +67,11 @@ def parse_args():
     ap.add_argument('--no-prune-tree', action='store_true', help="desativa poda automatica da arvore por locus (default: poda ativada)")
     ap.add_argument('--two-pass', action='store_true', help="passada 1 sem BEB em todos os genes, passada 2 com BEB so nos LRT-significativos (ver docstring)")
     ap.add_argument('--sig-threshold', type=float, default=0.05, help="p-valor de corte pro --two-pass (default: 0.05)")
+    ap.add_argument('--warm-start-m0', action='store_true',
+                     help="roda M0 escondido por gene pra usar como ponto de partida nos modelos de sitio "
+                          "(~7x mais rapido agregado, medido). Desligado por padrao: em pelo menos 1/3 loci "
+                          "de teste o otimizador convergiu pra um otimo local pior (~1.6 lnL) partindo do M0 "
+                          "em vez do zero. Ligue sabendo do trade-off.")
     args = ap.parse_args()
 
     if args.config:
@@ -92,6 +97,7 @@ def parse_args():
         'auto_prune_tree': not args.no_prune_tree,
         'two_pass': args.two_pass,
         'sig_threshold': args.sig_threshold,
+        'warm_start_m0': args.warm_start_m0,
     }
 
 
@@ -101,6 +107,7 @@ def _make_app(cfg, input_folder, output_folder, models, skip_beb):
         'input_folder': input_folder, 'tree_file': cfg['tree'], 'output_folder': output_folder,
         'models': models, 'timeout': cfg['timeout'], 'run_lrt': cfg['run_lrt'],
         'n_workers': cfg['workers'], 'auto_prune_tree': cfg['auto_prune_tree'], 'skip_beb': skip_beb,
+        'warm_start_m0': cfg.get('warm_start_m0', False),
     }
     return app
 

@@ -672,8 +672,14 @@ class CodemlBatchAnalysis:
             # silenciosamente apenas para extrair κ e branch lengths como ponto de
             # partida — os resultados do M0 implícito NÃO são salvos na saída.
             # Sem esse passo, fix_kappa e fix_blength=2 nunca seriam ativados.
+            # Default False: medido (2026-09-18) 1 caso em 3 loci de teste onde
+            # o ponto de partida do M0 levou o otimizador a um otimo local pior
+            # (lnL ~1.6 unidades acima do resultado do zero) -- ganho de
+            # velocidade e real (~7x agregado) mas nao e garantia matematica de
+            # mesmo resultado. Ligar via config['warm_start_m0'] = True sabendo
+            # do trade-off.
             _SITE_WARMUP = {'M1a', 'M2a', 'M7', 'M8'}
-            _needs_warmup = bool(set(models_ordered) & _SITE_WARMUP)
+            _needs_warmup = bool(set(models_ordered) & _SITE_WARMUP) and self.config.get('warm_start_m0', False)
             _m0_absent    = 'M0' not in models_ordered and _needs_warmup
 
             if _m0_absent:
