@@ -50,11 +50,18 @@ SAIDA/
 ```
 
 `analysis_summary.tsv` já tem tudo que normalmente se quer sem abrir os
-outfiles crus: `lnL`, `np`, `ntime`, `omega`, tempo de execução, e colunas
-`lrt_*` já calculadas (estatística + p-valor) quando os pares de modelo
-nulo/alternativo (M1a/M2a, M7/M8, etc.) foram ambos rodados. Leia com
-`pandas.read_csv(path, sep='\t')` -- não precisa de parser novo, não existe
-formato JSON separado porque essa tabela já cobre o caso de uso.
+outfiles crus: `lnL`, `np`, `ntime`, `omega`, tempo de execução, coluna
+`lrt_*` (estatística 2Δl bruta) e coluna `q_*` (p-valor corrigido por
+Benjamini-Hochberg, FDR, dentro da família de todos os genes testados
+nesse par de modelos) quando os pares nulo/alternativo (M1a/M2a, M7/M8,
+etc.) foram ambos rodados com `run_lrt=True`. **Use a coluna `q_*` para
+filtrar significância, não a `lrt_*` bruta convertida em p-valor** -- com
+milhares de genes testados simultaneamente, o p-valor bruto sozinho infla
+falsos positivos; o q-valor é o corte correto. `LRT_results.txt` traz o
+mesmo par p/q por gene, texto legível, com a métrica documentada no topo
+do arquivo. Leia com `pandas.read_csv(path, sep='\t')` -- não precisa de
+parser novo, não existe formato JSON separado porque essa tabela já cobre
+o caso de uso.
 
 Pra ir além do resumo (sítios individuais sob seleção positiva, valores por
 ramo), use as classes já prontas em vez de regex no outfile cru:
@@ -65,11 +72,12 @@ ramo), use as classes já prontas em vez de regex no outfile cru:
 - `src.backend.branch_extractor.BranchExtractor` -- omega por ramo, árvore
   anotada em JSON (modelos Branch/Branch-site).
 - `src.backend.go_enrichment.rank_candidates(summary_tsv, go_annotation_tsv)`
-  -- genes com LRT significativo ranqueados por p-valor + termos GO
-  enriquecidos (Fisher exato, candidatos vs. todos os genes testados).
-  Pensado pra escala de genoma inteiro: reduz "leia N tabelas BEB" pra
-  "leia uma lista curta". TSV de anotação esperado: colunas
-  `gene_id_full`, `go_biological_process`, `go_cellular_component`,
+  -- genes com LRT significativo (corrigido por Benjamini-Hochberg dentro
+  da própria função, sobre a família completa de genes do TSV) ranqueados
+  por q-valor + termos GO enriquecidos (Fisher exato, candidatos vs. todos
+  os genes testados). Pensado pra escala de genoma inteiro: reduz "leia N
+  tabelas BEB" pra "leia uma lista curta". TSV de anotação esperado:
+  colunas `gene_id_full`, `go_biological_process`, `go_cellular_component`,
   `go_molecular_function`, cada uma com `"descrição [GO:XXXXXXX]; ..."`.
   Também acessível na GUI, aba "Interpretação"/"Interpretation" do
   results viewer.
@@ -85,11 +93,11 @@ ramo), use as classes já prontas em vez de regex no outfile cru:
   (mais confiável). Ligando, o LRT continua valendo -- lnL/np são escritos
   antes do BEB começar -- só a tabela de sítio some (cai pra NEB, que fica
   disponível quando não foi cortado a tempo).
-- **`--two-pass`**: roda tudo sem BEB primeiro (rápido), calcula LRT, e só
-  reroda com BEB completo os genes com p < `--sig-threshold` (default
-  0.05). Saída em `SAIDA/pass1_screen/` (todos os genes) e
-  `SAIDA/pass2_beb/` (só os significativos). Bom pra escala de genoma
-  inteiro, onde a maioria dos genes não rejeita o nulo.
+- **`--two-pass`**: roda tudo sem BEB primeiro (rápido), calcula LRT +
+  q-valor BH, e só reroda com BEB completo os genes com q < `--sig-threshold`
+  (default 0.05, BH-corrigido, não p bruto). Saída em `SAIDA/pass1_screen/`
+  (todos os genes) e `SAIDA/pass2_beb/` (só os significativos). Bom pra
+  escala de genoma inteiro, onde a maioria dos genes não rejeita o nulo.
 - **`--warm-start-m0`** (opt-in, desligado por padrão): roda M0 escondido
   uma vez por gene pra usar κ/branch-lengths como ponto de partida nos
   modelos de sítio pedidos, com multi-start automático de ômega (3 pontos:

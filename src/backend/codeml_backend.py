@@ -776,18 +776,19 @@ class CodemlBatchAnalysis:
         
         total_time = time.time() - start_time
         
-        # Salvar sumário
-        print(f"\n{'='*80}")
-        print("SAVING RESULTS")
-        print(f"{'='*80}")
-        self._save_summary()
-        
-        # Executar LRT
+        # Executar LRT primeiro -- popula self._lrt_qvalues (BH), que
+        # _save_summary() abaixo anexa como colunas q_* no TSV.
         if self.config['run_lrt'] and len(self.config['models']) > 1:
             print(f"\n{'='*80}")
             print("PERFORMING LIKELIHOOD RATIO TESTS")
             print(f"{'='*80}")
             self._run_lrt_analysis()
+
+        # Salvar sumário
+        print(f"\n{'='*80}")
+        print("SAVING RESULTS")
+        print(f"{'='*80}")
+        self._save_summary()
         
         # Sumário final
         print(f"\n{'='*80}")
@@ -1743,46 +1744,59 @@ class CodemlBatchAnalysis:
         return {'lnL': lnL, 'np': np_params, 'ntime': ntime_params}
 
 
+    def _lrt_comparisons_for(self, selected_models):
+        """Pares (null, alt, nome_da_coluna) validos dado o conjunto de modelos
+        selecionados -- usado tanto pelo header/linhas do TSV quanto pelo LRT,
+        pra nao ter a mesma lista de ifs duplicada em dois metodos."""
+        comparisons = []
+        if 'M0' in selected_models and 'M1a' in selected_models:
+            comparisons.append(('M0', 'M1a', 'lrt_M0_vs_M1a'))
+        if 'M1a' in selected_models and 'M2a' in selected_models:
+            comparisons.append(('M1a', 'M2a', 'lrt_M1a_vs_M2a'))
+        if 'M7' in selected_models and 'M8' in selected_models:
+            comparisons.append(('M7', 'M8', 'lrt_M7_vs_M8'))
+        if 'M0' in selected_models and 'Branch' in selected_models:
+            comparisons.append(('M0', 'Branch', 'lrt_M0_vs_Branch'))
+        # Suporta tanto o nome antigo (BranchSite_A) quanto o novo (Branch-site)
+        if ('BranchSite_A_null' in selected_models and 'BranchSite_A' in selected_models) or \
+           ('Branch-site_null' in selected_models and 'Branch-site' in selected_models):
+            if 'Branch-site_null' in selected_models and 'Branch-site' in selected_models:
+                comparisons.append(('Branch-site_null', 'Branch-site', 'lrt_Branch-site_null_vs_Branch-site'))
+            else:
+                comparisons.append(('BranchSite_A_null', 'BranchSite_A', 'lrt_BranchSite_A_null_vs_BranchSite_A'))
+        return comparisons
+
     def _save_summary(self):
-        """Salva sumário em TSV com colunas de LRT e omegas extraídos robustamente"""
+        """Salva sumário em TSV com colunas de LRT (+ q-valor BH, quando
+        _run_lrt_analysis já rodou) e omegas extraídos robustamente."""
         summary_file = self.config['output_folder'] / "analysis_summary.tsv"
-        
+        selected_models = self.config['models']
+        lrt_comparisons = self._lrt_comparisons_for(selected_models)
+        qvalues = getattr(self, '_lrt_qvalues', None) or {}
+
         with open(summary_file, 'w', encoding='utf-8') as f:
             # Header
             header = ["Gene"]
             for model in self.config['models']:
                 header.extend([f"{model}_lnL", f"{model}_np", f"{model}_ntime", f"{model}_omega", f"{model}_time", f"{model}_stops"])
-            
-            # Adicionar colunas de LRT
-            selected_models = self.config['models']
-            if 'M0' in selected_models and 'M1a' in selected_models:
-                header.append("lrt_M0_vs_M1a")
-            if 'M1a' in selected_models and 'M2a' in selected_models:
-                header.append("lrt_M1a_vs_M2a")
-            if 'M7' in selected_models and 'M8' in selected_models:
-                header.append("lrt_M7_vs_M8")
-            if 'M0' in selected_models and 'Branch' in selected_models:
-                header.append("lrt_M0_vs_Branch")
-            # Support both old name (BranchSite_A) and new name (Branch-site)
-            if ('BranchSite_A_null' in selected_models and 'BranchSite_A' in selected_models) or \
-               ('Branch-site_null' in selected_models and 'Branch-site' in selected_models):
-                if 'Branch-site_null' in selected_models and 'Branch-site' in selected_models:
-                    header.append("lrt_Branch-site_null_vs_Branch-site")
-                else:
-                    header.append("lrt_BranchSite_A_null_vs_BranchSite_A")
-            
+
+            for null_model, alt_model, col_name in lrt_comparisons:
+                header.append(col_name)
+                if (null_model, alt_model) in qvalues:
+                    header.append(f"q_{null_model}_vs_{alt_model}")
+
             f.write("\t".join(header) + "\n")
-            
+
             # Data
             for gene_name in sorted(self.results.keys()):
                 gene_results = self.results[gene_name]
                 # Remover caracteres que corrompem o formato TSV
                 row = [str(gene_name).replace('\n', '').replace('\r', '').replace('\t', '_')]
-                
+
                 for model in self.config['models']:
                     if model in gene_results and gene_results[model]:
                         result = gene_results[model]
-                        
+
                         # Extrair omega robustamente do arquivo de resultados
                         omega_value = result.get('omega')
                         if omega_value is None or omega_value == 'NA':
@@ -1794,7 +1808,7 @@ class CodemlBatchAnalysis:
                                     omega_value = SitesParser.extract_omega_robust(Path(results_file))
                                 except Exception:
                                     omega_value = None
-                        
+
                         row.extend([
                             f"{result.get('lnL', 'NA'):.6f}" if result.get('lnL') else 'NA',
                             str(result.get('np', 'NA')),
@@ -1805,27 +1819,9 @@ class CodemlBatchAnalysis:
                         ])
                     else:
                         row.extend(['NA', 'NA', 'NA', 'NA', '0'])
-                
-                # Calcular LRTs para este gene
-                lrt_comparisons = []
-                if 'M0' in selected_models and 'M1a' in selected_models:
-                    lrt_comparisons.append(('M0', 'M1a', 'lrt_M0_vs_M1a'))
-                if 'M1a' in selected_models and 'M2a' in selected_models:
-                    lrt_comparisons.append(('M1a', 'M2a', 'lrt_M1a_vs_M2a'))
-                if 'M7' in selected_models and 'M8' in selected_models:
-                    lrt_comparisons.append(('M7', 'M8', 'lrt_M7_vs_M8'))
-                if 'M0' in selected_models and 'Branch' in selected_models:
-                    lrt_comparisons.append(('M0', 'Branch', 'lrt_M0_vs_Branch'))
-                # Support both old name (BranchSite_A) and new name (Branch-site)
-                if ('BranchSite_A_null' in selected_models and 'BranchSite_A' in selected_models) or \
-                   ('Branch-site_null' in selected_models and 'Branch-site' in selected_models):
-                    if 'Branch-site_null' in selected_models and 'Branch-site' in selected_models:
-                        lrt_comparisons.append(('Branch-site_null', 'Branch-site', 'lrt_Branch-site_null_vs_Branch-site'))
-                    else:
-                        lrt_comparisons.append(('BranchSite_A_null', 'BranchSite_A', 'lrt_BranchSite_A_null_vs_BranchSite_A'))
-                
+
                 for null_model, alt_model, _ in lrt_comparisons:
-                    if (null_model in gene_results and gene_results[null_model] and 
+                    if (null_model in gene_results and gene_results[null_model] and
                         alt_model in gene_results and gene_results[alt_model]):
                         null_lnL = gene_results[null_model].get('lnL')
                         alt_lnL = gene_results[alt_model].get('lnL')
@@ -1836,18 +1832,32 @@ class CodemlBatchAnalysis:
                             row.append('NA')
                     else:
                         row.append('NA')
-                
+
+                    if (null_model, alt_model) in qvalues:
+                        q = qvalues[(null_model, alt_model)].get(gene_name)
+                        row.append(f"{q:.6e}" if q is not None else 'NA')
+
                 # Limpar newlines de todos os valores antes de escrever
                 row = [str(v).replace('\n', '').replace('\r', '') for v in row]
                 f.write("\t".join(row) + "\n")
-        
+
         print(f"  [OK] Summary saved: {summary_file}")
     
     def _run_lrt_analysis(self):
-        """Executa Likelihood Ratio Tests"""
-        
+        """Executa Likelihood Ratio Tests + correcao Benjamini-Hochberg (FDR).
+
+        BH precisa da familia COMPLETA de p-valores de uma comparacao antes de
+        corrigir (o q-valor de um gene depende do rank do seu p-valor entre
+        todos os outros) -- por isso o metodo e em duas fases por comparacao:
+        primeiro coleta todos os genes validos, corrige com
+        scipy.stats.false_discovery_control, so depois escreve. Os q-valores
+        ficam em self._lrt_qvalues[(null_model, alt_model)][gene] pra
+        _save_summary() anexar como colunas q_* no TSV (por isso este metodo
+        tem que rodar ANTES de _save_summary() em run_batch_analysis()).
+        """
         lrt_file = self.config['output_folder'] / "LRT_results.txt"
-        
+        self._lrt_qvalues = {}
+
         with open(lrt_file, 'w', encoding='utf-8') as f:
             f.write("="*80 + "\n")
             f.write("LIKELIHOOD RATIO TEST (LRT) RESULTS\n")
@@ -1864,13 +1874,18 @@ class CodemlBatchAnalysis:
                 "  NOTA: o CODEML reporta ntime>0 no np do M0 mas ntime=0 nos modelos\n"
                 "  NSsites (M1a, M2a, M7, M8) pois usa branch lengths do M0 como partida.\n"
                 "  Por isso df e calculado com valores fixos por par, nao por np_alt - np_null.\n"
+                "  q-value = p-valor corrigido por Benjamini-Hochberg (FDR) DENTRO de\n"
+                "  cada comparacao (familia = todos os genes testados nesse par de\n"
+                "  modelos). E o corte correto quando se testam muitos genes\n"
+                "  simultaneamente -- o p-valor bruto sozinho infla falsos positivos\n"
+                "  nessa escala.\n"
                 "\n"
             )
 
             # Determinar comparações relevantes
             comparisons = []
             selected_models = self.config['models']
-            
+
             # Site models comparisons
             if 'M0' in selected_models and 'M1a' in selected_models:
                 comparisons.append(('M0', 'M1a', 'Tests if ω varies among sites'))
@@ -1878,50 +1893,61 @@ class CodemlBatchAnalysis:
                 comparisons.append(('M1a', 'M2a', 'Tests for positive selection'))
             if 'M7' in selected_models and 'M8' in selected_models:
                 comparisons.append(('M7', 'M8', 'Alternative test for positive selection'))
-            
+
             # Branch models
             if 'M0' in selected_models and 'Branch' in selected_models:
                 comparisons.append(('M0', 'Branch', 'Tests if ω differs in foreground'))
-            
+
             # Branch-site models
             if 'Branch-site_null' in selected_models and 'Branch-site' in selected_models:
                 comparisons.append(('Branch-site_null', 'Branch-site',
                                   'Tests for positive selection in foreground sites (50:50 mixture χ²)'))
-            
+
             if not comparisons:
                 f.write("No valid model comparisons found.\n")
                 f.write("For LRT, you need pairs of nested models.\n")
                 print("  [WARN] No valid LRT comparisons found")
                 return
-            
+
             print(f"\n  Running {len(comparisons)} LRT comparison(s):\n")
-            
+
+            # df por par de comparação (Yang & Nielsen 2002, PAML manual):
+            # CODEML reporta ntime>0 no np do M0 mas ntime=0 nos modelos
+            # NSsites (M1a/M2a/M7/M8 — branch lengths fixados pelo M0 e não
+            # contados como df).  Isso faz abs(np_alt - np_null) dar df=14
+            # para M0 vs M1a em vez de 2.  Usamos df fixos para esses pares.
+            _CANONICAL_DF = {
+                ('M0',  'M1a'): 2,  # M1a adds p0 + ω0 vs M0's single ω
+                ('M1a', 'M2a'): 2,  # M2a adds ω2 + one proportion vs M1a
+                ('M7',  'M8'):  2,  # M8  adds ω2 + one proportion vs M7
+                # M0 vs Branch: NÃO fixo — veja correção ntime abaixo
+            }
+
             # Realizar cada comparação
             for null_model, alt_model, description in comparisons:
                 print(f"    • {null_model} vs {alt_model}")
-                
+
                 f.write("\n" + "="*80 + "\n")
                 f.write(f"COMPARISON: {null_model} (null) vs {alt_model} (alternative)\n")
                 f.write(f"Description: {description}\n")
                 f.write("="*80 + "\n\n")
-                
-                sig_count_05 = 0
-                sig_count_01 = 0
-                total_valid = 0
-                
-                # Comparar cada gene
+
+                is_branchsite = (null_model == 'Branch-site_null' and alt_model == 'Branch-site')
+
+                # Fase 1: coletar todos os genes validos ANTES de corrigir por BH
+                collected = []
                 for gene_name in sorted(self.results.keys()):
                     gene_results = self.results[gene_name]
-                    
+
                     if null_model not in gene_results or alt_model not in gene_results:
                         continue
-                    
+
                     null_res = gene_results[null_model]
                     alt_res = gene_results[alt_model]
-                    
+
                     if not null_res or not alt_res:
                         continue
-                    
+
                     lnL_null = null_res.get('lnL')
                     lnL_alt = alt_res.get('lnL')
                     np_null     = null_res.get('np')
@@ -1932,32 +1958,17 @@ class CodemlBatchAnalysis:
                     if lnL_null is None or lnL_alt is None:
                         continue
 
-                    # Calcular LRT
                     lrt_stat = 2 * (lnL_alt - lnL_null)
 
-                    # df por par de comparação (Yang & Nielsen 2002, PAML manual):
-                    # CODEML reporta ntime>0 no np do M0 mas ntime=0 nos modelos
-                    # NSsites (M1a/M2a/M7/M8 — branch lengths fixados pelo M0 e não
-                    # contados como df).  Isso faz abs(np_alt - np_null) dar df=14
-                    # para M0 vs M1a em vez de 2.  Usamos df fixos para esses pares.
-                    # Para M0 vs Branch: ambos estimam branch lengths livremente, mas
-                    # M0 usa árvore NÃO-enraizada (ntime = 2n-3) enquanto Branch usa
-                    # a árvore rotulada/enraizada (ntime = 2n-2).  A diferença de 1
-                    # em ntime inflaciona abs(np_Branch − np_M0) para k+1 em vez de k
-                    # (onde k = número de grupos foreground).
-                    # Correção: df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
-                    _CANONICAL_DF = {
-                        ('M0',  'M1a'): 2,  # M1a adds p0 + ω0 vs M0's single ω
-                        ('M1a', 'M2a'): 2,  # M2a adds ω2 + one proportion vs M1a
-                        ('M7',  'M8'):  2,  # M8  adds ω2 + one proportion vs M7
-                        # M0 vs Branch: NÃO fixo — veja correção ntime abaixo
-                    }
                     df = _CANONICAL_DF.get(
                         (null_model, alt_model),
                         abs(np_alt - np_null) if (np_alt and np_null) else 0
                     )
 
                     # Corrigir df para M0 vs Branch quando as árvores têm ntime diferente
+                    # (M0 usa árvore não-enraizada [ntime=2n-3], Branch usa a
+                    # rotulada/enraizada [ntime=2n-2] -- a diferença de 1 infla
+                    # abs(np_Branch - np_M0) pra k+1 em vez de k grupos foreground)
                     if null_model == 'M0' and alt_model == 'Branch' and df > 0:
                         if ntime_null is not None and ntime_alt is not None:
                             df = max(1, df - (ntime_alt - ntime_null))
@@ -1967,14 +1978,9 @@ class CodemlBatchAnalysis:
                     if lrt_stat < 0:
                         lrt_stat = 0.0
 
-                    # Calcular p-value
-                    is_branchsite = (null_model == 'Branch-site_null' and alt_model == 'Branch-site')
-
                     if is_branchsite:
                         # Distribuição nula: mistura 50:50 de χ²(0) e χ²(1)
                         # P(2Δl > x) = 0.5 * P(χ²(1) > x)  para x > 0
-                        # Valor crítico α=0.05: 2.706  (qchisq(0.90, df=1))
-                        # Valor crítico α=0.01: 5.412  (qchisq(0.98, df=1))
                         if lrt_stat <= 0:
                             p_value = 1.0
                         else:
@@ -1983,42 +1989,60 @@ class CodemlBatchAnalysis:
                     else:
                         p_value = 1 - stats.chi2.cdf(lrt_stat, df)
                         df_display = str(df)
-                    
-                    total_valid += 1
-                    
-                    if p_value < 0.05:
+
+                    collected.append({
+                        'gene': gene_name, 'lnL_null': lnL_null, 'lnL_alt': lnL_alt,
+                        'np_null': np_null, 'np_alt': np_alt, 'lrt_stat': lrt_stat,
+                        'df_display': df_display, 'p_value': p_value,
+                    })
+
+                # Fase 2: corrigir por BH usando a familia completa desta comparação
+                if collected:
+                    qvals = stats.false_discovery_control([c['p_value'] for c in collected], method='bh')
+                    for c, q in zip(collected, qvals):
+                        c['q_value'] = q
+                self._lrt_qvalues[(null_model, alt_model)] = {c['gene']: c['q_value'] for c in collected}
+
+                # Fase 3: escrever (agora com p bruto e q-valor BH lado a lado)
+                sig_count_05 = sig_count_01 = sig_count_q05 = 0
+                for c in collected:
+                    if c['p_value'] < 0.05:
                         sig_count_05 += 1
-                    if p_value < 0.01:
+                    if c['p_value'] < 0.01:
                         sig_count_01 += 1
-                    
-                    # Escrever resultado
-                    f.write(f"Gene: {gene_name}\n")
-                    f.write(f"  lnL {null_model}: {lnL_null:.6f} (np={np_null})\n")
-                    f.write(f"  lnL {alt_model}: {lnL_alt:.6f} (np={np_alt})\n")
-                    f.write(f"  2Δl = {lrt_stat:.6f}\n")
-                    f.write(f"  df = {df_display}\n")
-                    f.write(f"  p-value = {p_value:.6e}\n")
-                    
-                    if p_value < 0.01:
-                        f.write(f"  Result: [OK][OK] {alt_model} significantly better (p < 0.01)\n")
-                    elif p_value < 0.05:
-                        f.write(f"  Result: [OK] {alt_model} significantly better (p < 0.05)\n")
+                    if c['q_value'] < 0.05:
+                        sig_count_q05 += 1
+
+                    f.write(f"Gene: {c['gene']}\n")
+                    f.write(f"  lnL {null_model}: {c['lnL_null']:.6f} (np={c['np_null']})\n")
+                    f.write(f"  lnL {alt_model}: {c['lnL_alt']:.6f} (np={c['np_alt']})\n")
+                    f.write(f"  2Δl = {c['lrt_stat']:.6f}\n")
+                    f.write(f"  df = {c['df_display']}\n")
+                    f.write(f"  p-value = {c['p_value']:.6e}\n")
+                    f.write(f"  q-value (BH) = {c['q_value']:.6e}\n")
+
+                    if c['q_value'] < 0.01:
+                        f.write(f"  Result: [OK][OK] {alt_model} significantly better (q < 0.01, BH-corrected)\n")
+                    elif c['q_value'] < 0.05:
+                        f.write(f"  Result: [OK] {alt_model} significantly better (q < 0.05, BH-corrected)\n")
                     else:
-                        f.write(f"  Result: [ERROR] No significant difference\n")
-                    
+                        f.write(f"  Result: [ERROR] No significant difference (q >= 0.05, BH-corrected)\n")
+
                     f.write("\n" + "-"*60 + "\n\n")
-                
-                # Sumário da comparação
+
+                total_valid = len(collected)
                 f.write("\nRESUMO:\n")
                 f.write(f"  Total de genes analisados: {total_valid}\n")
                 if total_valid > 0:
-                    f.write(f"  Significativo em p < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
-                    f.write(f"  Significativo em p < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
+                    f.write(f"  Significativo em p bruto < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
+                    f.write(f"  Significativo em p bruto < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
+                    f.write(f"  Significativo em q (BH) < 0.05: {sig_count_q05} ({100*sig_count_q05/total_valid:.1f}%)\n")
                 else:
-                    f.write(f"  Significativo em p < 0.05: {sig_count_05}\n")
-                    f.write(f"  Significativo em p < 0.01: {sig_count_01}\n")
+                    f.write(f"  Significativo em p bruto < 0.05: {sig_count_05}\n")
+                    f.write(f"  Significativo em p bruto < 0.01: {sig_count_01}\n")
+                    f.write(f"  Significativo em q (BH) < 0.05: {sig_count_q05}\n")
                 f.write("\n")
-        
+
         print(f"\n  [OK] LRT results saved: {lrt_file}")
 
     # ══════════════════════════════════════════════════════════════════

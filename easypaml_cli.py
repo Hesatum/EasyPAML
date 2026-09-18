@@ -28,11 +28,14 @@ resultado por sitio) -- so pule se o volume de loci tornar isso proibitivo.
 
 --two-pass automatiza a mesma ideia pro dataset inteiro: passada 1 roda
 todos os genes com --skip-beb (rapido, so pra ter o LRT); passada 2 reroda
-so os genes com LRT significativo (p < --sig-threshold, default 0.05) com
-BEB completo. Na maioria dos datasets a maior parte dos genes nao rejeita
-o nulo -- essa e a fatia de BEB que fica pulada sem perder nenhum gene de
-interesse real. Requer M1a+M2a e/ou M7+M8 em --models (precisa do par pra
-calcular LRT).
+so os genes com LRT significativo apos correcao Benjamini-Hochberg
+(q < --sig-threshold, default 0.05) com BEB completo. Na maioria dos
+datasets a maior parte dos genes nao rejeita o nulo -- essa e a fatia de
+BEB que fica pulada sem perder nenhum gene de interesse real. Requer
+M1a+M2a e/ou M7+M8 em --models (precisa do par pra calcular LRT). O
+q-valor (nao o p bruto) e o corte porque a passada 1 testa todos os genes
+do dataset simultaneamente -- sem correcao de multiplos testes o p bruto
+infla falsos positivos nessa escala.
 """
 import argparse
 import json
@@ -40,13 +43,10 @@ import shutil
 import sys
 from pathlib import Path
 
-from scipy import stats
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from src.backend.codeml_backend import CodemlBatchAnalysis
 
 VALID_MODELS = {'M0', 'M1a', 'M2a', 'M7', 'M8', 'Branch', 'Branch-site', 'Branch-site_null'}
-LRT_DF = 2  # M1a vs M2a e M7 vs M8 sempre tem df=2 (ver _CANONICAL_DF em codeml_backend.py)
 
 
 def parse_args():
@@ -66,7 +66,7 @@ def parse_args():
     ap.add_argument('--skip-beb', action='store_true', help="interrompe M2a/M8 antes do BEB (mantem LRT, perde tabela de sitio BEB -- ver docstring)")
     ap.add_argument('--no-prune-tree', action='store_true', help="desativa poda automatica da arvore por locus (default: poda ativada)")
     ap.add_argument('--two-pass', action='store_true', help="passada 1 sem BEB em todos os genes, passada 2 com BEB so nos LRT-significativos (ver docstring)")
-    ap.add_argument('--sig-threshold', type=float, default=0.05, help="p-valor de corte pro --two-pass (default: 0.05)")
+    ap.add_argument('--sig-threshold', type=float, default=0.05, help="q-valor (BH) de corte pro --two-pass (default: 0.05)")
     ap.add_argument('--warm-start-m0', action='store_true',
                      help="roda M0 escondido por gene pra usar como ponto de partida nos modelos de sitio, "
                           "com multi-start automatico de omega (3 pontos de partida, warm_start_multistart=True "
@@ -134,13 +134,13 @@ def run_two_pass(cfg):
     import pandas as pd
     df = pd.read_csv(pass1_dir / 'analysis_summary.tsv', sep='\t')
     sig_genes = set()
-    for null, alt, col in (('M1a', 'M2a', 'lrt_M1a_vs_M2a'), ('M7', 'M8', 'lrt_M7_vs_M8')):
-        if null in cfg['models'] and alt in cfg['models'] and col in df.columns:
-            stat = df[col].dropna()
-            pvals = stats.chi2.sf(stat.clip(lower=0), df=LRT_DF)
-            sig_genes |= set(df.loc[stat.index[pvals < cfg['sig_threshold']], 'Gene'])
+    for null, alt in (('M1a', 'M2a'), ('M7', 'M8')):
+        q_col = f'q_{null}_vs_{alt}'
+        if null in cfg['models'] and alt in cfg['models'] and q_col in df.columns:
+            qvals = pd.to_numeric(df[q_col], errors='coerce')
+            sig_genes |= set(df.loc[qvals < cfg['sig_threshold'], 'Gene'])
 
-    print(f"\n### {len(sig_genes)}/{len(df)} genes com LRT significativo (p<{cfg['sig_threshold']}) -- rerodando com BEB ###\n")
+    print(f"\n### {len(sig_genes)}/{len(df)} genes com LRT significativo (q BH<{cfg['sig_threshold']}) -- rerodando com BEB ###\n")
     if not sig_genes:
         print("Nenhum gene significativo -- passada 2 nao tem o que fazer.")
         return

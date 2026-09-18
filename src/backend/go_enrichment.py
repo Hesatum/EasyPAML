@@ -78,7 +78,11 @@ def rank_candidates(lrt_summary_tsv: Path, annotation_file: Path,
     """Le o analysis_summary.tsv do EasyPAML + o TSV de anotacao GO, devolve
     (tabela de candidatos ranqueada por efeito, tabela de enriquecimento GO).
     Ponto de entrada unico que a aba da GUI chama -- toda a logica de
-    verdade mora nas duas funcoes acima, testaveis sem Tkinter."""
+    verdade mora nas duas funcoes acima, testaveis sem Tkinter.
+
+    Corrige por Benjamini-Hochberg (FDR) sobre a familia completa de genes
+    do TSV antes de filtrar candidatos -- com milhares de genes testados
+    simultaneamente, o p-valor bruto sozinho infla falsos positivos."""
     summary = pd.read_csv(lrt_summary_tsv, sep='\t')
     gene_to_go = load_gene_to_go(annotation_file)
 
@@ -87,14 +91,15 @@ def rank_candidates(lrt_summary_tsv: Path, annotation_file: Path,
         if col in summary.columns:
             best_stat = best_stat.combine(summary[col].fillna(0).clip(lower=0), max)
     summary['p_value'] = stats.chi2.sf(best_stat, df=df)
+    summary['q_value'] = stats.false_discovery_control(summary['p_value'], method='bh')
     summary['go_terms'] = summary['Gene'].map(
         lambda g: '; '.join(sorted(gene_to_go.get(g, {}).values())) or 'sem anotacao'
     )
 
     all_genes = set(summary['Gene'])
-    sig_genes = set(summary.loc[summary['p_value'] < sig_threshold, 'Gene'])
+    sig_genes = set(summary.loc[summary['q_value'] < sig_threshold, 'Gene'])
 
-    candidates = summary.loc[summary['Gene'].isin(sig_genes)].sort_values('p_value')
+    candidates = summary.loc[summary['Gene'].isin(sig_genes)].sort_values('q_value')
     go_table = enrich(sig_genes, all_genes, gene_to_go)
     return candidates, go_table
 

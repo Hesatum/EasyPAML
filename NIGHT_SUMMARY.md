@@ -45,6 +45,7 @@ feito — não tem nada aqui que só rodou uma vez na minha cabeça.
 | 7 | Warm-start virou opt-in de verdade (`config['warm_start_m0']`, default False) | Confirmado: default agora reproduz exatamente o lnL do from-scratch |
 | 8 | Multi-start de ômega (3 pontos: 0.2/1.0/2.5) quando warm-start ativo | 20 loci reais: risco de ótimo local caiu de ~1/3 pra 1/20 grande + 1/20 pequeno, com 2/20 *melhorando* |
 | 9 | Auto-limpeza do próprio código de hoje (dead code em `go_enrichment.py`) | Self-check ainda passa depois do corte |
+| 10 | Correção Benjamini-Hochberg (FDR) integrada ao `_run_lrt_analysis` (colunas `q_*` no TSV, campo espelhado no `LRT_results.txt`), propagada pro corte do `--two-pass` e do `rank_candidates` (GO) | 1.542-1.573 genes reais já concluídos no lote de produção (leitura, lote nunca tocado): q≥p em 100% dos casos (0 violações); reduz significância de 64,3%→61,5% (M1a/M2a) e 70,3%→68,4% (M7/M8) — confirma que o confundidor dominante é o poder estatístico ligado ao tamanho do alinhamento, não inflação por múltiplos testes |
 
 ## Arquivos novos
 
