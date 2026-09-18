@@ -5,23 +5,12 @@ por coluna de categoria (biological_process/cellular_component/molecular_functio
 """
 import re
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 from scipy import stats
 
 GO_TERM_RE = re.compile(r'([^;]+?)\s*\[(GO:\d+)\]')
-GO_COLUMNS = {
-    'biological_process': 'go_biological_process',
-    'cellular_component': 'go_cellular_component',
-    'molecular_function': 'go_molecular_function',
-}
-
-
-def _parse_go_terms(cell) -> set:
-    if not isinstance(cell, str) or not cell.strip():
-        return set()
-    return {m.group(2) for m in GO_TERM_RE.finditer(cell)}
+GO_COLUMNS = ('go_biological_process', 'go_cellular_component', 'go_molecular_function')
 
 
 def load_gene_to_go(annotation_file: Path, gene_id_col: str = 'gene_id_full') -> dict:
@@ -32,7 +21,7 @@ def load_gene_to_go(annotation_file: Path, gene_id_col: str = 'gene_id_full') ->
     gene_to_go = {}
     for _, row in df.iterrows():
         terms = {}
-        for col in GO_COLUMNS.values():
+        for col in GO_COLUMNS:
             cell = row.get(col)
             if isinstance(cell, str):
                 for m in GO_TERM_RE.finditer(cell):
