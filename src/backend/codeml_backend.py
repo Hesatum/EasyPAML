@@ -1911,8 +1911,17 @@ class CodemlBatchAnalysis:
                 "    M1a vs M2a  : df = 2  (M2a adiciona omega2 e uma proporcao vs M1a)\n"
                 "    M7  vs M8   : df = 2  (M8  adiciona omega2 e uma proporcao vs M7)\n"
                 "    M0  vs Branch : df = 1  (modelo dois-omega: 1 omega extra de foreground)\n"
-                "    Branch-site : distribuicao mista 0.5*chi2(0) + 0.5*chi2(1)\n"
-                "                  Valor critico alpha=0.05: 2.706  alpha=0.01: 5.412\n"
+                "    Branch-site : usa chi2(1) PURO (critico 3.84 a 5%, 5.99 a 1%), NAO a\n"
+                "                  mistura 0.5*chi2(0)+0.5*chi2(1) (critico 2.706/5.412).\n"
+                "                  A mistura e a distribuicao nula assintotica correta\n"
+                "                  (Self & Liang 1987; omega2=1 fica na fronteira do\n"
+                "                  espaco de parametros), mas o proprio manual do PAML\n"
+                "                  (pamlDOC.pdf) recomenda explicitamente NAO usa-la:\n"
+                "                  \"We recommend that you use chi1^2 ... instead of the\n"
+                "                  mixture to guard against violations of model\n"
+                "                  assumptions.\" chi2(1) e mais conservador (corta mais\n"
+                "                  alto) e e o teste de fato usado pelos autores do PAML.\n"
+                "                  A mistura fica reportada por gene so como referencia.\n"
                 "  NOTA: o CODEML reporta ntime>0 no np do M0 mas ntime=0 nos modelos\n"
                 "  NSsites (M1a, M2a, M7, M8) pois usa branch lengths do M0 como partida.\n"
                 "  Por isso df e calculado com valores fixos por par, nao por np_alt - np_null.\n"
@@ -2020,14 +2029,27 @@ class CodemlBatchAnalysis:
                     if lrt_stat < 0:
                         lrt_stat = 0.0
 
+                    p_value_mixture = None
                     if is_branchsite:
-                        # Distribuição nula: mistura 50:50 de χ²(0) e χ²(1)
-                        # P(2Δl > x) = 0.5 * P(χ²(1) > x)  para x > 0
+                        # A distribuicao nula ASSINTOTICA correta (Self & Liang 1987,
+                        # Zhang et al. 2005) e a mistura 50:50 de χ²(0) e χ²(1), porque
+                        # o nulo (ω2=1) fica na FRONTEIRA do espaco de parametros.
+                        # PORTANTO o manual do PAML (pamlDOC.pdf, secao do teste
+                        # branch-site) calcula essa mistura -- e ENTAO recomenda
+                        # explicitamente NAO usa-la: "We recommend that you use χ1²
+                        # (with critical values 3.84 and 5.99) instead of the mixture
+                        # to guard against violations of model assumptions." O χ²(1)
+                        # puro e mais conservador (corta em 3.84 vs 2.71 a 5%) e e o
+                        # teste de fato usado/recomendado pelos autores do PAML, entao
+                        # e o que usamos pra significancia/BH aqui. A mistura fica
+                        # calculada e exibida so como referencia (p_value_mixture).
                         if lrt_stat <= 0:
                             p_value = 1.0
+                            p_value_mixture = 1.0
                         else:
-                            p_value = 0.5 * stats.chi2.sf(lrt_stat, df=1)
-                        df_display = "mixture(0,1)"
+                            p_value = stats.chi2.sf(lrt_stat, df=1)
+                            p_value_mixture = 0.5 * p_value
+                        df_display = "1 (χ²₁ puro, recomendacao PAML -- nao a mistura)"
                     else:
                         p_value = 1 - stats.chi2.cdf(lrt_stat, df)
                         df_display = str(df)
@@ -2036,6 +2058,7 @@ class CodemlBatchAnalysis:
                         'gene': gene_name, 'lnL_null': lnL_null, 'lnL_alt': lnL_alt,
                         'np_null': np_null, 'np_alt': np_alt, 'lrt_stat': lrt_stat,
                         'df_display': df_display, 'p_value': p_value,
+                        'p_value_mixture': p_value_mixture,
                     })
 
                 # Fase 2: corrigir por BH usando a familia completa desta comparação
@@ -2061,6 +2084,9 @@ class CodemlBatchAnalysis:
                     f.write(f"  2Δl = {c['lrt_stat']:.6f}\n")
                     f.write(f"  df = {c['df_display']}\n")
                     f.write(f"  p-value = {c['p_value']:.6e}\n")
+                    if c.get('p_value_mixture') is not None:
+                        f.write(f"  p-value (mistura 50:50, referencia -- NAO usado pro q-valor) = "
+                                f"{c['p_value_mixture']:.6e}\n")
                     f.write(f"  q-value (BH) = {c['q_value']:.6e}\n")
 
                     if c['q_value'] < 0.01:
@@ -2577,31 +2603,37 @@ class CodemlBatchAnalysis:
                             elif gene_df == 0:
                                 gene_df = 1  # fallback seguro
 
-                        # Branch-site usa distribuição nula 50:50 de χ²(0)+χ²(1),
-                        # não χ² padrão — consistente com _run_lrt_analysis.
-                        # Referência: Yang et al. (2005), Zhang et al. (2005).
+                        # Branch-site: a mistura 50:50 de χ²(0)+χ²(1) e a nula
+                        # assintotica correta (Self & Liang 1987), mas o manual do
+                        # PAML recomenda explicitamente usar χ²(1) puro em vez dela
+                        # ("guard against violations of model assumptions") -- ver
+                        # nota completa em _run_lrt_analysis. Consistente com la.
                         is_branchsite = (null_model == 'Branch-site_null'
                                          and alt_model == 'Branch-site')
+                        p_value_mixture = None
                         if is_branchsite:
-                            p_value = 0.5 * stats.chi2.sf(lrt_stat, df=1) if lrt_stat > 0 else 1.0
+                            p_value = stats.chi2.sf(lrt_stat, df=1) if lrt_stat > 0 else 1.0
+                            p_value_mixture = 0.5 * p_value
                         else:
                             p_value = 1 - stats.chi2.cdf(lrt_stat, gene_df)
 
                         total_valid += 1
-                        
+
                         if p_value < 0.05:
                             sig_count_05 += 1
                         if p_value < 0.01:
                             sig_count_01 += 1
-                        
+
                         # Escrever resultado
                         f.write(f"Gene: {gene}\n")
                         f.write(f"  lnL {null_model}: {lnL_null:.6f}\n")
                         f.write(f"  lnL {alt_model}: {lnL_alt:.6f}\n")
-                        df_display = "mixture(0,1)" if is_branchsite else str(gene_df)
+                        df_display = "1 (χ²₁ puro, recomendacao PAML)" if is_branchsite else str(gene_df)
                         f.write(f"  2Δl = {lrt_stat:.6f}\n")
                         f.write(f"  df = {df_display}\n")
                         f.write(f"  p-value = {p_value:.6e}\n")
+                        if p_value_mixture is not None:
+                            f.write(f"  p-value (mistura 50:50, referencia) = {p_value_mixture:.6e}\n")
                         
                         if p_value < 0.01:
                             f.write(f"  Result: [OK][OK] {alt_model} significantly better (p < 0.01)\n")
