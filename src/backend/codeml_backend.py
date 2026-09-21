@@ -1183,6 +1183,48 @@ class CodemlBatchAnalysis:
                 if _lbl_clean != labeled_content:
                     print(f"  [tree] Branch lengths removidos da arvore labelada "
                           f"(nao interferem com labels #1).")
+
+                # ── Podar a arvore LABELADA pra bater com o FASTA deste locus ─────
+                # O bloco de poda automatica acima (auto_prune_tree) so poda a
+                # arvore original/nao-labelada -- uma arvore labelada com #1 fixo
+                # nunca era ajustada por locus, entao qualquer gene faltando 1+
+                # taxons dava "Number of sequences different in tree and seq
+                # files" no codeml (achado rodando teste real do clado C: gene
+                # sem 1 dos 5 taxons #1 falhava). _not_in_fasta ja foi calculado
+                # acima (mesmo bloco de poda) a partir da arvore ORIGINAL sem
+                # sufixo #N -- reusa esse mesmo set aqui, so cuidando de casar
+                # nomes com ou sem "#N" no fim.
+                _lbl_missing = locals().get('_not_in_fasta')
+                if _lbl_missing:
+                    try:
+                        from io import StringIO as _SIO_lbl
+                        from Bio import Phylo as _Phylo_lbl
+
+                        _lbl_tree = _Phylo_lbl.read(_SIO_lbl(_lbl_clean), 'newick')
+                        _to_prune = [
+                            t for t in _lbl_tree.get_terminals()
+                            if re.sub(r'#\d+$', '', t.name or '') in _lbl_missing
+                        ]
+                        for _t in _to_prune:
+                            _lbl_tree.prune(_t)
+
+                        _lbl_io = _SIO_lbl()
+                        _Phylo_lbl.write(_lbl_tree, _lbl_io, 'newick')
+                        _lbl_clean = _lbl_io.getvalue().strip()
+                        # mesmo artefato de branch length residual no root do Bio.Phylo
+                        _lbl_clean = re.sub(
+                            r'\):[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?;$', ');', _lbl_clean
+                        )
+                        print(f"  [tree] Arvore labelada podada: {len(_to_prune)} "
+                              f"taxon(s) ausente(s) deste locus removido(s) "
+                              f"({[t.name for t in _to_prune]}).")
+                    except Exception as _lbl_prune_err:
+                        with open(log_file, 'a', encoding='utf-8') as _log_lp:
+                            _log_lp.write(
+                                f"[WARN] {base_name} [{model_name}]: poda da arvore "
+                                f"labelada falhou: {_lbl_prune_err}\n"
+                            )
+
                 (temp_dir / 'labeled.nwk').write_text(_lbl_clean, encoding='utf-8')
                 tree_ref  = 'labeled.nwk'   # relativo ao CWD (temp_dir)
                 fix_bl    = 0                # branch lengths estimados normalmente
