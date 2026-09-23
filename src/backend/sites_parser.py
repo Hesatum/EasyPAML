@@ -68,51 +68,79 @@ class SitesParser:
             )
 
         match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
-        
-        if not match:
+
+        if match:
+            sites_text = match.group(1).strip()
+            # Pattern para linhas com dados de sítios (formato M2a/M8, com
+            # media posterior de omega +- erro padrao):
+            # "   159 R      0.990**       8.976 +- 1.573"
+            site_pattern = r'\s*(\d+)\s+([A-Z])\s+([\d.]+)([\*]*)\s+([\d.]+)\s*\+-\s*([\d.]+)'
+
+            sites = []
+            for line in sites_text.split('\n'):
+                if not line.strip():
+                    continue
+                m = re.search(site_pattern, line)
+                if m:
+                    position = int(m.group(1))
+                    amino_acid = m.group(2)
+                    pr_w_gt_1 = float(m.group(3))
+                    significance = m.group(4)
+                    post_mean = float(m.group(5))
+                    post_se = float(m.group(6))
+                    omega_lower = post_mean - post_se
+                    omega_upper = post_mean + post_se
+                    sites.append({
+                        'position': position,
+                        'amino_acid': amino_acid,
+                        'pr_w_gt_1': pr_w_gt_1,
+                        'post_mean': post_mean,
+                        'post_se': post_se,
+                        'omega_lower': max(0, omega_lower),
+                        'omega_upper': omega_upper,
+                        'significance': significance,
+                        'is_significant_95': pr_w_gt_1 >= 0.95,
+                        'is_significant_99': pr_w_gt_1 >= 0.99
+                    })
+            return pd.DataFrame(sites)
+
+        # Formato Branch-site (model=2 NSsites=2): secao de sitios usa um
+        # cabecalho diferente ("Positive sites for foreground lineages
+        # Prob(w>1):") e cada linha so tem posicao/aminoacido/probabilidade
+        # -- sem media posterior de omega +- erro padrao (o modelo nao
+        # reporta isso pra esse teste). Ex.: "   987 S 0.993**"
+        section_header = "BEB" if method == "BEB" else "NEB"
+        bs_pattern = (
+            rf"{section_header}\b.*?analysis"
+            r".*?Positive sites for foreground lineages Prob\(w>1\):\s*\n"
+            r"(.*?)"
+            r"(?:\n\s*\n|Time used:|$)"
+        )
+        bs_match = re.search(bs_pattern, content, re.DOTALL | re.IGNORECASE)
+        if not bs_match:
             return pd.DataFrame()
-        
-        sites_text = match.group(1).strip()
-        
-        # Parser linha por linha
+
+        bs_site_pattern = r'\s*(\d+)\s+([A-Z])\s+([\d.]+)([\*]*)\s*$'
         sites = []
-        
-        # Pattern para linhas com dados de sítios
-        # Exemplos:
-        # "   159 R      0.990**       8.976 +- 1.573"
-        # "   233 P      0.989*        8.967 +- 1.596"
-        site_pattern = r'\s*(\d+)\s+([A-Z])\s+([\d.]+)([\*]*)\s+([\d.]+)\s*\+-\s*([\d.]+)'
-        
-        for line in sites_text.split('\n'):
+        for line in bs_match.group(1).strip().split('\n'):
             if not line.strip():
                 continue
-            
-            match = re.search(site_pattern, line)
-            if match:
-                position = int(match.group(1))
-                amino_acid = match.group(2)
-                pr_w_gt_1 = float(match.group(3))
-                significance = match.group(4)  # * ou **
-                post_mean = float(match.group(5))
-                post_se = float(match.group(6))
-                
-                # Calcular limites de confiança
-                omega_lower = post_mean - post_se
-                omega_upper = post_mean + post_se
-                
+            m = re.search(bs_site_pattern, line)
+            if m:
+                position = int(m.group(1))
+                pr_w_gt_1 = float(m.group(3))
                 sites.append({
                     'position': position,
-                    'amino_acid': amino_acid,
+                    'amino_acid': m.group(2),
                     'pr_w_gt_1': pr_w_gt_1,
-                    'post_mean': post_mean,
-                    'post_se': post_se,
-                    'omega_lower': max(0, omega_lower),  # omega não pode ser negativo
-                    'omega_upper': omega_upper,
-                    'significance': significance,
+                    'post_mean': np.nan,   # nao reportado pelo branch-site
+                    'post_se': np.nan,
+                    'omega_lower': np.nan,
+                    'omega_upper': np.nan,
+                    'significance': m.group(4),
                     'is_significant_95': pr_w_gt_1 >= 0.95,
                     'is_significant_99': pr_w_gt_1 >= 0.99
                 })
-        
         return pd.DataFrame(sites)
     
     @staticmethod
