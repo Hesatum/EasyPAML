@@ -2193,28 +2193,31 @@ class CodemlBatchAnalysis:
             raise ValueError(f"Results folder not found: {results_folder}")
         
         generated_files = {}
-        
+
         try:
-            # ═══ 1. REGENERAR analysis_summary.tsv ═══
-            print("\n[1/3] Generating analysis_summary.tsv...")
-            summary_file = CodemlBatchAnalysis._regenerate_analysis_summary(results_folder)
+            # ═══ 1. REGENERAR LRT_results.txt (+ q-valores BH) ═══
+            # Roda primeiro porque analysis_summary.tsv precisa dos q-valores
+            # pra anexar as colunas q_* -- mesma dependência que uma run ao
+            # vivo tem (_run_lrt_analysis antes de _save_summary).
+            print("\n[1/3] Generating LRT_results.txt...")
+            lrt_file, qvalues = CodemlBatchAnalysis._regenerate_lrt_results(results_folder)
+            if lrt_file:
+                generated_files['LRT_results'] = str(lrt_file)
+                print(f"  OK: {lrt_file.name}")
+
+            # ═══ 2. REGENERAR analysis_summary.tsv ═══
+            print("\n[2/3] Generating analysis_summary.tsv...")
+            summary_file = CodemlBatchAnalysis._regenerate_analysis_summary(results_folder, qvalues)
             if summary_file:
                 generated_files['analysis_summary'] = str(summary_file)
                 print(f"  OK: {summary_file.name}")
-            
-            # ═══ 2. REGENERAR batch_analysis_log.txt ═══
-            print("\n[2/3] Generating batch_analysis_log.txt...")
+
+            # ═══ 3. REGENERAR batch_analysis_log.txt ═══
+            print("\n[3/3] Generating batch_analysis_log.txt...")
             log_file = CodemlBatchAnalysis._regenerate_batch_log(results_folder)
             if log_file:
                 generated_files['batch_analysis_log'] = str(log_file)
                 print(f"  OK: {log_file.name}")
-            
-            # ═══ 3. REGENERAR LRT_results.txt ═══
-            print("\n[3/3] Generating LRT_results.txt...")
-            lrt_file = CodemlBatchAnalysis._regenerate_lrt_results(results_folder)
-            if lrt_file:
-                generated_files['LRT_results'] = str(lrt_file)
-                print(f"  OK: {lrt_file.name}")
             
             print(f"\n[SUCCESS] All files regenerated successfully!")
             return generated_files
@@ -2225,9 +2228,16 @@ class CodemlBatchAnalysis:
             return {}
     
     @staticmethod
-    def _regenerate_analysis_summary(results_folder: Path) -> Optional[Path]:
-        """Regenera analysis_summary.tsv"""
+    def _regenerate_analysis_summary(results_folder: Path, qvalues: Optional[dict] = None) -> Optional[Path]:
+        """Regenera analysis_summary.tsv.
+
+        qvalues (opcional): {(null_model, alt_model): {gene: q_value}}, vindo
+        de _regenerate_lrt_results() -- anexa colunas q_{null}_vs_{alt} do
+        mesmo jeito que uma run normal faz via _save_summary(). Sem isso o
+        TSV regenerado ficaria sem correção de múltiplos testes, divergindo
+        do schema de uma run ao vivo."""
         results_folder = Path(results_folder)
+        qvalues = qvalues or {}
         summary_file = results_folder / "analysis_summary.tsv"
 
         # Mapeamento de nomes de pasta (legados) para nomes de modelo (atuais)
@@ -2350,7 +2360,14 @@ class CodemlBatchAnalysis:
             if f'Branch-site_null_lnL' in row and f'Branch-site_lnL' in row and row[f'Branch-site_null_lnL'] and row[f'Branch-site_lnL']:
                 lrt = 2 * (row[f'Branch-site_lnL'] - row[f'Branch-site_null_lnL'])
                 row['lrt_Branch-site_null_vs_Branch-site'] = lrt
-        
+
+        # Anexar q-valores (BH), se fornecidos por _regenerate_lrt_results()
+        for (null_model, alt_model), gene_qvals in qvalues.items():
+            col = f'q_{null_model}_vs_{alt_model}'
+            for gene_name, q in gene_qvals.items():
+                if gene_name in data:
+                    data[gene_name][col] = q
+
         # ═══ PÓS-PROCESSAMENTO: Expandir dados de classes Branch-site ═══
         # Adicionar colunas de foreground omega para cada classe
         for gene_name in data:
@@ -2502,10 +2519,18 @@ class CodemlBatchAnalysis:
         return log_file
     
     @staticmethod
-    def _regenerate_lrt_results(results_folder: Path) -> Optional[Path]:
-        """Regenera LRT_results.txt"""
+    def _regenerate_lrt_results(results_folder: Path) -> tuple:
+        """Regenera LRT_results.txt, com correcao Benjamini-Hochberg (FDR) por
+        comparacao -- mesma logica de duas fases que _run_lrt_analysis (coleta
+        todos os p-valores da familia, corrige, so depois escreve).
+
+        Retorna (lrt_file, qvalues) onde qvalues e
+        {(null_model, alt_model): {gene: q_value}} -- usado por
+        regenerate_summary_files() pra anexar colunas q_* no TSV, do mesmo
+        jeito que uma run normal faz via _save_summary()."""
         results_folder = Path(results_folder)
         lrt_file = results_folder / "LRT_results.txt"
+        qvalues: dict = {}
 
         # Mapeamento de nomes legados → atuais (centralizado na constante de classe)
         model_name_mapping = CodemlBatchAnalysis._LEGACY_MODEL_NAMES
@@ -2546,19 +2571,19 @@ class CodemlBatchAnalysis:
             
             if not comparisons:
                 f.write("No valid comparisons found\n")
-                return lrt_file
-            
+                return lrt_file, qvalues
+
             for null_model, alt_model, description, df in comparisons:
                 f.write("\n" + "="*80 + "\n")
                 f.write(f"COMPARISON: {null_model} (null) vs {alt_model} (alternative)\n")
                 f.write(f"Description: {description}\n")
                 f.write("="*80 + "\n\n")
-                
-                sig_count_05 = 0
-                sig_count_01 = 0
-                total_valid = 0
-                
-                # Comparar cada gene
+
+                # Fase 1: coletar todos os genes validos ANTES de corrigir por BH
+                # (q-valor de um gene depende do rank do seu p-valor entre todos
+                # os outros da mesma comparacao -- nao da pra escrever linha a
+                # linha como o p bruto).
+                collected = []
                 for gene in sorted(genes):
                     null_folder = reverse_mapping.get(null_model, null_model)
                     alt_folder = reverse_mapping.get(alt_model, alt_model)
@@ -2617,42 +2642,61 @@ class CodemlBatchAnalysis:
                         else:
                             p_value = 1 - stats.chi2.cdf(lrt_stat, gene_df)
 
-                        total_valid += 1
+                        collected.append({
+                            'gene': gene, 'lnL_null': lnL_null, 'lnL_alt': lnL_alt,
+                            'lrt_stat': lrt_stat, 'df_display':
+                                "1 (χ²₁ puro, recomendacao PAML)" if is_branchsite else str(gene_df),
+                            'p_value': p_value, 'p_value_mixture': p_value_mixture,
+                        })
 
-                        if p_value < 0.05:
-                            sig_count_05 += 1
-                        if p_value < 0.01:
-                            sig_count_01 += 1
-
-                        # Escrever resultado
-                        f.write(f"Gene: {gene}\n")
-                        f.write(f"  lnL {null_model}: {lnL_null:.6f}\n")
-                        f.write(f"  lnL {alt_model}: {lnL_alt:.6f}\n")
-                        df_display = "1 (χ²₁ puro, recomendacao PAML)" if is_branchsite else str(gene_df)
-                        f.write(f"  2Δl = {lrt_stat:.6f}\n")
-                        f.write(f"  df = {df_display}\n")
-                        f.write(f"  p-value = {p_value:.6e}\n")
-                        if p_value_mixture is not None:
-                            f.write(f"  p-value (mistura 50:50, referencia) = {p_value_mixture:.6e}\n")
-                        
-                        if p_value < 0.01:
-                            f.write(f"  Result: [OK][OK] {alt_model} significantly better (p < 0.01)\n")
-                        elif p_value < 0.05:
-                            f.write(f"  Result: [OK] {alt_model} significantly better (p < 0.05)\n")
-                        else:
-                            f.write(f"  Result: [ERROR] No significant difference\n")
-                        
-                        f.write("\n" + "-"*60 + "\n\n")
-                    
                     except Exception:
                         continue
 
+                # Fase 2: corrigir por BH usando a familia completa desta comparacao
+                if collected:
+                    qvals = stats.false_discovery_control([c['p_value'] for c in collected], method='bh')
+                    for c, q in zip(collected, qvals):
+                        c['q_value'] = q
+                qvalues[(null_model, alt_model)] = {c['gene']: c['q_value'] for c in collected}
+
+                # Fase 3: escrever (p bruto e q-valor BH lado a lado)
+                sig_count_05 = sig_count_01 = sig_count_q05 = 0
+                for c in collected:
+                    if c['p_value'] < 0.05:
+                        sig_count_05 += 1
+                    if c['p_value'] < 0.01:
+                        sig_count_01 += 1
+                    if c['q_value'] < 0.05:
+                        sig_count_q05 += 1
+
+                    f.write(f"Gene: {c['gene']}\n")
+                    f.write(f"  lnL {null_model}: {c['lnL_null']:.6f}\n")
+                    f.write(f"  lnL {alt_model}: {c['lnL_alt']:.6f}\n")
+                    f.write(f"  2Δl = {c['lrt_stat']:.6f}\n")
+                    f.write(f"  df = {c['df_display']}\n")
+                    f.write(f"  p-value = {c['p_value']:.6e}\n")
+                    if c['p_value_mixture'] is not None:
+                        f.write(f"  p-value (mistura 50:50, referencia -- NAO usado pro q-valor) = "
+                                f"{c['p_value_mixture']:.6e}\n")
+                    f.write(f"  q-value (BH) = {c['q_value']:.6e}\n")
+
+                    if c['q_value'] < 0.01:
+                        f.write(f"  Result: [OK][OK] {alt_model} significantly better (q < 0.01, BH-corrected)\n")
+                    elif c['q_value'] < 0.05:
+                        f.write(f"  Result: [OK] {alt_model} significantly better (q < 0.05, BH-corrected)\n")
+                    else:
+                        f.write(f"  Result: [ERROR] No significant difference (q >= 0.05, BH-corrected)\n")
+
+                    f.write("\n" + "-"*60 + "\n\n")
+
                 # Resumo
+                total_valid = len(collected)
                 if total_valid > 0:
                     f.write("\nRESUMO:\n")
                     f.write(f"  Total de genes analisados: {total_valid}\n")
-                    f.write(f"  Significativo em p < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
-                    f.write(f"  Significativo em p < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
+                    f.write(f"  Significativo em p bruto < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
+                    f.write(f"  Significativo em p bruto < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
+                    f.write(f"  Significativo em q (BH) < 0.05: {sig_count_q05} ({100*sig_count_q05/total_valid:.1f}%)\n")
                     f.write("\n")
-        
-        return lrt_file
+
+        return lrt_file, qvalues
