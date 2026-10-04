@@ -613,7 +613,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                              text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(4, 4))
                 for _, row in go_table.head(15).iterrows():
                     line = (f"{row['description']}  ({row['go_id']})  ·  "
-                            f"{row['n_candidates']}/{len(candidates)} candidatos  ·  p = {self._fmt_pval(row['p_value'])}")
+                            f"{row['n_candidates']}/{len(candidates)} candidatos  ·  "
+                            f"q = {self._fmt_pval(row['q_value'])} (p = {self._fmt_pval(row['p_value'])})")
                     ctk.CTkLabel(scroll, text=line, font=("Roboto", 9),
                                  text_color=self.COLORS['text_tertiary'], anchor='w').pack(anchor='w', pady=1)
 
@@ -628,7 +629,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     side="left", fill="y", padx=(6, 0), pady=8)
                 content = ctk.CTkFrame(card, fg_color='transparent')
                 content.pack(side="left", fill="both", expand=True, padx=14, pady=10)
-                ctk.CTkLabel(content, text=f"{row['Gene']}   ·   p = {self._fmt_pval(row['p_value'])}",
+                ctk.CTkLabel(content, text=f"{row['Gene']}   ·   q = {self._fmt_pval(row['q_value'])} "
+                                            f"(p = {self._fmt_pval(row['p_value'])})",
                              font=("Roboto", 12, "bold"), text_color='#6ee7b7').pack(anchor='w')
                 ctk.CTkLabel(content, text=row['go_terms'], font=("Roboto", 9),
                              text_color='#a7f3d0', wraplength=850, justify='left').pack(anchor='w', pady=(3, 0))

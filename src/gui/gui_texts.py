@@ -197,9 +197,10 @@ TEXTS_PT: dict[str, object] = {
     "viewer_tab_interpretation": "Interpretação",
     "go_tab_title":              "Candidatos e enriquecimento de GO",
     "go_tab_criterion": (
-        "Genes com LRT significativo (M1a×M2a e/ou M7×M8, p < 0.05), ranqueados por "
-        "significância, cruzados com anotação funcional GO. Enriquecimento de GO: "
-        "Fisher exato, candidatos vs. todos os genes testados."
+        "Genes com LRT significativo (M1a×M2a e/ou M7×M8, q < 0.05 corrigido por "
+        "Benjamini-Hochberg), ranqueados por significância, cruzados com anotação "
+        "funcional GO. Enriquecimento de GO: Fisher exato, candidatos vs. todos os "
+        "genes testados, também corrigido por BH."
     ),
     "go_tab_load_button":    "Carregar anotação GO (.tsv)",
     "go_tab_none_loaded":    "Nenhuma anotação carregada",
@@ -511,9 +512,10 @@ TEXTS_EN: dict[str, object] = {
     "viewer_tab_interpretation": "Interpretation",
     "go_tab_title":              "Candidates and GO enrichment",
     "go_tab_criterion": (
-        "Genes with significant LRT (M1a×M2a and/or M7×M8, p < 0.05), ranked by "
-        "significance, cross-referenced with GO functional annotation. GO "
-        "enrichment: Fisher exact test, candidates vs. all tested genes."
+        "Genes with significant LRT (M1a×M2a and/or M7×M8, Benjamini-Hochberg "
+        "q < 0.05), ranked by significance, cross-referenced with GO functional "
+        "annotation. GO enrichment: Fisher exact test, candidates vs. all tested "
+        "genes, also BH-corrected."
     ),
     "go_tab_load_button":    "Load GO annotation (.tsv)",
     "go_tab_none_loaded":    "No annotation loaded",

@@ -30,16 +30,24 @@ def load_gene_to_go(annotation_file: Path, gene_id_col: str = 'gene_id_full') ->
     return gene_to_go
 
 
+_ENRICH_COLUMNS = ['go_id', 'description', 'n_candidates', 'n_background', 'odds_ratio', 'p_value', 'q_value']
+
+
 def enrich(candidate_genes: set, background_genes: set, gene_to_go: dict,
            min_candidates: int = 2) -> pd.DataFrame:
     """Fisher exato (2x2: no termo / fora do termo  x  candidato / background)
     por termo GO. Retorna DataFrame ordenado por p-valor, uma linha por termo
     que aparece em pelo menos `min_candidates` genes candidatos (termos
-    presentes numa unica amostra nao sao informativos e so inflam o teste)."""
+    presentes numa unica amostra nao sao informativos e so inflam o teste).
+
+    q_value = Benjamini-Hochberg sobre a familia de termos testados aqui --
+    sem isso, "enriquecimento" vira so p bruto com N testes simultaneos (um
+    por termo GO), o mesmo erro de multipla comparacao que o resto deste
+    projeto corrige em todo outro teste em lote."""
     n_cand = len(candidate_genes)
     n_bg = len(background_genes)
     if n_cand == 0 or n_bg == 0:
-        return pd.DataFrame(columns=['go_id', 'description', 'n_candidates', 'n_background', 'odds_ratio', 'p_value'])
+        return pd.DataFrame(columns=_ENRICH_COLUMNS)
 
     term_candidates: dict = {}
     term_desc: dict = {}
@@ -68,8 +76,11 @@ def enrich(candidate_genes: set, background_genes: set, gene_to_go: dict,
             'n_candidates': a, 'n_background': len(bg_set),
             'odds_ratio': odds_ratio, 'p_value': p_value,
         })
-    return pd.DataFrame(rows).sort_values('p_value') if rows else pd.DataFrame(
-        columns=['go_id', 'description', 'n_candidates', 'n_background', 'odds_ratio', 'p_value'])
+    if not rows:
+        return pd.DataFrame(columns=_ENRICH_COLUMNS)
+    table = pd.DataFrame(rows)
+    table['q_value'] = stats.false_discovery_control(table['p_value'], method='bh')
+    return table.sort_values('p_value')
 
 
 def rank_candidates(lrt_summary_tsv: Path, annotation_file: Path,
@@ -122,6 +133,8 @@ def _self_check():
     go_table = enrich(candidates, all_genes, gene_to_go)
     assert not go_table.empty, 'esperava pelo menos um termo GO com >=2 candidatos numa amostra de 50 genes reais'
     assert (go_table['p_value'] >= 0).all() and (go_table['p_value'] <= 1).all()
+    assert 'q_value' in go_table.columns, 'enrich() deve devolver q_value (BH), nao so p bruto'
+    assert (go_table['q_value'] >= go_table['p_value']).all(), 'q-valor BH nunca deve ser menor que o p bruto'
     print(f'OK: {len(gene_to_go)} genes anotados, {len(go_table)} termos GO testados na amostra de checagem.')
 
 
