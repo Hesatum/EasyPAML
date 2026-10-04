@@ -23,9 +23,19 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent
 CODEML_BIN = REPO / 'bin' / 'codeml'
-EASYPAML_INPUT = Path('/home/user/Desktop/projetos/matheus_wgs/resultados_analises/13_te_contamination/easypaml_input_5725')
-TREE_FILE = Path('/home/user/Desktop/projetos/matheus_wgs/resultados_analises/13_te_contamination/codeml_site_models_5725/tree.nwk')
-EASYPAML_TREE = Path('/home/user/Desktop/projetos/matheus_wgs/resultados_analises/13_te_contamination/astral_castles_comparison/astral4_11386.tre')
+
+# Defaults batem com o dataset usado pra medir o benchmark nesta sessao
+# (projeto matheus_wgs) -- mas isso e um script generico do EasyPAML, nao
+# algo especifico desse projeto, entao os 3 sao sobrescritaveis via flag
+# (--easypaml-input/--tree-file/--easypaml-tree) pra rodar em qualquer
+# outro dataset/maquina.
+_DEFAULT_EASYPAML_INPUT = '/home/user/Desktop/projetos/matheus_wgs/resultados_analises/13_te_contamination/easypaml_input_5725'
+_DEFAULT_TREE_FILE = '/home/user/Desktop/projetos/matheus_wgs/resultados_analises/13_te_contamination/codeml_site_models_5725/tree.nwk'
+_DEFAULT_EASYPAML_TREE = '/home/user/Desktop/projetos/matheus_wgs/resultados_analises/13_te_contamination/astral_castles_comparison/astral4_11386.tre'
+
+EASYPAML_INPUT = Path(_DEFAULT_EASYPAML_INPUT)
+TREE_FILE = Path(_DEFAULT_TREE_FILE)
+EASYPAML_TREE = Path(_DEFAULT_EASYPAML_TREE)
 
 CTL_TEMPLATE = """\
       seqfile = seq.phy
@@ -101,11 +111,29 @@ def run_easypaml(locus: str, model: str) -> dict:
         return {'elapsed': elapsed, 'lnL': float(m.group(3)) if m else None, 'np': int(m.group(2)) if m else None}
 
 
+def _fmt_lnl(v):
+    return f"{v:16.4f}" if v is not None else f"{'N/A':>16s}"
+
+
 def main():
+    global EASYPAML_INPUT, TREE_FILE, EASYPAML_TREE, CODEML_BIN
+
     ap = argparse.ArgumentParser()
     ap.add_argument('--loci', required=True, help='comma-separated locus IDs (must have all 24 taxa)')
     ap.add_argument('--model', default='M1a')
+    ap.add_argument('--easypaml-input', default=_DEFAULT_EASYPAML_INPUT,
+                     help='pasta com os .fasta de input (default: dataset matheus_wgs)')
+    ap.add_argument('--tree-file', default=_DEFAULT_TREE_FILE,
+                     help='arvore pro caminho raw/codeml puro (default: dataset matheus_wgs)')
+    ap.add_argument('--easypaml-tree', default=_DEFAULT_EASYPAML_TREE,
+                     help='arvore pro caminho EasyPAML, antes da poda automatica (default: dataset matheus_wgs)')
+    ap.add_argument('--codeml-bin', default=str(CODEML_BIN), help='binario codeml (default: bin/codeml do repo)')
     args = ap.parse_args()
+
+    EASYPAML_INPUT = Path(args.easypaml_input)
+    TREE_FILE = Path(args.tree_file)
+    EASYPAML_TREE = Path(args.easypaml_tree)
+    CODEML_BIN = Path(args.codeml_bin)
 
     print(f"{'locus':28s} {'raw_s':>8s} {'ep_s':>8s} {'overhead_s':>10s} {'raw_lnL':>16s} {'ep_lnL':>16s} {'match':>8s}")
     for locus in args.loci.split(','):
@@ -114,7 +142,7 @@ def main():
         ep = run_easypaml(locus, args.model)
         match = raw['lnL'] is not None and ep['lnL'] is not None and abs(raw['lnL'] - ep['lnL']) < 0.5
         print(f"{locus:28s} {raw['elapsed']:8.1f} {ep['elapsed']:8.1f} {ep['elapsed'] - raw['elapsed']:10.1f} "
-              f"{raw['lnL']:16.4f} {ep['lnL']:16.4f} {'OK' if match else 'MISMATCH'}")
+              f"{_fmt_lnl(raw['lnL'])} {_fmt_lnl(ep['lnL'])} {'OK' if match else 'MISMATCH/FAILED'}")
 
 
 if __name__ == '__main__':
