@@ -82,9 +82,30 @@ def parse_args():
     if args.config:
         with open(args.config, encoding='utf-8') as fh:
             cfg = json.load(fh)
+
+        missing = [k for k in ('input', 'tree', 'output') if k not in cfg]
+        if missing:
+            ap.error(f"--config {args.config}: faltando chave(s) obrigatoria(s) {missing}")
         for key in ('input', 'tree', 'output'):
-            if key in cfg:
-                cfg[key] = Path(cfg[key])
+            cfg[key] = Path(cfg[key])
+
+        # Mesmos defaults do caminho via flags -- sem isso, uma config.json
+        # minima (so input/tree/output) quebra com KeyError la na frente em
+        # vez de rodar com o comportamento padrao esperado.
+        cfg.setdefault('models', ['M1a', 'M2a', 'M7', 'M8'])
+        cfg.setdefault('workers', 4)
+        cfg.setdefault('timeout', 1600)
+        cfg.setdefault('run_lrt', True)
+        cfg.setdefault('skip_beb', False)
+        cfg.setdefault('auto_prune_tree', True)
+        cfg.setdefault('two_pass', False)
+        cfg.setdefault('sig_threshold', 0.05)
+        cfg.setdefault('warm_start_m0', False)
+        # Aceita tanto lista (forma natural em JSON) quanto string "A,B,C"
+        # (pra quem copiar o valor direto de --models)
+        if isinstance(cfg['models'], str):
+            cfg['models'] = [m.strip() for m in cfg['models'].split(',') if m.strip()]
+
         return cfg
 
     if not (args.input and args.tree and args.output):
