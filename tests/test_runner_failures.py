@@ -241,3 +241,44 @@ def test_codeml_symlink_is_not_resolved(tmp_path):
     link = tmp_path / 'codeml'
     link.symlink_to(target)
     assert find_codeml(str(link)).endswith('codeml')
+
+
+def test_branch_site_uses_labeled_tree(tmp_path, fake_codeml, monkeypatch):
+    """Árvore marcada (#1) vai para o .ctl do Branch-site, podada ao gene, sem
+    comprimentos de ramo; o nulo usa fix_omega = 1."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    app = _app(tmp_path, fake_codeml, models=('Branch-site_null', 'Branch-site'))
+    (app.config['input_folder'] / 'gene.fasta').write_text((DATA / 'gene_problematico.fasta').read_text())
+    app.config['ignore_stop_codons'] = True
+    app.config['labeled_tree_branchsite'] = (
+        "((((Homo_sapiens:0.1,Pan_troglodytes:0.1)#1,Gorilla_gorilla),(Pongo_abelii,Hylobates_lar)),"
+        "((Macaca_mulatta,Papio_anubis),(Callithrix_jacchus,(Saimiri_boliviensis,Aotus_nancymaae))));")
+    summary = app.run_batch_analysis()
+    assert summary['ok'] == 1
+    out = tmp_path / 'out'
+    tree = (out / 'Branch-site' / 'gene_Branch-site_tree.nwk').read_text()
+    assert '#1' in tree and ':0.1' not in tree
+    assert tree.startswith('9  1')                 # Macaca_mulata ausente da árvore -> 9 táxons
+    from src.backend.ctl_params import parse_ctl_text
+    null = parse_ctl_text((out / 'Branch-site_null' / 'gene_Branch-site_null.ctl').read_text())
+    assert null['model'] == '2' and null['NSsites'] == '2' and null['fix_omega'] == '1'
+    alt = parse_ctl_text((out / 'Branch-site' / 'gene_Branch-site.ctl').read_text())
+    assert alt['fix_omega'] == '0'
+    assert 'lrt_Branch-site_null_vs_Branch-site' in (out / 'analysis_summary.tsv').read_text()
+
+
+def test_pruning_keeps_branch_labels():
+    """(Macaca,Papio)#2 sem Macaca: a marca #2 passa para Papio (antes sumia)."""
+    from io import StringIO
+    from Bio import Phylo
+    tree = Phylo.read(StringIO("(((Homo,Pan)#1,Gorilla),((Macaca,Papio)#2,(Aotus,Saimiri)));"), 'newick')
+    CodemlBatchAnalysis._prune_keep_labels(tree, {'Homo', 'Pan', 'Gorilla', 'Papio', 'Aotus', 'Saimiri'})
+    io = StringIO()
+    Phylo.write(tree, io, 'newick')
+    text = io.getvalue()
+    assert 'Papio#2' in text and '#1' in text and 'Macaca' not in text
+    tree = Phylo.read(StringIO("(((Homo,Pan)#1,Gorilla),(Macaca,Papio));"), 'newick')
+    CodemlBatchAnalysis._prune_keep_labels(tree, {'Pan', 'Gorilla', 'Macaca', 'Papio'})
+    io = StringIO()
+    Phylo.write(tree, io, 'newick')
+    assert 'Pan#1' in io.getvalue()

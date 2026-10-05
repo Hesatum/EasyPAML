@@ -1030,6 +1030,41 @@ class CodemlBatchAnalysis:
             self._terminate(proc)
         return len(procs)
 
+    @staticmethod
+    def _prune_keep_labels(tree, keep: set) -> None:
+        """Poda as folhas que não estão em `keep` sem perder marcas de ramo.
+
+        Quando a poda deixa um nó interno com um só filho, o Bio.Phylo
+        colapsa o nó -- e a marca dele (#1, #2...) sumia. Aqui o filho que
+        sobra herda a marca (o ramo resultante é a soma dos dois ramos)."""
+        label_re = re.compile(r'[#$]\d+$')
+
+        def _label(clade):
+            m = label_re.search(clade.name or '')
+            return m.group(0) if m else None
+
+        def _add_label(clade, lab):
+            if lab and not _label(clade):
+                clade.name = (clade.name or '') + lab
+
+        def _walk(clade):
+            for child in list(clade.clades):
+                if child.is_terminal():
+                    if label_re.sub('', child.name or '') not in keep:
+                        clade.clades.remove(child)
+                else:
+                    _walk(child)
+                    if not child.clades:
+                        clade.clades.remove(child)
+                    elif len(child.clades) == 1:
+                        only = child.clades[0]
+                        _add_label(only, _label(child))
+                        idx = clade.clades.index(child)
+                        clade.clades[idx] = only
+        _walk(tree.root)
+        while len(tree.root.clades) == 1 and not tree.root.clades[0].is_terminal():
+            tree.root = tree.root.clades[0]
+
     # ── Uma execução do codeml (gene × modelo) ───────────────────────────
 
     def _failed(self, reason: str, exec_start: float = None, **extra) -> Dict:
@@ -1139,7 +1174,12 @@ class CodemlBatchAnalysis:
                     excluded = not_in_tree
                     names = [n for n in names if n in tree_taxa]
                     msg = self._t('warn_excluded', gene=base_name, names=', '.join(not_in_tree))
-                    if model_name == (cfg['models'][0] if cfg.get('models') else model_name):
+                    with self._results_lock:
+                        warned = getattr(self, '_excluded_warned', set())
+                        first = base_name not in warned
+                        warned.add(base_name)
+                        self._excluded_warned = warned
+                    if first:   # uma vez por gene, não uma por modelo
                         self._emit('warn', msg)
                     self._log(f"[WARN] {base_name} [{model_name}]: {msg}")
                 for tx in not_in_fasta:
@@ -1190,9 +1230,7 @@ class CodemlBatchAnalysis:
                 if not_in_fasta or excluded:
                     try:
                         lbl_tree = Phylo.read(StringIO(lbl), 'newick')
-                        for term in [t for t in lbl_tree.get_terminals()
-                                     if re.sub(r'[#$]\d+$', '', t.name or '') not in set(names)]:
-                            lbl_tree.prune(term)
+                        self._prune_keep_labels(lbl_tree, set(names))
                         lbl = _newick(lbl_tree)
                     except Exception as exc:
                         self._log(f"[WARN] {base_name} [{model_name}]: labeled tree pruning failed: {exc}")
