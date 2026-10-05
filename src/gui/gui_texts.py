@@ -980,6 +980,11 @@ def set_language(lang: str) -> None:
         _current_lang = lang
 
 
+def tr(pt: str, en: str) -> str:
+    """Mensagem curta bilíngue (para textos montados em código)."""
+    return pt if _current_lang == 'pt' else en
+
+
 def get_language() -> str:
     """Retorna o código do idioma ativo ('pt' ou 'en')."""
     return _current_lang

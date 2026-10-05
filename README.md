@@ -71,7 +71,7 @@ Benjamini-Hochberg e tabela de sítios (BEB).
   PAML 4.9j). O `install.sh` tenta instalar se faltar; se não houver pacote,
   baixa o binário oficial do PAML 4.10.10 para `bin/codeml`.
 - **Versões testadas**: PAML 4.9j e 4.10.10. Todos os parâmetros vão escritos no
-  `.ctl`, então as duas dão o mesmo resultado (ver METODOS.md).
+  `.ctl` (nada fica no default interno do codeml); ver METODOS.md.
 - Outro codeml: defina a variável `EASYPAML_CODEML=/caminho/do/codeml` ou use
   `--codeml` no modo linha de comando.
 - A versão do codeml usada aparece em **Sobre** e em `run_config.json`.

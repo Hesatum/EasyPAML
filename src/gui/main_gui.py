@@ -27,7 +27,7 @@ from backend.ctl_params import (CODONFREQ_OPTIONS, DEFAULT_CODONFREQ, DEFAULT_CT
                                 build_ctl_text, codonfreq_label, parse_codonfreq_label)
 from backend.preflight import list_alignment_files, run_preflight
 from .results_viewer import ResultsViewerWindow
-from .gui_texts import TEXTS, set_language, get_language
+from .gui_texts import TEXTS, set_language, get_language, tr
 from .ui_helpers import (PALETTE, PreflightDialog, ask_yes_no, disable_mouse_wheel,
                          fit_to_screen, hover_tint, mix, open_folder, show_about, show_message)
 
@@ -208,7 +208,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
     
     def __init__(self, parent, tree_path: Path | None, mode: str = 'branchsite'):
         super().__init__(parent)
-        self.title(f"Etiquetar Arvore - {mode.upper()}")
+        self.title(tr("Marcar ramos", "Label branches") + f" - {mode}")
         self.geometry("1400x850")
         self.parent = parent
         self.mode = mode
@@ -565,12 +565,12 @@ class TreeLabelWindow(ctk.CTkToplevel):
             
             if current_tag == '#1':
                 self._remove_tag_recursively(clade)
-                self.parent.append_log(f"[-] Tag #1 removida de {self._get_clade_name(clade)}\n")
+                self.parent.append_log(tr("Marca #1 removida de ", "Tag #1 removed from ") + f"{self._get_clade_name(clade)}\n")
             else:
                 self._remove_tag_recursively(clade)
                 self._apply_tag_recursively(clade, '#1')
                 self.marked_clades[clade] = '#1'
-                self.parent.append_log(f"[+] Tag #1 aplicada a {self._get_clade_name(clade)}\n")
+                self.parent.append_log(tr("Marca #1 aplicada a ", "Tag #1 applied to ") + f"{self._get_clade_name(clade)}\n")
         
         else:
             current_tag = self.marked_clades.get(clade)
@@ -587,13 +587,13 @@ class TreeLabelWindow(ctk.CTkToplevel):
                     response = response.strip().lower()
                     if response == 'remover':
                         self._remove_tag_recursively(clade)
-                        self.parent.append_log(f"[-] Tag {current_tag} removida de {clade_name}\n")
+                        self.parent.append_log(tr(f"Marca {current_tag} removida de {clade_name}", f"Tag {current_tag} removed from {clade_name}") + "\n")
                     elif response.isdigit():
                         self._remove_tag_recursively(clade)
                         new_tag = f"#{response}"
                         self._apply_tag_recursively(clade, new_tag)
                         self.marked_clades[clade] = new_tag
-                        self.parent.append_log(f"[edit] Tag alterada para {new_tag} em {clade_name}\n")
+                        self.parent.append_log(tr(f"Marca alterada para {new_tag} em {clade_name}", f"Tag changed to {new_tag} on {clade_name}") + "\n")
             else:
                 response = simpledialog.askstring(
                     TEXTS["tag_dialog_new_title"],
@@ -606,7 +606,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
                     self._remove_tag_recursively(clade)
                     self._apply_tag_recursively(clade, new_tag)
                     self.marked_clades[clade] = new_tag
-                    self.parent.append_log(f"[tag] Tag {new_tag} aplicada a {clade_name}\n")
+                    self.parent.append_log(tr(f"Marca {new_tag} aplicada a {clade_name}", f"Tag {new_tag} applied to {clade_name}") + "\n")
 
         self._draw_tree()
         self._refresh_legend()
@@ -668,7 +668,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
             self.marked_clades.pop(clade, None)
         self._draw_tree()
         self._refresh_legend()
-        self.parent.append_log(f"Tag {tag} removida.\n")
+        self.parent.append_log(tr(f"Marca {tag} removida.", f"Tag {tag} removed.") + "\n")
 
     def _refresh_legend(self):
         """Atualiza legenda com tags ativas e botão de exclusão por tag."""
@@ -753,17 +753,17 @@ class TreeLabelWindow(ctk.CTkToplevel):
 
             if self.mode == 'branchsite':
                 self.parent.tree_branchsite_labeled = newick_str
-                self.parent.append_log(f"[OK] Arvore Branch-Site salva ({applied_terminals} terminais).\n")
+                self.parent.append_log(tr(f"[OK] Árvore branch-site salva ({applied_terminals} terminais).", f"[OK] Branch-site tree saved ({applied_terminals} tips).") + "\n")
             else:
                 self.parent.tree_branch_labeled = newick_str
-                self.parent.append_log(f"[OK] Arvore Branch salva ({applied_terminals} terminais).\n")
+                self.parent.append_log(tr(f"[OK] Árvore do modelo Branch salva ({applied_terminals} terminais).", f"[OK] Branch tree saved ({applied_terminals} tips).") + "\n")
 
                 branchsite_version = re.sub(r"\s*#(?!1)\d+\b", "", newick_str)
                 branchsite_version = re.sub(r"\s+", " ", branchsite_version).strip()
                 self.parent.tree_branchsite_labeled = branchsite_version
 
         except Exception as e:
-            self.parent.append_log(f"[Erro] Erro ao gerar Newick: {e}\n")
+            self.parent.append_log(tr("Erro ao gerar o Newick: ", "Error generating Newick: ") + f"{e}\n", "error")
 
         self.destroy()
 
@@ -1534,8 +1534,8 @@ class App(ctk.CTk):
         try:
             TreeLabelWindow(self, self.tree_file, mode=mode)
         except Exception as e:
-            self.append_log(f"[Erro] Erro ao abrir TreeLabelWindow: {e}\n")
-            self.append_log(f"{traceback.format_exc()}\n")
+            self.append_log(tr("Erro ao abrir a marcação de ramos: ", "Error opening branch labelling: ") + f"{e}", "error")
+            self.append_log(traceback.format_exc(), "debug")
 
     def select_input_folder(self):
         start = str(self.input_folder) if self.input_folder else str(Path.home())
@@ -1817,7 +1817,7 @@ class App(ctk.CTk):
         try:
             ResultsViewerWindow(self, self.output_folder)
         except Exception as e:
-            self.append_log(f"[Erro] Erro ao abrir visualizador: {e}\n")
+            self.append_log(tr("Erro ao abrir o painel de resultados: ", "Error opening the results panel: ") + f"{e}", "error")
             self.append_log(traceback.format_exc())
 
     def _regenerate_summary_files(self):
@@ -1832,10 +1832,8 @@ class App(ctk.CTk):
         
         results_folder = Path(results_folder)
         
-        self.append_log("\n" + "="*80 + "\n")
-        self.append_log(TEXTS["log_updating_results"])
-        self.append_log("="*80 + "\n")
-        self.append_log(f"Pasta de resultados: {results_folder}\n\n")
+        self.append_log(TEXTS["log_updating_results"], "header")
+        self.append_log(tr("Pasta de resultados: ", "Results folder: ") + f"{results_folder}", "info")
         
         # Executar em thread separada para não travar GUI
         def _update_thread():
@@ -1849,7 +1847,7 @@ class App(ctk.CTk):
                         models.add(item.name)
 
                 models = sorted(models)
-                self.append_log(f"[OK] Models found: {', '.join(models)}\n\n")
+                self.append_log(tr("Modelos encontrados: ", "Models found: ") + ", ".join(models), "info")
 
                 # Determinar comparações disponíveis
                 self.append_log(TEXTS["log_lrt_comparisons"])
@@ -1883,21 +1881,19 @@ class App(ctk.CTk):
                 
                 if generated_files:
                     self.append_log(TEXTS["log_update_done"])
-                    self.append_log("="*80 + "\n")
                     for file_type, file_path in generated_files.items():
                         filepath = Path(file_path)
                         size = filepath.stat().st_size if filepath.exists() else 0
-                        self.append_log(f"  [OK] {file_type:25s} | {size:,} bytes\n")
-                    self.append_log("="*80 + "\n")
+                        self.append_log(f"  [OK] {file_type:25s} | {size:,} bytes", "ok")
                     # Atualiza pasta de saída para a pasta selecionada e habilita o botão
                     self.output_folder = results_folder
                     self.after(0, self._update_models_state)
                 else:
-                    self.append_log("\n[Erro] Nenhum arquivo foi gerado.\n")
+                    self.append_log(tr("Nenhum arquivo foi gerado.", "No file was generated."), "error")
             
             except Exception as e:
-                self.append_log(f"\n[Erro] ERRO: {str(e)}\n")
-                self.append_log(traceback.format_exc())
+                self.append_log(str(e), "error")
+                self.append_log(traceback.format_exc(), "debug")
         
         update_thread = threading.Thread(target=_update_thread, daemon=True)
         update_thread.start()
@@ -2065,8 +2061,7 @@ class App(ctk.CTk):
             return
         original = [k for k, v in self.model_vars.items() if v.get()]
         if not original:
-            self.append_log("Selecione pelo menos um modelo." if get_language() == 'pt'
-                            else "Select at least one model.", 'warn')
+            self.append_log(tr("Selecione pelo menos um modelo.", "Select at least one model."), 'warn')
             return
         needs_branchsite = any('Branch-site' in m for m in original)
         if needs_branchsite and not self.tree_branchsite_labeled:

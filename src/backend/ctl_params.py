@@ -2,9 +2,10 @@
 Parâmetros do arquivo de controle (.ctl) do CODEML.
 
 Tudo que vai para o .ctl é escrito EXPLICITAMENTE (nada fica no default
-interno do codeml), para que o resultado não dependa da versão do PAML
-instalada. Exemplo real: com o mesmo .ctl sem ncatG, o PAML 4.9j discretiza a
-beta do M7/M8 em 4 categorias e o 4.10.x em 10 -- os lnL mudam.
+interno do codeml), para o resultado não depender de detalhes de invocação nem
+da versão do PAML. Exemplo real: sem ncatG, o codeml (4.9j e 4.10.10)
+discretiza a beta do M7/M8 em 4 categorias quando o modelo roda sozinho e em
+10 quando 'NSsites = 7 8' roda num mesmo .ctl -- os lnL mudam.
 
 Os valores padrão abaixo seguem o codeml.ctl de referência distribuído com o
 PAML (pamlDOC), exceto CodonFreq (F3x4 em vez de F61) e ncatG = 10, que é a

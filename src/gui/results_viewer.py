@@ -24,7 +24,7 @@ import sys
 from src.backend.branch_extractor import BranchExtractor
 from src.backend import lrt_stats
 from src.backend.site_map import attach_original_positions
-from .gui_texts import TEXTS, get_language
+from .gui_texts import TEXTS, get_language, tr
 from .ui_helpers import PALETTE, fit_to_screen, hover_tint, open_folder, show_message
 
 
@@ -358,12 +358,13 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             if n_genes > 5:
                 genes_list += f' … (+{n_genes - 5})'
 
-            warn_text = (
-                f"⚠  {n_genes} gene(s) started but never finished "
-                f"({n_models} run(s) orphaned — .ctl without result).\n"
-                f"Likely cause: parallel worker crash or session interrupted.\n"
-                f"Affected: {genes_list}\n"
-                f"→ Re-run those genes in EasyPAML to recover missing data."
+            warn_text = tr(
+                f"{n_genes} gene(s) começaram mas não terminaram ({n_models} execução(ões) "
+                f"com .ctl e sem resultado).\nAfetados: {genes_list}\n"
+                f"Rode esses genes de novo; o motivo está em genes_status.tsv / batch_analysis_log.txt.",
+                f"{n_genes} gene(s) started but never finished ({n_models} run(s) with a .ctl "
+                f"and no result).\nAffected: {genes_list}\n"
+                f"Re-run those genes; the reason is in genes_status.tsv / batch_analysis_log.txt."
             )
             ctk.CTkLabel(
                 warn_frame,
@@ -1308,7 +1309,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     p   = stats.chi2.sf(lrt_val, df=df_branch) if lrt_val > 0 else 1.0
                     sig = "  * p < 0.05" if p < 0.05 else ""
                     info_lbl.configure(
-                        text=f"LRT (M0 vs Branch): 2Df = {lrt_val:.3f}  ·  df = {df_branch}  ·  p = {self._fmt_pval(p)}{sig}",
+                        text=f"LRT (M0 vs Branch): 2Δℓ = {lrt_val:.3f}  ·  df = {df_branch}  ·  p = {self._fmt_pval(p)}{sig}",
                         text_color=self.COLORS['success'] if p < 0.05 else self.COLORS['text_tertiary']
                     )
 
@@ -1927,13 +1928,13 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         header_frame.pack(fill='x', padx=8, pady=(4, 2))
 
         if is_branchsite_model:
-            headers    = ["Gene", "Class", "Proportion", "Background ω", "Foreground ω", "2Δℓ", "p-valor", "Sig."]
+            headers    = ["Gene", tr("Classe", "Class"), tr("Proporção", "Proportion"), "Background ω", "Foreground ω", "2Δℓ", "p", "Sig."]
             col_widths = [200, 80, 120, 120, 120, 100, 120, 60]
         elif is_branch_model:
-            headers    = ["Gene", "ω (Branch Tags)", "2Δℓ", "p-valor", "Sig."]
+            headers    = ["Gene", tr("ω (marcas de ramo)", "ω (branch tags)"), "2Δℓ", "p", "Sig."]
             col_widths = [250, 400, 100, 120, 60]
         else:
-            headers    = ["Gene", f"ω ({alt_display})", "2Δℓ", "p-valor", "Sig."]
+            headers    = ["Gene", f"ω ({alt_display})", "2Δℓ", "p", "Sig."]
             col_widths = [260, 120, 100, 130, 60]
 
         for i, (h, width) in enumerate(zip(headers, col_widths)):
