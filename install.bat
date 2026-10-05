@@ -67,50 +67,63 @@ if !PY_MAJ! EQU 3 if !PY_MIN! LSS 8 (
     exit /b 1
 )
 
-REM ── 3. Instalar dependencias ────────────────────────────────────────────────
+REM ── 3. Ambiente .venv e dependencias ───────────────────────────────────────
+REM Cria um ambiente Python isolado em .venv (dentro desta pasta) e instala as
+REM dependencias nele. Se o venv nao puder ser criado, cai para o modo antigo
+REM (pip --user). O EasyPAML.bat usa o .venv automaticamente quando ele existe.
 echo.
-echo [2/4] Instalando dependencias Python...
+echo [2/4] Instalando dependencias Python em .venv ...
 echo  (Isso pode levar alguns minutos na primeira vez)
 echo.
 
+if not exist ".venv\Scripts\python.exe" (
+    !PYTHON! -m venv .venv
+)
+if not exist ".venv\Scripts\python.exe" goto :install_user
+
+".venv\Scripts\python.exe" -m pip install --upgrade pip --quiet --disable-pip-version-check
+".venv\Scripts\python.exe" -m pip install -r requirements.txt --disable-pip-version-check
+if errorlevel 1 goto :pip_error
+echo  OK: Dependencias instaladas em .venv
+goto :deps_done
+
+:install_user
+echo  Aviso: nao foi possivel criar .venv; instalando no usuario (--user)
 !PYTHON! -m pip install --upgrade pip --quiet --user
-if errorlevel 1 (
-    echo  Aviso: nao foi possivel atualizar pip, tentando continuar...
-)
-
 !PYTHON! -m pip install -r requirements.txt --user
-if errorlevel 1 (
-    echo.
-    echo  ERRO ao instalar dependencias!
-    echo.
-    echo  Possiveis causas:
-    echo   - Sem conexao com internet
-    echo   - Antivirus bloqueando pip
-    echo   - requirements.txt corrompido
-    echo.
-    echo  Tente executar manualmente:
-    echo   !PYTHON! -m pip install -r requirements.txt --user
-    echo.
-    pause
-    exit /b 1
-)
-echo  OK: Todas as dependencias instaladas
+if errorlevel 1 goto :pip_error
+echo  OK: Dependencias instaladas (--user)
+goto :deps_done
 
-REM ── 4. Criar launcher EasyPAML.bat ─────────────────────────────────────────
+:pip_error
 echo.
-echo [3/4] Criando launcher...
+echo  ERRO ao instalar dependencias!
+echo.
+echo  Possiveis causas:
+echo   - Sem conexao com internet
+echo   - Antivirus bloqueando pip
+echo.
+echo  Tente executar manualmente nesta pasta:
+echo   !PYTHON! -m venv .venv
+echo   .venv\Scripts\python.exe -m pip install -r requirements.txt
+echo.
+pause
+exit /b 1
+
+:deps_done
+
+REM ── 4. CODEML ───────────────────────────────────────────────────────────────
+echo.
+echo [3/4] Verificando CODEML...
+if exist "bin\codeml.exe" (
+    echo  OK: bin\codeml.exe encontrado
+) else (
+    echo  Aviso: bin\codeml.exe nao encontrado. Baixe o PAML em
+    echo  https://github.com/abacus-gene/paml/releases e copie codeml.exe para a pasta bin
+)
 
 set APP_DIR=%~dp0
 set APP_DIR=!APP_DIR:~0,-1!
-
-(
-    echo @echo off
-    echo cd /d "!APP_DIR!"
-    echo !PYTHON! EasyPAML.py
-    echo if errorlevel 1 pause
-) > "!APP_DIR!\EasyPAML.bat"
-
-echo  OK: Launcher criado (EasyPAML.bat)
 
 REM ── 5. Atalho na Area de Trabalho ───────────────────────────────────────────
 echo.
@@ -124,7 +137,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$s.Save()" >nul 2>&1
 
 if errorlevel 1 (
-    echo  Aviso: atalho nao criado (permissao negada). Use EasyPAML.bat diretamente.
+    echo  Aviso: atalho nao criado - permissao negada. Use EasyPAML.bat diretamente.
 ) else (
     echo  OK: Atalho "EasyPAML" criado na area de trabalho
 )
@@ -137,7 +150,7 @@ echo.
 echo  Para usar o EasyPAML:
 echo    - Duplo-clique em "EasyPAML" na area de trabalho
 echo    - OU duplo-clique em EasyPAML.bat nesta pasta
-echo    - OU execute: !PYTHON! EasyPAML.py
+echo    - OU execute: .venv\Scripts\python.exe EasyPAML.py
 echo.
 echo  Dados de exemplo em: exemplos_teste\
 echo.

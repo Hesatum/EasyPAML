@@ -18,7 +18,24 @@ _HERE = Path(__file__).resolve().parent
 os.chdir(_HERE)
 sys.path.insert(0, str(_HERE))
 
-from src.gui.main_gui import App
+try:
+    import tkinter  # noqa: F401
+except ImportError:
+    print("O EasyPAML precisa do tkinter (janela gráfica do Python), que não está instalado.\n"
+          "  Ubuntu/Debian: sudo apt install python3-tk\n"
+          "  Fedora:        sudo dnf install python3-tkinter\n"
+          "  macOS (brew):  brew install python-tk\n"
+          "O modo linha de comando funciona sem ele: python3 easypaml_cli.py --help\n"
+          "--- EasyPAML needs tkinter (sudo apt install python3-tk).")
+    sys.exit(1)
+try:
+    from src.gui.main_gui import App
+except ImportError as exc:
+    print(f"Dependência não encontrada: {exc}\n"
+          "Rode o instalador (Linux/macOS: ./install.sh · Windows: install.bat)\n"
+          "e abra pelo EasyPAML.sh / EasyPAML.bat (ou .venv/bin/python EasyPAML.py).\n"
+          f"--- Missing dependency: {exc}. Run the installer first.")
+    sys.exit(1)
 
 
 def main():

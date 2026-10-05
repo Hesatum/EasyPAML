@@ -140,7 +140,9 @@ def build_ctl_text(params: Dict[str, object]) -> str:
         comment = _COMMENTS.get(key)
         line = f"{key:>13} = {val}"
         if comment:
-            line = f"{line:<44}* {comment}"
+            # sempre pelo menos 3 espaços antes do '*': colado no valor
+            # ("arquivo.fasta*") o codeml lê o '*' como parte do nome
+            line = line.ljust(max(44, len(line) + 3)) + f"* {comment}"
         lines.append(line)
     return "\n".join(lines) + "\n"
 

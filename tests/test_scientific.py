@@ -119,3 +119,16 @@ def test_m7_m8_references():
     assert '2000' in info['M7']['references'] and '2005' not in info['M7']['references']
     assert '2000' in info['M8']['references']
     assert 'M8a' in info
+
+
+def test_ctl_comment_never_glued_to_long_values():
+    """Bug real: com nome longo o '*' do comentário colava no valor
+    ('..._seq.fasta*') e o codeml não achava o arquivo."""
+    app = CodemlBatchAnalysis()
+    app.config = {}
+    long = '25_PHOT2__phototropin2_chloroplast_avoidance_high_light_M8a_seq.fasta'
+    text = app.generate_ctl_content(long, 't.nwk', 'o.txt', CodemlBatchAnalysis.MODEL_CONFIGS['M8'],
+                                    model_name='M8')
+    line = next(l for l in text.splitlines() if l.strip().startswith('seqfile'))
+    assert f"{long}   *" in line
+    assert parse_ctl_text(text)['seqfile'] == long
