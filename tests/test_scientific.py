@@ -147,3 +147,13 @@ def test_regenerated_summary_keeps_tiny_p_values(tmp_path):
     p = float(df.loc[0, 'p_M7_vs_M8'])
     assert 1e-24 < p < 1e-22
     assert float(df.loc[0, 'q_M7_vs_M8']) > 0
+
+
+def test_m8a_can_be_left_out():
+    """Item 2 (2ª rodada): opção para não adicionar o M8a; o padrão continua com ele."""
+    assert set(CodemlBatchAnalysis.auto_complete_null_models(['M8'], include_m8a=False)) == {'M8', 'M7'}
+    assert set(CodemlBatchAnalysis.auto_complete_null_models(['M8'])) == {'M8', 'M7', 'M8a'}
+    # M8a escolhido à mão continua mesmo com a opção desligada
+    assert 'M8a' in CodemlBatchAnalysis.auto_complete_null_models(['M8', 'M8a'], include_m8a=False)
+    cli = (ROOT / 'easypaml_cli.py').read_text(encoding='utf-8')
+    assert '--no-m8a' in cli

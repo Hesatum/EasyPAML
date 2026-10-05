@@ -146,6 +146,7 @@ Opções principais (`--help` mostra todas):
 | Opção | Padrão | Significado |
 |---|---|---|
 | `--models` | `M1a,M2a,M7,M8,M8a` | modelos a rodar |
+| `--no-m8a` | — | não roda o M8a (sem o teste M8a vs M8); na janela: Configurações › "Incluir M8a" |
 | `--tree-folder` | — | pasta com uma árvore por gene (`GENE.nwk`), pareada pelo nome; também vale `GENE.nwk` na própria pasta de alinhamentos |
 | `--codonfreq` | `2` (F3x4) | CodonFreq do codeml (0 Fequal, 1 F1x4, 2 F3x4, 3 F61, 7 FMutSel …) |
 | `--ncatg` | `10` | categorias da beta (M7/M8/M8a) |

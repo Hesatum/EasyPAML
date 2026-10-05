@@ -371,6 +371,13 @@ TEXTS_PT: dict[str, object] = {
         "parâmetros) -- se usar, descreva assim nos métodos."
     ),
     "label_ncatg": "Categorias da beta (ncatG, M7/M8):",
+    "label_include_m8a": "Incluir M8a (nulo do M8)",
+    "label_include_m8a_hint": (
+        "Ligado (padrão): ao escolher M8 com 'Modelos nulos automáticos',\n"
+        "o EasyPAML roda também o M8a e faz o teste M8a vs M8, além do\n"
+        "M7 vs M8. O M8a vs M8 não é enganado por sítios neutros (ω = 1).\n"
+        "Desligue para economizar tempo (cerca de 1/3 a mais por gene)."
+    ),
     "label_found_alignments": "{n} alinhamento(s) encontrado(s): {names}",
     "label_no_alignments": "Nenhum alinhamento (.fasta, .fas, .phy, .phylip) nesta pasta",
     "label_per_gene_trees": "{n} de {total} gene(s) com árvore própria (GENE.nwk) -- usada no lugar do arquivo de árvore",
@@ -837,6 +844,13 @@ TEXTS_EN: dict[str, object] = {
         "(more parameters) -- if you use it, say so in Methods."
     ),
     "label_ncatg": "Beta categories (ncatG, M7/M8):",
+    "label_include_m8a": "Include M8a (null of M8)",
+    "label_include_m8a_hint": (
+        "On (default): when M8 is chosen with 'Automatic null models',\n"
+        "EasyPAML also runs M8a and the M8a vs M8 test, besides\n"
+        "M7 vs M8. M8a vs M8 is not fooled by neutral sites (ω = 1).\n"
+        "Turn off to save time (about 1/3 more per gene)."
+    ),
     "label_found_alignments": "{n} alignment(s) found: {names}",
     "label_no_alignments": "No alignment (.fasta, .fas, .phy, .phylip) in this folder",
     "label_per_gene_trees": "{n} of {total} gene(s) with their own tree (GENE.nwk) -- used instead of the tree file",

@@ -352,7 +352,8 @@ class CodemlBatchAnalysis:
         self.current_process = None   # compat. GUI (último processo ativo)
     
     @staticmethod
-    def auto_complete_null_models(selected_models: List[str], include_neutral: bool = True) -> List[str]:
+    def auto_complete_null_models(selected_models: List[str], include_neutral: bool = True,
+                                  include_m8a: bool = True) -> List[str]:
         """
         Auto-completa modelos nulos baseado em modelos alternativos selecionados.
         
@@ -374,6 +375,8 @@ class CodemlBatchAnalysis:
                 nulls = CodemlBatchAnalysis.NULL_MODEL_PAIRS[model]
                 if isinstance(nulls, str):
                     nulls = [nulls]
+                if not include_m8a:   # opção "não incluir M8a" (o M8a escolhido à mão fica)
+                    nulls = [m for m in nulls if m != 'M8a']
                 completed_models.update(nulls)
         
         # Se include_neutral está habilitado, adicionar modelos neutros se seus

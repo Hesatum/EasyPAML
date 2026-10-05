@@ -70,6 +70,9 @@ def parse_args():
     ap.add_argument('--output', type=Path, help="pasta de saida")
     ap.add_argument('--models', default='M1a,M2a,M7,M8,M8a',
                     help="modelos separados por virgula (default: M1a,M2a,M7,M8,M8a)")
+    ap.add_argument('--no-m8a', action='store_true',
+                    help="nao roda o M8a (nulo extra do M8; teste M8a vs M8). Por padrao o M8a roda "
+                         "junto com M7 e M8")
     ap.add_argument('--codonfreq', type=int, default=DEFAULT_CODONFREQ,
                     help=f"CodonFreq do codeml (default: {DEFAULT_CODONFREQ} = F3x4). Opcoes: {_CODONFREQ_HELP}")
     ap.add_argument('--ncatg', type=int, default=10, help="categorias da beta em M7/M8 (default: 10)")
@@ -135,6 +138,7 @@ def parse_args():
         cfg.setdefault('strict', False)
         cfg.setdefault('lang', args.lang)
         cfg.setdefault('verbose', args.verbose)
+        cfg.setdefault('no_m8a', args.no_m8a)
         cfg.setdefault('workers', 4)
         cfg.setdefault('timeout', 1600)
         cfg.setdefault('run_lrt', True)
@@ -178,6 +182,7 @@ def parse_args():
         'strict': args.strict,
         'lang': args.lang,
         'verbose': args.verbose,
+        'no_m8a': args.no_m8a,
     }
 
 
@@ -254,6 +259,8 @@ def main():
     messages.set_language(cfg.get('lang') or messages.system_language())
     lang = messages.get_language()
 
+    if cfg.get('no_m8a') and 'M8a' in cfg['models']:
+        cfg['models'] = [m for m in cfg['models'] if m != 'M8a']
     bad_models = set(cfg['models']) - VALID_MODELS
     if bad_models:
         sys.exit(f"Modelo(s) invalido(s): {sorted(bad_models)}. Validos: {sorted(VALID_MODELS)}")

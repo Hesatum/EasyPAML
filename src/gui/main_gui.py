@@ -848,6 +848,7 @@ class App(ctk.CTk):
         
         # Opção para incluir modelos neutros automaticamente
         self.include_neutral_models = ctk.BooleanVar(value=True)
+        self.include_m8a_var = ctk.BooleanVar(value=True)
 
         # Auto-detect CPU cores; user can adjust via slider
         _max_cores = CodemlBatchAnalysis.available_cores()
@@ -1109,6 +1110,24 @@ class App(ctk.CTk):
                       text_color=self.COLORS['text_primary'],
                       command=lambda: self._show_help(
                           TEXTS["label_ignore_stops"], TEXTS["label_ignore_stops_hint"])
+                      ).pack(side='right', padx=(0, 4))
+
+        # Incluir M8a como nulo automático do M8
+        row_m8a = ctk.CTkFrame(ci, fg_color='transparent')
+        row_m8a.pack(fill='x', pady=(10, 0))
+        ctk.CTkLabel(row_m8a, text=TEXTS["label_include_m8a"],
+                     font=(_FONT_UI, 12),
+                     text_color=self.COLORS['text_secondary']).pack(side='left')
+        ctk.CTkSwitch(row_m8a, text="", variable=self.include_m8a_var,
+                      onvalue=True, offvalue=False, switch_width=36, switch_height=18,
+                      progress_color=self.COLORS['accent_cyan'], button_color='#f0fdff',
+                      button_hover_color='#cffafe', fg_color=self.COLORS['border']).pack(side='right')
+        ctk.CTkButton(row_m8a, text="?", width=18, height=18, corner_radius=9,
+                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
+                      hover_color=self.COLORS['border_hover'],
+                      text_color=self.COLORS['text_primary'],
+                      command=lambda: self._show_help(
+                          TEXTS["label_include_m8a"], TEXTS["label_include_m8a_hint"])
                       ).pack(side='right', padx=(0, 4))
 
         # Poda automática de árvore toggle
@@ -2065,7 +2084,8 @@ class App(ctk.CTk):
     def _selected_models(self):
         selected = [k for k, v in self.model_vars.items() if v.get()]
         if self.include_neutral_models.get():
-            selected = CodemlBatchAnalysis.auto_complete_null_models(selected, include_neutral=True)
+            selected = CodemlBatchAnalysis.auto_complete_null_models(
+                selected, include_neutral=True, include_m8a=bool(self.include_m8a_var.get()))
         return selected
 
     def start_analysis(self):
