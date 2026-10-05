@@ -45,7 +45,10 @@ def find_codeml(explicit: Optional[str] = None) -> Optional[str]:
     ambiente EASYPAML_CODEML, bin/codeml(.exe) do projeto, codeml no PATH."""
     for cand in (explicit, os.environ.get('EASYPAML_CODEML')):
         if cand and Path(cand).exists():
-            return str(Path(cand).resolve())
+            # absolute(), NÃO resolve(): no Debian/Ubuntu /usr/bin/codeml é um link
+            # para um script único que decide o programa pelo nome com que foi
+            # chamado -- resolvendo o link, rodaria o baseml.
+            return str(Path(cand).absolute())
     if _CODEML_BIN.exists():
         return str(_CODEML_BIN)
     return shutil.which('codeml')

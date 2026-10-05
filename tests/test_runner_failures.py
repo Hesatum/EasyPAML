@@ -231,3 +231,13 @@ def test_per_gene_tree_is_paired_by_file_name(tmp_path, fake_codeml, monkeypatch
     assert summary2['ok'] == 2
     assert (tmp_path / 'second' / 'out' / 'M7' / 'g2_M7_tree.nwk').read_text().startswith('10  1')
     assert (tmp_path / 'second' / 'out' / 'M7' / 'gene_M7_tree.nwk').read_text().startswith('6  1')
+
+
+def test_codeml_symlink_is_not_resolved(tmp_path):
+    """Debian: /usr/bin/codeml -> script único que escolhe o programa pelo nome."""
+    from src.backend.codeml_backend import find_codeml
+    target = tmp_path / 'baseml'
+    target.write_text('#!/bin/sh\n')
+    link = tmp_path / 'codeml'
+    link.symlink_to(target)
+    assert find_codeml(str(link)).endswith('codeml')
