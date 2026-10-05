@@ -319,6 +319,40 @@ class SitesParser:
         return None
     
     @staticmethod
+    def extract_site_classes(filepath: Path) -> Optional[Dict[str, List[float]]]:
+        """Proporções e ω de cada classe de sítio ('p:' / 'w:' depois de
+        'MLEs of dN/dS (w) for site classes'). None se não houver."""
+        try:
+            text = Path(filepath).read_text(encoding='utf-8', errors='ignore')
+        except OSError:
+            return None
+        matches = list(re.finditer(
+            r'MLEs of dN/dS \(w\) for site classes[^\n]*\n\s*\n\s*p:\s*([^\n]+)\n\s*w:\s*([^\n]+)', text))
+        m = matches[-1] if matches else None   # último bloco (arquivo com vários modelos)
+        if not m:
+            return None
+        try:
+            p = [float(x) for x in m.group(1).split()]
+            w = [float(x) for x in m.group(2).split()]
+        except ValueError:
+            return None
+        if not p or len(p) != len(w):
+            return None
+        return {'p': p, 'w': w}
+
+    @staticmethod
+    def extract_positive_class(filepath: Path) -> Optional[Dict[str, float]]:
+        """ω e proporção (p₁) da classe extra do M2a/M8 -- a que pode ter ω > 1.
+
+        É a última classe da tabela 'MLEs of dN/dS (w) for site classes'.
+        Diferente do ω médio (soma de p·ω), que fica < 1 mesmo quando há
+        seleção positiva forte em poucos sítios."""
+        classes = SitesParser.extract_site_classes(filepath)
+        if not classes:
+            return None
+        return {'p': classes['p'][-1], 'omega': classes['w'][-1]}
+
+    @staticmethod
     def extract_omega_by_tags(filepath: Path) -> Dict[str, float]:
         """
         Extrai omegas diferenciados por tags/labels de branches (Branch/BranchSite models)

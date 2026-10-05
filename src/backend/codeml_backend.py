@@ -24,12 +24,61 @@ import pandas as pd
 from scipy import stats
 
 from .sites_parser import SitesParser
+from . import lrt_stats
+from .alignment_io import (AlignmentError, cleandata_kept_codons, find_stop_codons,
+                           read_alignment, to_fasta)
+from .ctl_params import (DEFAULT_CODONFREQ, DEFAULT_CTL_PARAMS, build_ctl_text,
+                         codonfreq_label)
+from .preflight import group_by_gene, list_alignment_files
+from .site_map import codeml_site_count, write_sitemap
+from .version import __version__
 
 # Absolute path to the bundled codeml binary — works regardless of CWD.
 _APP_ROOT   = Path(__file__).resolve().parent.parent.parent
 _CODEML_BIN = (_APP_ROOT / 'bin' / 'codeml.exe'
                if platform.system() == 'Windows'
                else _APP_ROOT / 'bin' / 'codeml')
+
+
+def find_codeml(explicit: Optional[str] = None) -> Optional[str]:
+    """Caminho do codeml a usar, em ordem: argumento/config, variável de
+    ambiente EASYPAML_CODEML, bin/codeml(.exe) do projeto, codeml no PATH."""
+    for cand in (explicit, os.environ.get('EASYPAML_CODEML')):
+        if cand and Path(cand).exists():
+            return str(Path(cand).resolve())
+    if _CODEML_BIN.exists():
+        return str(_CODEML_BIN)
+    return shutil.which('codeml')
+
+
+_CODEML_VERSION_CACHE: Dict[str, Optional[str]] = {}
+
+
+def codeml_version(codeml_path: Optional[str]) -> Optional[str]:
+    """'4.9j' / '4.10.10' -- o codeml só imprime a versão quando roda uma
+    análise, então roda uma minúscula (3 sequências, 3 códons, M0) numa
+    pasta temporária. Leva milissegundos."""
+    if not codeml_path:
+        return None
+    if codeml_path in _CODEML_VERSION_CACHE:
+        return _CODEML_VERSION_CACHE[codeml_path]
+    version = None
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            tdp = Path(td)
+            (tdp / 's.fa').write_text(">a\nATGAAACCC\n>b\nATGAAGCCC\n>c\nATGAAACCG\n")
+            (tdp / 't.nwk').write_text("(a,b,c);\n")
+            (tdp / 'p.ctl').write_text("seqfile = s.fa\ntreefile = t.nwk\noutfile = o.txt\n"
+                                       "noisy = 1\nseqtype = 1\nCodonFreq = 0\nmodel = 0\nNSsites = 0\n")
+            out = subprocess.run([codeml_path, 'p.ctl'], cwd=td, stdin=subprocess.DEVNULL,
+                                 capture_output=True, text=True, timeout=15, errors='replace')
+            m = re.search(r'version\s+([0-9][\w.]*)', out.stdout + out.stderr, re.IGNORECASE)
+            if m:
+                version = m.group(1).rstrip(',')
+    except Exception:
+        version = None
+    _CODEML_VERSION_CACHE[codeml_path] = version
+    return version
 
 
 class CodemlBatchAnalysis:
@@ -43,7 +92,7 @@ class CodemlBatchAnalysis:
             'NSsites': 0,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 7
+            'CodonFreq': DEFAULT_CODONFREQ
         },
         'M1a': {
             'description': 'Nearly Neutral - ω < 1 or = 1',
@@ -51,7 +100,7 @@ class CodemlBatchAnalysis:
             'NSsites': 1,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 7
+            'CodonFreq': DEFAULT_CODONFREQ
         },
         'M2a': {
             'description': 'Positive Selection - adds ω > 1 class',
@@ -59,7 +108,7 @@ class CodemlBatchAnalysis:
             'NSsites': 2,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 7
+            'CodonFreq': DEFAULT_CODONFREQ
         },
         'M7': {
             'description': 'Beta distribution - ω < 1',
@@ -67,7 +116,7 @@ class CodemlBatchAnalysis:
             'NSsites': 7,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 7
+            'CodonFreq': DEFAULT_CODONFREQ
         },
         'M8': {
             'description': 'Beta + ω - adds ω > 1 class',
@@ -75,7 +124,15 @@ class CodemlBatchAnalysis:
             'NSsites': 8,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 7
+            'CodonFreq': DEFAULT_CODONFREQ
+        },
+        'M8a': {
+            'description': 'M8 with the extra class fixed at ω = 1 (null for M8)',
+            'model': 0,
+            'NSsites': 8,
+            'fix_omega': 1,
+            'omega': 1.0,
+            'CodonFreq': DEFAULT_CODONFREQ
         },
         'Branch': {
             'description': 'Branch model - different ω for foreground',
@@ -83,7 +140,7 @@ class CodemlBatchAnalysis:
             'NSsites': 0,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 7
+            'CodonFreq': DEFAULT_CODONFREQ
         },
         'Branch-site': {
             'display_name': 'Branch-site',
@@ -92,7 +149,7 @@ class CodemlBatchAnalysis:
             'NSsites': 2,
             'fix_omega': 0,
             'omega': 0.5,
-            'CodonFreq': 7
+            'CodonFreq': DEFAULT_CODONFREQ
         },
         'Branch-site_null': {
             'description': 'Branch-site null model - fixes ω=1 (null for Branch-site model)',
@@ -100,7 +157,7 @@ class CodemlBatchAnalysis:
             'NSsites': 2,
             'fix_omega': 1,
             'omega': 1.0,
-            'CodonFreq': 7
+            'CodonFreq': DEFAULT_CODONFREQ
         }
     }
     
@@ -140,7 +197,7 @@ class CodemlBatchAnalysis:
             'purpose': 'Null hypothesis: continuous distribution of selection, ω constrained < 1.',
             'interpretation': 'Provides smooth alternative to discrete M1a for testing positive selection.',
             'use_case': 'Alternative null hypothesis; compare against M8.',
-            'references': 'Yang et al. (2005)'
+            'references': 'Yang, Nielsen, Goldman & Pedersen (2000) Genetics 155:431-449'
         },
         'M8': {
             'full_name': 'Beta & Positive Selection Model',
@@ -148,8 +205,22 @@ class CodemlBatchAnalysis:
             'parameters': 'Beta(p,q) for ω < 1, PLUS additional class with ω > 1',
             'purpose': 'Alternative hypothesis: continuous distribution + discrete class for positive selection.',
             'interpretation': 'Reject M7 at p < 0.05 = evidence for positive selection. More flexible than M2a.',
-            'use_case': 'Alternative test for positive selection; compare against M7.',
-            'references': 'Yang et al. (2005)'
+            'use_case': 'Alternative test for positive selection; compare against M7 and M8a.',
+            'references': 'Yang, Nielsen, Goldman & Pedersen (2000) Genetics 155:431-449; '
+                          'BEB: Yang, Wong & Nielsen (2005) Mol Biol Evol 22:1107-1118'
+        },
+        'M8a': {
+            'full_name': 'Beta & ω = 1 (null for M8)',
+            'test_type': 'Site Model',
+            'parameters': 'Beta(p,q) for ω < 1, PLUS an extra class with ω fixed at 1',
+            'purpose': 'Null hypothesis for M8 that allows neutral sites (ω = 1). '
+                       'M7 vs M8 can reject M7 just because some sites are neutral; '
+                       'M8a vs M8 only rejects if there are sites with ω > 1.',
+            'interpretation': 'Reject M8a in favour of M8 = evidence for positive selection '
+                              'that is not explained by neutral sites.',
+            'use_case': 'Run together with M8 (added automatically as null).',
+            'references': 'Swanson, Nielsen & Yang (2003) Mol Biol Evol 20:18-20; '
+                          'Wong et al. (2004) Genetics 168:1041-1051'
         },
         'Branch': {
             'full_name': 'Branch Model',
@@ -176,7 +247,8 @@ class CodemlBatchAnalysis:
         'Site Models': [
             ('M0', 'M1a', 'Tests if ω varies among sites'),
             ('M1a', 'M2a', 'Tests for positive selection'),
-            ('M7', 'M8', 'Alternative test for positive selection')
+            ('M7', 'M8', 'Alternative test for positive selection'),
+            ('M8a', 'M8', 'Tests for positive selection allowing neutral sites in the null')
         ],
         'Branch Model': [
             ('M0', 'Branch', 'Tests if ω differs in foreground branch')
@@ -189,7 +261,7 @@ class CodemlBatchAnalysis:
     # Mapeamento de modelos alternativos -> modelos nulos (auto-seleção)
     NULL_MODEL_PAIRS = {
         'M2a': 'M1a',              # M2a (alternativo) -> M1a (nulo)
-        'M8': 'M7',                # M8 (alternativo) -> M7 (nulo)
+        'M8': ['M7', 'M8a'],       # M8 (alternativo) -> M7 e M8a (nulos)
         'Branch': 'M0',            # Branch -> M0 (nulo)
         'Branch-site': 'Branch-site_null'  # Branch-site -> Branch-site_null
     }
@@ -201,6 +273,12 @@ class CodemlBatchAnalysis:
     #   - M1a (NSsites=1): ω₁=1 é restringido INTERNAMENTE pelo CODEML via NSsites=1;
     #     fix_omega=1 no .ctl fixaria TODOS os ω=1, corrompendo o modelo
     NEUTRAL_MODELS = {
+        'M8a': {
+            'fix_omega': 1,
+            'omega': 1.0,
+            'corresponding_alternative': 'M8',
+            'reason': 'M8a: classe extra com ω = 1 fixado (Swanson et al. 2003)'
+        },
         'Branch-site_null': {
             'fix_omega': 1,
             'omega': 1.0,
@@ -290,8 +368,10 @@ class CodemlBatchAnalysis:
         
         for model in selected_models:
             if model in CodemlBatchAnalysis.NULL_MODEL_PAIRS:
-                null_model = CodemlBatchAnalysis.NULL_MODEL_PAIRS[model]
-                completed_models.add(null_model)
+                nulls = CodemlBatchAnalysis.NULL_MODEL_PAIRS[model]
+                if isinstance(nulls, str):
+                    nulls = [nulls]
+                completed_models.update(nulls)
         
         # Se include_neutral está habilitado, adicionar modelos neutros se seus
         # correspondentes alternativos foram selecionados
@@ -313,66 +393,55 @@ class CodemlBatchAnalysis:
                              model_name: str = None,
                              kappa: float = None,
                              fix_blength: int = 0) -> str:
-        """Gera conteúdo do arquivo .ctl baseado no modelo.
+        """Gera o .ctl com TODOS os parâmetros relevantes escritos explicitamente.
 
-        Parameters:
-        - seqfile, treefile, outfile : caminhos/nomes a inserir no .ctl
-        - model_config               : dict com parâmetros do modelo
-        - omega                      : valor inicial de ω
-        - cleandata                  : 0/1 — remover sítios ambíguos
-        - model_name                 : nome do modelo (para verificar modelos neutros)
-        - kappa                      : κ estimado pelo M0 (warm-start)
-        - fix_blength                : 0=estimar do zero  2=warm-start do M0 (safe —
-                                       branch lengths re-estimados livremente a partir
-                                       de valores iniciais melhores; sem impacto nos
-                                       resultados finais)
+        Nada fica no default interno do codeml: o mesmo .ctl dá o mesmo
+        resultado no PAML 4.9j e no 4.10.x (o ncatG padrão, por exemplo,
+        mudou entre versões). Valores base em ctl_params.DEFAULT_CTL_PARAMS;
+        model_config (modelo + edições do usuário na janela "cfg") e
+        self.config (opções globais: CodonFreq, ncatG, kappa) sobrescrevem.
 
-        Branch-site_null: fix_omega=1, omega=1.0 (ω₂=1 fixado, Yang et al. 2005)
+        - kappa       : κ inicial; se vier do warm-start M0 substitui o padrão
+        - fix_blength : 0 = estimar do zero; 1 = usar a árvore como ponto de partida
+        Modelos neutros (M8a, Branch-site_null): fix_omega = 1, omega = 1.0 sempre.
         """
-        # Para Branch-site_null, garantir fix_omega=1 mesmo se o usuário tiver editado
-        fix_omega = model_config['fix_omega']
-        final_omega = omega
+        params = dict(DEFAULT_CTL_PARAMS)
+        cfg = self.config or {}
+        skip = ('description', 'display_name')
+        # 1) padrão do modelo (MODEL_CONFIGS)
+        for key, val in (model_config or {}).items():
+            if key not in skip and val not in (None, ''):
+                params[key] = val
+        # 2) opções globais (GUI: Configurações; CLI: --codonfreq/--ncatg/--kappa)
+        for key in ('CodonFreq', 'ncatG', 'kappa', 'fix_kappa', 'icode', 'method',
+                    'Small_Diff', 'getSE', 'estFreq'):
+            if cfg.get(key) is not None:
+                params[key] = cfg[key]
+        # 3) edições do usuário na janela "cfg" deste modelo
+        custom = cfg.get('custom_model_params') or cfg.get('custom_model_configs') or {}
+        for key, val in (custom.get(model_name) or {}).items():
+            if key not in skip and val not in (None, ''):
+                params[key] = val
 
+        params['seqfile'] = seqfile
+        params['treefile'] = treefile
+        params['outfile'] = outfile
+        params['cleandata'] = int(cleandata)
+        params['fix_blength'] = int(fix_blength)
+
+        fix_omega = int(params.get('fix_omega', 0))
+        final_omega = omega
         if model_name in self.NEUTRAL_MODELS:
             fix_omega = 1
             final_omega = 1.0
-        elif fix_omega == 0:
-            final_omega = omega
+        params['fix_omega'] = fix_omega
+        params['omega'] = final_omega
 
-        # ── Bloco de kappa ────────────────────────────────────────────────────
         if kappa is not None and 0.1 <= kappa <= 20:
-            kappa_block = (
-                f"\n    fix_kappa = 0              * κ livre (re-estimado)"
-                f"\n        kappa = {kappa:.4f}     * ts/tv warm-start do M0 (ponto de partida)"
-            )
-        else:
-            kappa_block = ""
+            params['fix_kappa'] = 0
+            params['kappa'] = round(float(kappa), 4)
 
-        # ── Linha fix_blength ─────────────────────────────────────────────────
-        # fix_blength=2: warm-start dos branch lengths do M0; re-estimados livremente.
-        # Matematicamente equivalente a fix_blength=0, porém converge mais rápido.
-        blength_line = f"\n  fix_blength = {fix_blength}              * 0=estimar do zero  2=warm-start dos branch lengths" if fix_blength != 0 else ""
-
-        ctl_template = f"""      seqfile = {seqfile}
-     treefile = {treefile}
-      outfile = {outfile}
-
-        noisy = 1              * 0-9: output detail (1=minimal stdout, model fit written to outfile)
-      verbose = 1              * More or less detailed report in outfile
-      seqtype = 1              * Data type
-        ndata = 1              * Number of data sets or loci
-        icode = 0              * Genetic code
-    cleandata = {cleandata}              * Remove sites with ambiguity data?
-
-        model = {model_config['model']}         * Models for omega varying across lineages
-      NSsites = {model_config['NSsites']}          * Models for omega varying across sites
-    CodonFreq = {model_config['CodonFreq']}        * Codon frequencies
-      estFreq = 0              * Use observed freqs or estimate freqs by ML
-        clock = 0              * Clock model
-    fix_omega = {fix_omega}         * Estimate or fix omega
-        omega = {final_omega}        * Initial or fixed omega{kappa_block}{blength_line}
-"""
-        return ctl_template
+        return build_ctl_text(params)
 
     @staticmethod
     def _extract_kappa(output_path: Path) -> Optional[float]:
@@ -407,15 +476,12 @@ class CodemlBatchAnalysis:
 
         O CODEML escreve, perto do final do output, a topologia com os comprimentos
         de ramo estimados por ML em formato Newick.  Essa árvore é usada nos modelos
-        complexos (M1a, M2a, M7, M8, Branch-site) como ponto de partida via
-        fix_blength = 2 ("inicializar a partir dos valores fornecidos na árvore mas
-        ainda re-estimar livremente").
+        de sítio (opção warm_start_m0) como ponto de partida via fix_blength = 1
+        ("initial" no pamlDOC: os valores da árvore são só o início da otimização
+        e continuam sendo estimados).
 
-        fix_blength = 2  ≠  fix_blength = 1
-          • fix_blength = 1: branch lengths FIXADOS (aproximação, altera resultados).
-          • fix_blength = 2: branch lengths usados só como WARM-START; o otimizador
-            ainda os re-estima livremente.  Os resultados finais são matematicamente
-            idênticos a qualquer outro ponto de partida — apenas convergem mais rápido.
+        Atenção: fix_blength = 2 é "fixed" -- prende os comprimentos nos valores da
+        árvore e muda os resultados. Versões até 0.2.0 usavam 2 aqui por engano.
 
         Estratégia de extração:
         Varredura reversa das linhas do arquivo (a árvore ajustada aparece após os
@@ -440,365 +506,385 @@ class CodemlBatchAnalysis:
             pass
         return None
 
-    def run_batch_analysis(self):
-        """Executa análise em batch"""
+    # ══════════════════════════════════════════════════════════════════
+    # Log / mensagens
+    # ══════════════════════════════════════════════════════════════════
 
+    # Modelos de sítio: árvore desenraizada (o PAML exige sem relógio/marcas)
+    _SITE_MODELS_UNROOT = {'M0', 'M1a', 'M2a', 'M7', 'M8', 'M8a'}
+    # Modelos que aceitam warm-start do M0
+    _SITE_WARMUP = {'M1a', 'M2a', 'M7', 'M8', 'M8a'}
+
+    @staticmethod
+    def _t(key: str, **kw) -> str:
+        from .messages import t
+        return t(key, **kw)
+
+    def _emit(self, level: str, text: str) -> None:
+        """Uma mensagem por linha para o usuário.
+
+        level: 'info' | 'ok' | 'warn' | 'error' | 'debug' | 'header'.
+        Com config['log_callback'] (GUI) a mensagem vai para lá, já
+        classificada; sem callback (CLI) vai para o stdout -- 'debug' só com
+        config['verbose']."""
+        cb = (self.config or {}).get('log_callback')
+        if cb is not None:
+            try:
+                cb(level, text)
+                return
+            except Exception:
+                pass
+        if level == 'debug' and not (self.config or {}).get('verbose'):
+            return
+        print(text, flush=True)
+
+    def _log(self, text: str) -> None:
+        """Linha no batch_analysis_log.txt (thread-safe)."""
+        path = getattr(self, '_log_path', None)
+        if path is None:
+            return
+        with self._log_lock:
+            with open(path, 'a', encoding='utf-8') as fh:
+                fh.write(text.rstrip('\n') + '\n')
+
+    def _progress(self, done: int, total: int, gene: str = '') -> None:
+        cb = (self.config or {}).get('progress_callback')
+        if cb is not None:
+            try:
+                cb(done, total, gene)
+            except Exception:
+                pass
+
+    # ══════════════════════════════════════════════════════════════════
+    # Execução em lote
+    # ══════════════════════════════════════════════════════════════════
+
+    def effective_ctl_defaults(self) -> Dict[str, object]:
+        """Parâmetros globais do .ctl efetivamente usados nesta execução."""
+        params = dict(DEFAULT_CTL_PARAMS)
+        for key in ('CodonFreq', 'ncatG', 'kappa', 'fix_kappa', 'icode', 'method',
+                    'Small_Diff', 'getSE', 'estFreq'):
+            if (self.config or {}).get(key) is not None:
+                params[key] = self.config[key]
+        params['cleandata'] = int((self.config or {}).get('cleandata', 1))
+        return params
+
+    def _write_run_config(self, codeml_path: Optional[str], codeml_ver: Optional[str],
+                          genes: List[str]) -> None:
+        """run_config.json -- tudo o que é preciso para descrever/reproduzir a
+        execução: versões, parâmetros do .ctl por modelo e opções do wrapper.
+        Gravado pela GUI e pelo CLI."""
+        import json
+        cfg = self.config
+        skip = {'pause_event', 'stop_event', 'manual_continue_event',
+                'manual_continue_all_event', 'log_callback', 'progress_callback',
+                'labeled_tree_content', 'labeled_tree_branchsite'}
+        wrapper = {}
+        for k, v in cfg.items():
+            if k in skip:
+                continue
+            if isinstance(v, Path):
+                v = str(v)
+            elif isinstance(v, dict):
+                v = {kk: (str(vv) if isinstance(vv, Path) else vv) for kk, vv in v.items()}
+            wrapper[k] = v
+        per_model = {}
+        for m in cfg['models']:
+            mc = dict(self.MODEL_CONFIGS.get(m, {}))
+            mc.update((cfg.get('custom_model_params') or {}).get(m, {}))
+            ctl = self.effective_ctl_defaults()
+            ctl.update({k: v for k, v in mc.items() if k not in ('description', 'display_name')})
+            if m in self.NEUTRAL_MODELS:
+                ctl['fix_omega'], ctl['omega'] = 1, 1.0
+            elif cfg.get('omega') is not None:
+                ctl['omega'] = float(cfg['omega'])
+            ctl['CodonFreq_name'] = codonfreq_label(ctl.get('CodonFreq'))
+            per_model[m] = ctl
+        data = {
+            'easypaml_version': __version__,
+            'codeml_path': codeml_path,
+            'codeml_version': codeml_ver,
+            'python_version': platform.python_version(),
+            'platform': platform.platform(),
+            'started_at': datetime.now().isoformat(timespec='seconds'),
+            'interface': cfg.get('interface', 'cli'),
+            'genes': genes,
+            'ctl_parameters_by_model': per_model,
+            'lrt': {f"{n} vs {a}": {'df': (info['df'] if info['df'] is not None else 'n foreground groups'),
+                                    'null_distribution': ('chi2(1) (mixture 50:50 reported as reference)'
+                                                          if info['boundary'] else 'chi2(df)'),
+                                    'multiple_testing': 'Benjamini-Hochberg within the pair, all genes of this run'}
+                    for (n, a), info in lrt_stats.PAIRS.items()
+                    if n in cfg['models'] and a in cfg['models']},
+            'options': wrapper,
+        }
+        out = Path(cfg['output_folder']) / 'run_config.json'
+        out.write_text(json.dumps(data, indent=2, ensure_ascii=False, default=str), encoding='utf-8')
+
+    def run_batch_analysis(self):
+        """Executa a análise em lote. Retorna self.run_summary:
+        {'total', 'ok', 'failed', 'stopped', 'failures': {gene: motivo}, ...}."""
         if not self.config:
             raise ValueError(
                 "self.config vazio -- defina input_folder/tree_file/output_folder/models "
                 "antes de chamar run_batch_analysis() (ver easypaml_cli.py ou a GUI)."
             )
 
-        output_folder = self.config['output_folder']
+        cfg = self.config
+        cfg['input_folder'] = Path(cfg['input_folder'])
+        cfg['output_folder'] = Path(cfg['output_folder'])
+        output_folder = cfg['output_folder']
+        output_folder.mkdir(parents=True, exist_ok=True)   # cria se não existir
         log_file = output_folder / "batch_analysis_log.txt"
-        
-        # Criar log inicial
-        with open(log_file, 'w', encoding='utf-8') as log:
-            log.write("="*80 + "\n")
-            log.write("CODEML BATCH ANALYSIS LOG\n")
-            log.write("="*80 + "\n")
-            log.write(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            log.write(f"Input folder: {self.config['input_folder']}\n")
-            log.write(f"Output folder: {output_folder}\n")
-            log.write(f"Tree file: {self.config['tree_file']}\n")
-            log.write(f"Models: {', '.join(self.config['models'])}\n")
-            log.write("="*80 + "\n\n")
-        
-        # Obter arquivos de sequência (.fas, .fasta, .phy, .phylip)
-        _input = self.config['input_folder']
-        fas_files = sorted(
-            list(_input.glob("*.fas"))
-            + list(_input.glob("*.fasta"))
-            + list(_input.glob("*.phy"))
-            + list(_input.glob("*.phylip")),
-            key=lambda p: p.name.lower()
-        )
-        self.current_total_genes = len(fas_files)
+        self._log_path = log_file
+        self._log_lock = threading.Lock()
+        self.failures: Dict[str, str] = {}
+        self.gene_status: Dict[str, str] = {}
+        self.results = {}
+        self.current_stop_count = 0
+        self.current_stop_details = []
+
+        codeml_path = find_codeml(cfg.get('codeml_path'))
+        codeml_ver = codeml_version(codeml_path)
+        self._codeml_path = codeml_path
+        ctl_defaults = self.effective_ctl_defaults()
+
+        files = list_alignment_files(cfg['input_folder'])
+        chosen, ignored = group_by_gene(files)
+        genes = list(chosen.items())
+        self.current_total_genes = len(genes)
         self.current_processed_genes = 0
+        n_workers = max(1, int(cfg.get('n_workers', 1)))
 
-        n_workers = max(1, int(self.config.get('n_workers', 1)))
+        with open(log_file, 'w', encoding='utf-8') as log:
+            log.write("=" * 80 + "\n")
+            log.write("CODEML BATCH ANALYSIS LOG\n")
+            log.write("=" * 80 + "\n")
+            log.write(f"EasyPAML: {__version__}\n")
+            log.write(f"codeml: {codeml_path} (version {codeml_ver})\n")
+            log.write(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            log.write(f"Input folder: {cfg['input_folder']}\n")
+            log.write(f"Output folder: {output_folder}\n")
+            log.write(f"Tree file: {cfg.get('tree_file')}\n")
+            log.write(f"Models: {', '.join(cfg['models'])}\n")
+            log.write(f"Base .ctl parameters: {dict(ctl_defaults)}\n")
+            log.write("=" * 80 + "\n\n")
 
-        print("\n" + "="*80)
-        print("STARTING BATCH ANALYSIS")
-        print("="*80)
-        print(f"Processing {len(fas_files)} genes × {len(self.config['models'])} models  |  workers: {n_workers}\n")
+        self._write_run_config(codeml_path, codeml_ver, [g for g, _ in genes])
+
+        self._emit('header', self._t('run_start', n=len(genes), m=len(cfg['models']),
+                                     w=n_workers, version=codeml_ver or '?'))
+        self._emit('info', self._t('run_models', models=', '.join(cfg['models']),
+                                   codonfreq=codonfreq_label(ctl_defaults['CodonFreq']),
+                                   ncatg=ctl_defaults['ncatG'], cleandata=ctl_defaults['cleandata']))
+        for dup in ignored:
+            msg = self._t('duplicate_ignored', ignored=dup.name, used=chosen[dup.stem].name)
+            self._emit('warn', msg)
+            self._log(f"[WARN] {msg}")
 
         start_time = time.time()
+        self._progress(0, len(genes))
 
-        def _process_gene(args):
-            idx, fas_file = args
-            pause_event = self.config.get('pause_event')
-            stop_event = self.config.get('stop_event')
+        if not codeml_path:
+            self._emit('error', self._t('no_codeml'))
+            for gene, _ in genes:
+                self._mark_gene_failed(gene, self._t('reason_no_codeml'))
+        else:
+            indexed = [(i, g, p) for i, (g, p) in enumerate(genes, 1)]
+            if n_workers > 1:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+                    list(executor.map(lambda a: self._process_gene(*a, len(genes)), indexed))
+            else:
+                for item in indexed:
+                    self._process_gene(*item, len(genes))
 
+        total_time = time.time() - start_time
+        stopped = bool(cfg.get('stop_event') is not None and cfg['stop_event'].is_set())
+
+        # LRT primeiro -- popula q/p, que _save_summary() anexa ao TSV.
+        if cfg.get('run_lrt', True) and len(cfg['models']) > 1:
+            self._emit('info', self._t('lrt_start'))
+            self._run_lrt_analysis()
+        self._save_summary()
+
+        n_ok = sum(1 for s in self.gene_status.values() if s == 'ok')
+        n_failed = sum(1 for s in self.gene_status.values() if s == 'failed')
+        self.run_summary = {
+            'total': len(genes), 'ok': n_ok, 'failed': n_failed, 'stopped': stopped,
+            'failures': dict(self.failures), 'minutes': total_time / 60,
+            'output_folder': str(output_folder), 'codeml_version': codeml_ver,
+        }
+        self._write_failures_file()
+
+        if stopped:
+            final = self._t('summary_stopped', ok=n_ok, n=len(genes))
+            self._emit('warn', final)
+        elif n_failed:
+            final = self._t('summary_failed', ok=n_ok, n=len(genes), failed=n_failed)
+            self._emit('error', final)
+            for gene, reason in sorted(self.failures.items()):
+                self._emit('error', self._t('summary_failed_item', gene=gene, reason=reason))
+        else:
+            final = self._t('summary_ok', ok=n_ok, n=len(genes), minutes=total_time / 60)
+            self._emit('ok', final)
+        self._emit('info', self._t('results_in', path=output_folder))
+        self._log("\n" + final)
+        self._log(f"Total time: {total_time / 60:.1f} minutes")
+        return self.run_summary
+
+    def _write_failures_file(self) -> None:
+        """genes_status.tsv: uma linha por gene, 'ok' ou o motivo da falha."""
+        path = Path(self.config['output_folder']) / 'genes_status.tsv'
+        with open(path, 'w', encoding='utf-8') as fh:
+            fh.write("Gene\tstatus\treason\n")
+            for gene in sorted(self.gene_status):
+                reason = self.failures.get(gene, '').replace('\t', ' ').replace('\n', ' ')
+                fh.write(f"{gene}\t{self.gene_status[gene]}\t{reason}\n")
+
+    def _mark_gene_failed(self, gene: str, reason: str) -> None:
+        with self._results_lock:
+            self.failures[gene] = reason
+            self.gene_status[gene] = 'failed'
+            self.results.setdefault(gene, {})
+        self._emit('error', self._t('gene_failed', gene=gene, reason=reason))
+        self._log(f"[FAILED] {gene}: {reason}")
+
+    def _process_gene(self, idx: int, gene: str, fas_file: Path, n_total: int):
+        cfg = self.config
+        pause_event = cfg.get('pause_event')
+        stop_event = cfg.get('stop_event')
+
+        def _done():
+            with self._results_lock:
+                self.current_processed_genes += 1
+                done = self.current_processed_genes
+            self._progress(done, n_total, gene)
+
+        if stop_event is not None and stop_event.is_set():
+            return gene, {}
+        if pause_event is not None:
+            pause_event.wait()
+
+        self._emit('info', self._t('gene_start', i=idx, n=n_total, gene=gene))
+
+        # ── Validação do alinhamento (mesmas regras do preflight) ──────────
+        try:
+            aln = read_alignment(fas_file)
+        except AlignmentError as exc:
+            self._mark_gene_failed(gene, str(exc))
+            _done()
+            return gene, {}
+        from .preflight import Issue, format_issue
+        from .messages import get_language
+        problem = None
+        if len(aln.names) < 3:
+            problem = Issue(gene, 'too_few_sequences', 'error', {'n': len(aln.names)})
+        elif not aln.is_aligned:
+            problem = Issue(gene, 'unaligned', 'error', {'lengths': sorted(set(aln.lengths))})
+        elif aln.length % 3 != 0:
+            problem = Issue(gene, 'not_multiple_of_3', 'error',
+                            {'length': aln.length, 'remainder': aln.length % 3})
+        elif aln.duplicate_names:
+            problem = Issue(gene, 'duplicate_name', 'error', {'name': aln.duplicate_names[0]})
+        if problem is not None:
+            self._mark_gene_failed(gene, format_issue(problem, get_language()))
+            _done()
+            return gene, {}
+
+        # ── Stop codons: decididos ANTES de rodar ─────────────────────────
+        stops = find_stop_codons(aln.names, aln.seqs)
+        last_codon = aln.length // 3
+        internal = [s for s in stops if s[1] != last_codon]
+        if stops:
+            with self._results_lock:
+                self.current_stop_count += len(stops)
+                self.current_stop_details.extend(
+                    {'gene': gene, 'sequence': n, 'codon_position': p, 'codon': c} for n, p, c in stops)
+            details = "; ".join(f"{n} códon {p} ({c})" if get_language() == 'pt'
+                                else f"{n} codon {p} ({c})" for n, p, c in stops[:5])
+            if len(stops) > 5:
+                details += f"; +{len(stops) - 5}"
+            if internal and not cfg.get('ignore_stop_codons', False):
+                self._mark_gene_failed(gene, self._t('reason_stop_codons', details=details))
+                _done()
+                return gene, {}
+            msg = self._t('warn_stops_masked', gene=gene, count=len(stops), details=details)
+            self._emit('warn', msg)
+            self._log(f"[WARN] {msg}")
+
+        gene_results: Dict[str, Dict] = {}
+        gene_kappa: Optional[float] = None
+        gene_fitted_tree: Optional[str] = None
+
+        models_ordered = (['M0'] + [m for m in cfg['models'] if m != 'M0']
+                          if 'M0' in cfg['models'] else list(cfg['models']))
+
+        # Warm-start opcional via M0 implícito (ver AGENTS.md / METODOS.md)
+        _needs_warmup = bool(set(models_ordered) & self._SITE_WARMUP) and cfg.get('warm_start_m0', False)
+        if 'M0' not in models_ordered and _needs_warmup:
+            self._emit('debug', f"    {gene} · M0 (implicit warm-start)…")
+            _warmup = self._run_single_analysis(fas_file=fas_file, model_name='M0',
+                                                log_file=self._log_path, aln=aln,
+                                                save_outputs=False)
+            if _warmup and _warmup.get('output_file'):
+                _wpath = Path(_warmup['output_file'])
+                gene_kappa = self._extract_kappa(_wpath)
+                gene_fitted_tree = self._extract_fitted_tree(_wpath)
+            self._log(f"[M0-implicit] {gene}: warm-start kappa={gene_kappa}")
+
+        for model_name in models_ordered:
             if stop_event is not None and stop_event.is_set():
-                return fas_file.stem, {}
-
+                break
             if pause_event is not None:
                 pause_event.wait()
+            kappa_for_this = None if model_name == 'M0' else gene_kappa
+            fitted_for_this = None if model_name == 'M0' else gene_fitted_tree
+            self._emit('debug', self._t('model_running', gene=gene, model=model_name))
+            if fitted_for_this is not None and cfg.get('warm_start_multistart', True):
+                result = self._run_model_multistart(fas_file, model_name, self._log_path,
+                                                    kappa_for_this, fitted_for_this, aln=aln)
+            else:
+                result = self._run_single_analysis(fas_file=fas_file, model_name=model_name,
+                                                   log_file=self._log_path,
+                                                   warm_start_kappa=kappa_for_this,
+                                                   fitted_tree=fitted_for_this, aln=aln)
+            gene_results[model_name] = result
+            if result.get('status') == 'success':
+                self._emit('ok', self._t('model_ok', gene=gene, model=model_name,
+                                         lnl=result['lnL'], t=result.get('execution_time') or 0))
+                if model_name == 'M0' and result.get('output_file'):
+                    out_path = Path(result['output_file'])
+                    k = self._extract_kappa(out_path)
+                    if k is not None:
+                        gene_kappa = k
+                    ft = self._extract_fitted_tree(out_path)
+                    if ft:
+                        gene_fitted_tree = ft
+            elif result.get('status') == 'stopped':
+                break
+            else:
+                self._emit('error', self._t('model_failed', gene=gene, model=model_name,
+                                            reason=result.get('fail_reason', '?')))
 
-            # Resetar flag manual-all para cada gene
-            manual_all_ev = self.config.get('manual_continue_all_event')
-            if manual_all_ev is not None:
-                try:
-                    manual_all_ev.clear()
-                except Exception:
-                    pass  # evento já limpo ou inválido — não é crítico
-
-            print(f"\n{'='*60}")
-            print(f"[{idx}/{len(fas_files)}] Gene: {fas_file.stem}")
-            print(f"{'='*60}")
-
-            # ── Validar arquivo de sequência antes de passar ao CODEML ───────────
-            # CODEML rejeita silenciosamente arquivos com sequências de tamanhos
-            # diferentes (cria outfile vazio e sai com código -1).  Detectar aqui
-            # evita arquivos de resultado vazios e dá ao usuário uma mensagem clara.
-            # Suporta FASTA (>..) e PHYLIP sequential/interleaved (N  L na 1ª linha).
-            try:
-                _raw_text  = fas_file.read_text(encoding='utf-8', errors='ignore')
-                _raw_lines = [l for l in _raw_text.splitlines() if l.strip()]
-                _seqs: dict[str, str] = {}
-
-                _first_clean = _raw_lines[0].strip() if _raw_lines else ''
-                _is_phylip   = (
-                    bool(_first_clean)
-                    and _first_clean.split()[0].lstrip('-').isdigit()
-                    and not _first_clean.startswith('>')
-                )
-
-                if _is_phylip:
-                    # PHYLIP sequential: "N  L\nname10+seq\n..."
-                    _ph_parts = _first_clean.split()
-                    _ph_ns    = int(_ph_parts[0])
-                    _ph_ls    = int(_ph_parts[1]) if len(_ph_parts) > 1 else 0
-                    # Cada sequência ocupa uma ou mais linhas; nome = primeiros 10 chars
-                    _seq_lines = _raw_lines[1:]
-                    _cur_name: str | None = None
-                    _cur_seq:  list[str]  = []
-                    for _sln in _seq_lines:
-                        # Nova sequência: linha com nome no início (não é espaço ou continuação)
-                        if not _sln.startswith(' ') and len(_seqs) < _ph_ns:
-                            if _cur_name is not None:
-                                _seqs[_cur_name] = ''.join(_cur_seq)
-                            _cur_name = _sln[:10].strip() or f'seq{len(_seqs)+1}'
-                            _cur_seq  = [re.sub(r'\s', '', _sln[10:])]
-                        elif _cur_name is not None:
-                            _cur_seq.append(re.sub(r'\s', '', _sln))
-                    if _cur_name is not None:
-                        _seqs[_cur_name] = ''.join(_cur_seq)
-                else:
-                    # FASTA: > header lines
-                    _cur: str | None = None
-                    _parts: list[str] = []
-                    for _ln in _raw_lines:
-                        if _ln.startswith('>'):
-                            if _cur is not None:
-                                _seqs[_cur] = ''.join(_parts)
-                            _cur   = _ln[1:].split()[0]
-                            _parts = []
-                        elif _cur is not None:
-                            _parts.append(_ln.strip())
-                    if _cur is not None:
-                        _seqs[_cur] = ''.join(_parts)
-
-                _fmt_label = "PHYLIP" if _is_phylip else "FASTA"
-
-                if len(_seqs) < 2:
-                    print(f"[SKIP] {fas_file.name}: arquivo {_fmt_label} com menos de 2 sequencias — pulando")
-                    with open(log_file, 'a', encoding='utf-8') as _log:
-                        _log.write(f"[SKIP] {fas_file.stem}: menos de 2 sequencias no {_fmt_label}\n")
-                    with self._results_lock:
-                        self.results[fas_file.stem] = {}
-                        self.current_processed_genes += 1
-                    return fas_file.stem, {}
-
-                _lengths = {len(s) for s in _seqs.values()}
-                if len(_lengths) != 1:
-                    _sorted = sorted(_lengths)
-                    print(
-                        f"[SKIP] {fas_file.name}: sequencias nao alinhadas "
-                        f"(tamanhos: {_sorted}) — pulando"
-                    )
-                    with open(log_file, 'a', encoding='utf-8') as _log:
-                        _log.write(
-                            f"[SKIP] {fas_file.stem}: sequencias nao alinhadas "
-                            f"(tamanhos distintos: {_sorted})\n"
-                        )
-                    with self._results_lock:
-                        self.results[fas_file.stem] = {}
-                        self.current_processed_genes += 1
-                    return fas_file.stem, {}
-
-                _seq_len = _lengths.pop()
-                if _seq_len < 6:
-                    print(f"[SKIP] {fas_file.name}: sequencias muito curtas ({_seq_len} bp) — pulando")
-                    with open(log_file, 'a', encoding='utf-8') as _log:
-                        _log.write(f"[SKIP] {fas_file.stem}: sequencias com {_seq_len} bp (minimo 6 bp)\n")
-                    with self._results_lock:
-                        self.results[fas_file.stem] = {}
-                        self.current_processed_genes += 1
-                    return fas_file.stem, {}
-
-                # ── Verificação de alinhamento de códons ─────────────────────────
-                # CODEML opera em códons (tripletos de nucleotídeos).  O comprimento
-                # total do alinhamento deve ser múltiplo de 3.  Se não for, o último
-                # codon estará incompleto e o CODEML pode falhar ou descartar sítios.
-                if _seq_len % 3 != 0:
-                    _rem = _seq_len % 3
-                    _msg = (
-                        f"[WARN] {fas_file.stem}: comprimento do alinhamento "
-                        f"({_seq_len} bp) nao e multiplo de 3 "
-                        f"(sobra(m) {_rem} base(s)). "
-                        f"CODEML requer alinhamento de codons — revise o arquivo."
-                    )
-                    print(f"[WARN] {fas_file.name}: {_seq_len} bp não é múltiplo de 3 "
-                          f"(sobra(m) {_rem} base(s))")
-                    with open(log_file, 'a', encoding='utf-8') as _log:
-                        _log.write(_msg + '\n')
-                    # Não pula — CODEML tenta e reporta o erro com mais detalhes
-
-                # ── Contagem antecipada de stop codons ──────────────────────────
-                # Stop codons (TAA, TAG, TGA) no meio de um alinhamento de códons
-                # indicam erros de anotação ou frameshifts.  O CODEML irá pausar
-                # ao encontrá-los — informar o usuário ANTES da execução permite
-                # decidir se ativa "Ignorar Stop Codons" ou corrige o arquivo.
-                _STOP_SET = {'TAA', 'TAG', 'TGA'}
-                _stops_by_seq: list[tuple[str, int]] = []
-                for _sname, _seq in _seqs.items():
-                    _n_st = sum(
-                        1 for _ci in range(0, len(_seq) - 2, 3)
-                        if _seq[_ci:_ci+3].upper() in _STOP_SET
-                    )
-                    if _n_st > 0:
-                        _stops_by_seq.append((_sname, _n_st))
-
-                if _stops_by_seq:
-                    _tot_st = sum(n for _, n in _stops_by_seq)
-                    _seq_ct = len(_stops_by_seq)
-                    _detail = ', '.join(f'{s}({n})' for s, n in _stops_by_seq[:5])
-                    if len(_stops_by_seq) > 5:
-                        _detail += f' ...+{len(_stops_by_seq)-5} mais'
-                    _st_msg = (
-                        f"[WARN] {fas_file.stem}: {_tot_st} stop codon(s) "
-                        f"encontrado(s) em {_seq_ct} sequencia(s) [{_detail}]. "
-                        f"O CODEML ira pausar — ative 'Ignorar Stop Codons' "
-                        f"nas configuracoes ou remova-os do alinhamento."
-                    )
-                    print(f"  [WARN] Stop codons: {_tot_st} em {_seq_ct} seq(s) "
-                          f"— [{_detail}]")
-                    with open(log_file, 'a', encoding='utf-8') as _log:
-                        _log.write(_st_msg + '\n')
-
-            except Exception as _val_err:
-                # Erro ao ler o arquivo — deixar o CODEML tentar e lidar com a falha
-                with open(log_file, 'a', encoding='utf-8') as _log:
-                    _log.write(f"[WARN] {fas_file.stem}: nao foi possivel validar arquivo de sequencia: {_val_err}\n")
-
-            gene_results = {}
-            gene_kappa:       Optional[float] = None   # κ estimado pelo M0 → warm-start
-            gene_fitted_tree: Optional[str]   = None   # árvore ajustada M0 → warm-start branch lengths
-
-            # Sempre rodar M0 primeiro (se selecionado):
-            #  • κ estimado pelo M0 é usado como warm-start ou fixado nos modelos seguintes
-            #  • árvore ajustada pelo M0 (branch lengths ML) é usada como warm-start via fix_blength=2
-            models_ordered = (
-                ['M0'] + [m for m in self.config['models'] if m != 'M0']
-                if 'M0' in self.config['models']
-                else list(self.config['models'])
-            )
-
-            # ── Warm-start implícito via M0 ───────────────────────────────────
-            # O warm-start de κ e branch lengths só funciona se M0 foi selecionado.
-            # Quando o modo heurístico está ativo e M0 não está na lista, roda-se M0
-            # silenciosamente apenas para extrair κ e branch lengths como ponto de
-            # partida — os resultados do M0 implícito NÃO são salvos na saída.
-            # Sem esse passo, fix_kappa e fix_blength=2 nunca seriam ativados.
-            # Default False. Com multistart de omega (default quando ligado --
-            # ver warm_start_multistart / _run_model_multistart), medido em 20
-            # loci reais: 17.6x mais rapido (M1a isolado), 2/20 genes com lnL
-            # levemente pior que from-scratch (pior caso: -1.47), 2/20 MELHOR
-            # (multistart escapou de otimo que o from-scratch nao escapou).
-            # Ainda nao e garantia matematica de resultado identico -- so
-            # estatisticamente raro de divergir. Ligar via
-            # config['warm_start_m0'] = True sabendo do trade-off.
-            _SITE_WARMUP = {'M1a', 'M2a', 'M7', 'M8'}
-            _needs_warmup = bool(set(models_ordered) & _SITE_WARMUP) and self.config.get('warm_start_m0', False)
-            _m0_absent    = 'M0' not in models_ordered and _needs_warmup
-
-            if _m0_absent:
-                # M0 implicito: roda uma vez so pra extrair kappa/branch-lengths
-                # como warm-start dos modelos de sitio pedidos -- nao entra em
-                # gene_results nem no summary (usuario nao pediu M0).
-                print("  - Running M0 (implicit warm-start)...", end=" ", flush=True)
-                _warmup = self._run_single_analysis(
-                    fas_file=fas_file, model_name='M0', log_file=log_file,
-                    warm_start_kappa=None, fitted_tree=None,
-                )
-                if _warmup and _warmup.get('output_file'):
-                    _wpath = Path(_warmup['output_file'])
-                    gene_kappa = self._extract_kappa(_wpath)
-                    gene_fitted_tree = self._extract_fitted_tree(_wpath)
-                _ws_tag = f"k={gene_kappa:.3f}" if gene_kappa is not None else "falhou"
-                print(f"[OK] {_ws_tag}" if gene_kappa is not None else "[FALHOU]")
-                with open(log_file, 'a', encoding='utf-8') as _log:
-                    _log.write(f"[M0-implicit] {fas_file.stem}: warm-start {_ws_tag}\n")
-
-            for model_name in models_ordered:
-                if stop_event is not None and stop_event.is_set():
-                    break
-                if pause_event is not None:
-                    pause_event.wait()
-
-                # M0 não usa warm-start (ele É a fonte)
-                kappa_for_this       = None if model_name == 'M0' else gene_kappa
-                fitted_tree_for_this = None if model_name == 'M0' else gene_fitted_tree
-
-                print(f"  - Running {model_name}...", end=" ", flush=True)
-                if fitted_tree_for_this is not None and self.config.get('warm_start_multistart', True):
-                    result = self._run_model_multistart(
-                        fas_file, model_name, log_file, kappa_for_this, fitted_tree_for_this,
-                    )
-                else:
-                    result = self._run_single_analysis(
-                        fas_file=fas_file,
-                        model_name=model_name,
-                        log_file=log_file,
-                        warm_start_kappa=kappa_for_this,
-                        fitted_tree=fitted_tree_for_this,
-                    )
-                if result:
-                    gene_results[model_name] = result
-                    lnL = result.get('lnL')
-                    t   = result.get('execution_time')
-
-                    # Extrair κ e árvore ajustada do M0 para warm-start dos modelos seguintes
-                    if model_name == 'M0' and result.get('output_file'):
-                        out_path = Path(result['output_file'])
-
-                        extracted_k = self._extract_kappa(out_path)
-                        if extracted_k is not None:
-                            gene_kappa = extracted_k
-
-                        extracted_tree = self._extract_fitted_tree(out_path)
-                        if extracted_tree:
-                            gene_fitted_tree = extracted_tree
-
-                        # Montar sufixo de status para o log
-                        ws_parts = []
-                        if gene_kappa        is not None: ws_parts.append(f"k={gene_kappa:.3f}")
-                        if gene_fitted_tree  is not None: ws_parts.append("bl=ok")
-                        ws_tag = "  →warm-start[" + ", ".join(ws_parts) + "]" if ws_parts else ""
-                        print(f"[OK]  lnL={lnL:.2f}  t={t:.1f}s{ws_tag}" if lnL is not None and t is not None else f"[OK]{ws_tag}")
-                    else:
-                        tags = []
-                        if kappa_for_this is not None:
-                            tags.append(f"k0=warm={kappa_for_this:.3f}")
-                        if fitted_tree_for_this is not None:
-                            tags.append("bl=warm")
-                        ws = ("  (" + ", ".join(tags) + ")") if tags else ""
-                        print(f"[OK]  lnL={lnL:.2f}  t={t:.1f}s{ws}" if lnL is not None and t is not None else "[OK]")
-                else:
-                    print("[ERROR]")
-
+        stopped = stop_event is not None and stop_event.is_set()
+        failed_models = [m for m, r in gene_results.items() if r.get('status') == 'failed']
+        with self._results_lock:
+            self.results[gene] = gene_results
+        if failed_models:
+            reasons = "; ".join(f"{m}: {gene_results[m].get('fail_reason', '?')}" for m in failed_models)
             with self._results_lock:
-                self.results[fas_file.stem] = gene_results
-                self.current_processed_genes += 1
-
-            return fas_file.stem, gene_results
-
-        indexed = list(enumerate(fas_files, 1))
-
-        if n_workers > 1:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
-                list(executor.map(_process_gene, indexed))
+                self.failures[gene] = reasons
+                self.gene_status[gene] = 'failed'
+            self._log(f"[FAILED] {gene}: {reasons}")
+        elif stopped and len(gene_results) < len(models_ordered):
+            with self._results_lock:
+                self.gene_status[gene] = 'stopped'
         else:
-            for item in indexed:
-                _process_gene(item)
-        
-        total_time = time.time() - start_time
-        
-        # Executar LRT primeiro -- popula self._lrt_qvalues (BH), que
-        # _save_summary() abaixo anexa como colunas q_* no TSV.
-        if self.config['run_lrt'] and len(self.config['models']) > 1:
-            print(f"\n{'='*80}")
-            print("PERFORMING LIKELIHOOD RATIO TESTS")
-            print(f"{'='*80}")
-            self._run_lrt_analysis()
+            with self._results_lock:
+                self.gene_status[gene] = 'ok'
+        _done()
+        return gene, gene_results
 
-        # Salvar sumário
-        print(f"\n{'='*80}")
-        print("SAVING RESULTS")
-        print(f"{'='*80}")
-        self._save_summary()
-        
-        # Sumário final
-        print(f"\n{'='*80}")
-        print("ANALYSIS COMPLETE!")
-        print(f"{'='*80}")
-        print(f"Total time: {total_time/60:.1f} minutes")
-        print(f"Results saved to: {output_folder}")
-        print(f"Log file: {log_file}")
-        print(f"{'='*80}\n")
-    
     @staticmethod
     def _labeled_root_check(nwk_content: str) -> str:
         """
@@ -865,7 +951,8 @@ class CodemlBatchAnalysis:
     _WARM_START_OMEGA_TRIALS = (0.2, 1.0, 2.5)
 
     def _run_model_multistart(self, fas_file: Path, model_name: str, log_file: Path,
-                               warm_start_kappa: float, fitted_tree: str) -> Optional[Dict]:
+                               warm_start_kappa: float, fitted_tree: str,
+                               aln=None) -> Dict:
         """Roda o mesmo modelo com warm-start de branch length/kappa varias
         vezes, cada uma com omega inicial diferente, e fica com o de maior
         lnL. Mitiga o risco medido do warm-start (2026-09-18: em teste com
@@ -874,869 +961,475 @@ class CodemlBatchAnalysis:
         zero em cada tentativa -- so a parte barata (omega) e repetida.
         """
         best = None
+        last = None
         for omega0 in self._WARM_START_OMEGA_TRIALS:
             r = self._run_single_analysis(
                 fas_file=fas_file, model_name=model_name, log_file=log_file,
                 warm_start_kappa=warm_start_kappa, fitted_tree=fitted_tree,
-                omega_override=omega0,
+                omega_override=omega0, aln=aln,
             )
-            if r and r.get('lnL') is not None and (best is None or r['lnL'] > best['lnL']):
+            last = r
+            if r.get('status') == 'stopped':
+                return r
+            if r.get('lnL') is not None and (best is None or r['lnL'] > best['lnL']):
                 best = r
-        return best
+        return best if best is not None else last
+
+    # ── Monitoramento do processo codeml ─────────────────────────────────
+
+    @staticmethod
+    def _process_cpu_seconds(pid: int) -> Optional[float]:
+        """Tempo de CPU acumulado do processo (s). psutil se houver; /proc no
+        Linux; None se não for possível medir (aí só o timeout vale)."""
+        try:
+            import psutil
+            t = psutil.Process(pid).cpu_times()
+            return float(t.user + t.system)
+        except ImportError:
+            pass
+        except Exception:
+            return None
+        try:
+            with open(f"/proc/{pid}/stat", 'r') as fh:
+                fields = fh.read().rsplit(')', 1)[1].split()
+            ticks = os.sysconf(os.sysconf_names['SC_CLK_TCK'])
+            return (int(fields[11]) + int(fields[12])) / ticks
+        except Exception:
+            return None
+
+    @staticmethod
+    def _terminate(process) -> None:
+        """Encerra o codeml e recolhe o processo (sem deixar zumbi/órfão)."""
+        if process.poll() is not None:
+            return
+        try:
+            process.terminate()
+            process.wait(timeout=3)
+        except Exception:
+            try:
+                process.kill()
+                process.wait(timeout=3)
+            except Exception:
+                pass
+
+    def stop_all_processes(self) -> int:
+        """Encerra todos os codeml em execução (botão Parar). Retorna quantos."""
+        with self._processes_lock:
+            procs = list(self._active_processes)
+        for proc in procs:
+            self._terminate(proc)
+        return len(procs)
+
+    # ── Uma execução do codeml (gene × modelo) ───────────────────────────
+
+    def _failed(self, reason: str, exec_start: float = None, **extra) -> Dict:
+        d = {
+            'output_file': None, 'results_file': None, 'lnL': None, 'np': None,
+            'ntime': None, 'omega': None,
+            'execution_time': (time.time() - exec_start) if exec_start else 0.0,
+            'status': 'failed', 'fail_reason': reason, 'stop_count': 0, 'beb_skipped': False,
+        }
+        d.update(extra)
+        return d
 
     def _run_single_analysis(self, fas_file: Path, model_name: str,
-                            log_file: Path,
-                            warm_start_kappa: float = None,
-                            fitted_tree: str = None,
-                            omega_override: float = None) -> Optional[Dict]:
-        """Executa análise CODEML para um arquivo e modelo.
+                             log_file: Path = None,
+                             warm_start_kappa: float = None,
+                             fitted_tree: str = None,
+                             omega_override: float = None,
+                             aln=None,
+                             save_outputs: bool = True) -> Dict:
+        """Executa o CODEML para um gene e um modelo. Sempre retorna um dict
+        com 'status' = 'success' | 'failed' | 'stopped' (e 'fail_reason').
 
-        Parâmetros de otimização de velocidade (sem impacto nos resultados):
-          warm_start_kappa  : κ estimado pelo M0 — usado como ponto de partida para
-                              a busca de κ em modelos subsequentes (fix_kappa=0).
-          fitted_tree       : árvore Newick com branch lengths otimizados pelo M0 —
-                              escrita no sandbox e referenciada com fix_blength=2,
-                              de forma que o otimizador parte de valores já próximos
-                              do ótimo.  Os branch lengths são re-estimados livremente;
-                              os resultados finais são matematicamente idênticos.
-          omega_override    : ignora config['omega']/default do modelo pra esta
-                              chamada especifica -- usado pelo multi-start de
-                              omega (ver _run_model_multistart) pra tentar varios
-                              pontos de partida sem mutar self.config (que e
-                              compartilhado entre threads/genes em paralelo).
+        Pasta de saída MODELO/ (reprodutível: `cd MODELO && codeml GENE_MODELO.ctl`):
+          GENE_MODELO.ctl            todos os parâmetros, caminhos relativos
+          GENE_MODELO_seq.fasta      alinhamento exatamente como o codeml leu
+          GENE_MODELO_tree.nwk       árvore exatamente como o codeml leu
+          GENE_MODELO_results.txt    saída bruta do codeml (mlc)
+          GENE_MODELO_sitemap.json   numeração de sítios codeml -> alinhamento
+
+        warm_start_kappa / fitted_tree: ponto de partida vindo do M0
+        (fix_blength = 1). omega_override: multi-start de omega.
         """
+        cfg = self.config
+        log_file = log_file or getattr(self, '_log_path', None)
+        if not hasattr(self, '_log_lock'):
+            self._log_lock = threading.Lock()
+        if getattr(self, '_log_path', None) is None and log_file is not None:
+            self._log_path = Path(log_file)
         base_name = fas_file.stem
-        # start from default config and allow GUI-provided custom overrides
-        model_config = dict(self.MODEL_CONFIGS.get(model_name, {}))
-        try:
-            # GUI uses 'custom_model_params'; keep backward-compatible key 'custom_model_configs'
-            custom_configs = self.config.get('custom_model_params', None)
-            if custom_configs is None:
-                custom_configs = self.config.get('custom_model_configs', {}) or {}
-            else:
-                custom_configs = custom_configs or {}
+        safe = re.sub(r'[^\w.\-]+', '_', base_name)
 
-            if model_name in custom_configs:
-                for k, v in custom_configs[model_name].items():
-                    model_config[k] = v
-        except Exception:
-            pass  # parâmetros customizados inválidos — usa configuração padrão
-        
-        # Pause support: if provided, wait before creating output dir / starting work
-        pause_event = self.config.get('pause_event')
+        model_config = dict(self.MODEL_CONFIGS.get(model_name, {}))
+        custom = cfg.get('custom_model_params')
+        if custom is None:
+            custom = cfg.get('custom_model_configs', {}) or {}
+        for k, v in (custom or {}).get(model_name, {}).items():
+            model_config[k] = v
+
+        pause_event = cfg.get('pause_event')
+        stop_event = cfg.get('stop_event')
         if pause_event is not None:
             pause_event.wait()
+        if stop_event is not None and stop_event.is_set():
+            return self._failed(self._t('reason_stopped'), status='stopped')
 
-        # Criar diretório para o modelo
-        model_output_dir = self.config['output_folder'] / model_name
-        model_output_dir.mkdir(exist_ok=True)
-        
-        # Nomes dos arquivos
-        output_filename = f"{base_name}_{model_name}_results.txt"
-        ctl_filename = f"{base_name}_{model_name}.ctl"
-        ctl_path = model_output_dir / ctl_filename
-        
-        # ── Preparar sandbox de execução ────────────────────────────────────────
-        # Cria diretório temporário isolado usando tempfile.mkdtemp().
-        # • No Linux, usa /dev/shm (tmpfs em RAM) quando disponível → zero I/O de disco.
-        # • No Windows/Mac, usa o temp dir padrão do sistema (normalmente SSD NVMe).
-        # • Nome único gerado pelo tempfile → sem colisões, sem necessidade de retry.
-        temp_dir = Path(tempfile.mkdtemp(
-            prefix=f'easypam_{model_name}_{base_name}_',
-            dir=self._get_fast_tempdir()
-        ))
+        codeml_path = getattr(self, '_codeml_path', None) or find_codeml(cfg.get('codeml_path'))
+        if not codeml_path:
+            return self._failed(self._t('reason_no_codeml'))
 
+        model_output_dir = Path(cfg['output_folder']) / model_name
+        if save_outputs:
+            model_output_dir.mkdir(parents=True, exist_ok=True)
+
+        prefix = f"{safe}_{model_name}"
+        output_filename = f"{base_name}_{model_name}_results.txt"   # nome esperado pelo painel
+        codeml_outfile = f"{prefix}_results.txt"                     # sem espaços para o codeml
+        ctl_filename = f"{prefix}.ctl"
+        seq_filename = f"{prefix}_seq.fasta"
+        tree_filename = f"{prefix}_tree.nwk"
+
+        temp_dir = Path(tempfile.mkdtemp(prefix=f'easypam_{prefix}_', dir=self._get_fast_tempdir()))
+        exec_start = time.time()
         try:
-            # ── Sanitizar headers / preparar cópia do arquivo de sequência ─────────
-            # Para FASTA: CODEML 4.9j tem um limite interno de ~90 chars por linha de
-            # header.  Headers mais longos corrompem o parser e causam:
-            #   "Error in sequence data file: O at 10 seq 1."
-            # Solução: cópia no sandbox com headers truncados ao nome da espécie.
-            # Para PHYLIP: arquivo já está no formato correto; cópia direta no sandbox.
-            sanitized_fas = temp_dir / fas_file.name
-            _seqfile_ref  = str(fas_file.absolute())   # fallback: arquivo original
+            # ── Alinhamento ──────────────────────────────────────────────
+            if aln is None:
+                aln = read_alignment(fas_file)
+            names = list(aln.names)
+            excluded: List[str] = []
+
+            # ── Árvore: leitura, poda e desenraizamento ─────────────────
+            from io import StringIO
+            from Bio import Phylo
+            tree_path = Path(cfg.get('tree_file')) if cfg.get('tree_file') else None
+            per_gene = (cfg.get('per_gene_trees') or {}).get(base_name)
+            if per_gene:
+                tree_path = Path(per_gene)
+            tree_text = tree_path.read_text(encoding='utf-8', errors='ignore') if tree_path else ''
+            t_lines = tree_text.splitlines()
+            if t_lines and t_lines[0].strip() and t_lines[0].strip().split()[0].isdigit() \
+                    and not t_lines[0].strip().startswith('('):
+                tree_text = '\n'.join(t_lines[1:])
+
+            tree_obj = None
+            not_in_fasta: set = set()
             try:
-                _raw_seq = fas_file.read_text(encoding='utf-8', errors='replace')
-                _raw_seq_lines = _raw_seq.splitlines()
-                _first_sq = (_raw_seq_lines[0].strip() if _raw_seq_lines else '')
-                _seq_is_phylip = (
-                    bool(_first_sq)
-                    and _first_sq.split()[0].lstrip('-').isdigit()
-                    and not _first_sq.startswith('>')
-                )
-                if _seq_is_phylip:
-                    # PHYLIP: copiar sem modificar (formato já adequado para CODEML)
-                    sanitized_fas.write_text(_raw_seq, encoding='utf-8')
-                else:
-                    # FASTA: truncar headers ao primeiro token (nome da espécie)
-                    _lines_out: list[str] = []
-                    for _fline in _raw_seq_lines:
-                        if _fline.startswith('>'):
-                            _spname = _fline[1:].split()[0] if _fline[1:].strip() else 'seq'
-                            _lines_out.append(f'>{_spname}')
-                        else:
-                            _lines_out.append(_fline)
-                    sanitized_fas.write_text('\n'.join(_lines_out) + '\n', encoding='utf-8')
-                _seqfile_ref = str(sanitized_fas)
-            except Exception as _san_err:
-                with open(log_file, 'a', encoding='utf-8') as _log:
-                    _log.write(
-                        f"[WARN] {base_name}: preparação do arquivo de sequência falhou: "
-                        f"{_san_err}; usando arquivo original\n"
-                    )
+                tree_obj = Phylo.read(StringIO(tree_text), 'newick')
+                tree_taxa = {re.sub(r'[#$]\d+$', '', t.name) for t in tree_obj.get_terminals() if t.name}
+            except Exception as exc:
+                return self._failed(f"tree: {exc}", exec_start)
 
-            # ── Podar árvore para corresponder ao FASTA ──────────────────────────
-            # CODEML exige que o número de sequências no FASTA seja igual ao número
-            # de taxons declarado no cabeçalho do arquivo de árvore ("N  1").
-            # Controlado pelo toggle 'auto_prune_tree' (padrão: True).
-            #   1. Identificar taxons da árvore ausentes no FASTA → podar
-            #   2. Identificar sequências do FASTA ausentes na árvore → excluir
-            #   3. Atualizar o contador na primeira linha do arquivo de árvore
-            _pruned_tree_path: Optional[Path] = None
-            if not self.config.get('auto_prune_tree', True):
-                pass  # Poda desativada pelo usuário — usar árvore original
+            if cfg.get('auto_prune_tree', True):
+                not_in_tree = [n for n in names if n not in tree_taxa]
+                not_in_fasta = tree_taxa - set(names)
+                if not_in_tree:
+                    excluded = not_in_tree
+                    names = [n for n in names if n in tree_taxa]
+                    msg = self._t('warn_excluded', gene=base_name, names=', '.join(not_in_tree))
+                    if model_name == (cfg['models'][0] if cfg.get('models') else model_name):
+                        self._emit('warn', msg)
+                    self._log(f"[WARN] {base_name} [{model_name}]: {msg}")
+                for tx in not_in_fasta:
+                    for term in [t for t in tree_obj.get_terminals()
+                                 if t.name and re.sub(r'[#$]\d+$', '', t.name) == tx]:
+                        tree_obj.prune(term)
+                if not_in_fasta:
+                    self._log(f"[tree] {base_name} [{model_name}]: pruned {sorted(not_in_fasta)}")
+            if len(names) < 3:
+                return self._failed(self._t('reason_exception',
+                                            error=f"{len(names)} sequence(s) shared with the tree"),
+                                    exec_start)
+
+            # Cópia FASTA (sempre FASTA, mesmo que o original seja PHYLIP)
+            seqs_used = {n: aln.seqs[n] for n in names}
+            (temp_dir / seq_filename).write_text(to_fasta(names, seqs_used), encoding='utf-8')
+
+            def _newick(tree) -> str:
+                io_ = StringIO()
+                Phylo.write(tree, io_, 'newick')
+                txt = io_.getvalue().strip()
+                # Bio.Phylo escreve comprimento no nó raiz (":0.00000;"), que o codeml rejeita
+                return re.sub(r'\):[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?;$', ');', txt)
+
+            if model_name in self._SITE_MODELS_UNROOT and len(tree_obj.root.clades) == 2:
+                c0, c1 = tree_obj.root.clades
+                if c1.clades:
+                    tree_obj.root.clades = [c0] + c1.clades
+                elif c0.clades:
+                    tree_obj.root.clades = c0.clades + [c1]
+                tree_note = "unrooted"
             else:
-                try:
-                    from io import StringIO as _SIO
-                    from Bio import Phylo as _Phylo
+                tree_note = "as given (pruned if needed)"
 
-                    # Taxons presentes no arquivo de sequência sanitizado
-                    # (suporta FASTA com '>' e PHYLIP sequential com nome nos primeiros 10 chars)
-                    _fasta_taxa: set = set()
-                    _san_lines = sanitized_fas.read_text(encoding='utf-8', errors='ignore').splitlines()
-                    _san_first = _san_lines[0].strip() if _san_lines else ''
-                    _san_is_phy = (
-                        bool(_san_first)
-                        and _san_first.split()[0].lstrip('-').isdigit()
-                        and not _san_first.startswith('>')
-                    )
-                    if _san_is_phy:
-                        # PHYLIP: extrair nomes (primeiros 10 chars não-espaço de cada linha de sequência)
-                        _phy_ns = int(_san_first.split()[0])
-                        for _pln in _san_lines[1:]:
-                            if _pln and not _pln.startswith(' ') and len(_fasta_taxa) < _phy_ns:
-                                _tx = _pln[:10].strip()
-                                if _tx:
-                                    _fasta_taxa.add(_tx)
-                    else:
-                        # FASTA: extrair nomes dos headers '>'
-                        for _fln in _san_lines:
-                            if _fln.startswith('>'):
-                                _tx = _fln[1:].split()[0] if _fln[1:].strip() else ''
-                                if _tx:
-                                    _fasta_taxa.add(_tx)
-
-                    # Ler e parsear a árvore original
-                    _orig_tree_file = Path(self.config['tree_file'])
-                    _orig_raw = _orig_tree_file.read_text(encoding='utf-8', errors='ignore')
-                    _orig_lines = _orig_raw.splitlines()
-                    # Cabeçalho PHYLIP opcional ("N  k") na primeira linha
-                    _has_header = (
-                        _orig_lines
-                        and _orig_lines[0].strip()
-                        and _orig_lines[0].strip().split()[0].isdigit()
-                    )
-                    _nwk_str = '\n'.join(_orig_lines[1:]) if _has_header else _orig_raw
-
-                    _bio_tree = _Phylo.read(_SIO(_nwk_str), 'newick')
-                    _tree_taxa: set = {t.name for t in _bio_tree.get_terminals() if t.name}
-
-                    _not_in_tree  = _fasta_taxa - _tree_taxa   # sequências FASTA sem match na árvore
-                    _not_in_fasta = _tree_taxa - _fasta_taxa   # taxons da árvore ausentes no FASTA
-
-                    if _not_in_tree:
-                        with open(log_file, 'a', encoding='utf-8') as _log:
-                            _log.write(
-                                f"[WARN] {base_name} [{model_name}]: {len(_not_in_tree)} "
-                                f"sequencia(s) do FASTA nao encontrada(s) na arvore (serao "
-                                f"excluidas da analise): {sorted(_not_in_tree)}\n"
-                            )
-
-                    # Podar árvore: remover taxons ausentes no FASTA
-                    for _tx in _not_in_fasta:
-                        _bio_tree.prune(_tx)
-
-                    # Filtrar FASTA: manter apenas taxons presentes na árvore
-                    _matching = _fasta_taxa & _tree_taxa
-                    if _not_in_tree:
-                        _raw_san = sanitized_fas.read_text(encoding='utf-8', errors='ignore')
-                        _kept_lines: list = []
-                        _include = False
-                        for _fln in _raw_san.splitlines():
-                            if _fln.startswith('>'):
-                                _tx = _fln[1:].split()[0] if _fln[1:].strip() else ''
-                                _include = _tx in _matching
-                            if _include:
-                                _kept_lines.append(_fln)
-                        sanitized_fas.write_text('\n'.join(_kept_lines) + '\n', encoding='utf-8')
-
-                    # Escrever árvore podada no sandbox
-                    _pnwk_io = _SIO()
-                    _Phylo.write(_bio_tree, _pnwk_io, 'newick')
-                    _pnwk = _pnwk_io.getvalue().strip()
-                    # Bio.Phylo adiciona branch length no nó raiz (ex: "...):0.00000;")
-                    # que CODEML não aceita — remover esse artefato
-                    _pnwk = re.sub(r'\):[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?;$', ');', _pnwk)
-                    _n_match = _bio_tree.count_terminals()
-                    _pruned_content = f"{_n_match}  1\n{_pnwk}\n"
-                    _pruned_tree_path = temp_dir / 'pruned_tree.nwk'
-                    _pruned_tree_path.write_text(_pruned_content, encoding='utf-8')
-
-                except ImportError:
-                    pass  # Biopython indisponível; CODEML pode falhar com contagem diferente
-                except Exception as _prune_err:
-                    with open(log_file, 'a', encoding='utf-8') as _log:
-                        _log.write(
-                            f"[WARN] {base_name} [{model_name}]: poda automatica da arvore "
-                            f"falhou: {_prune_err}\n"
-                        )
-
-            # ── Desenraizar árvore para site models ──────────────────────────────
-            # O guia do PAML é explícito: site models (M0, M1a, M2a, M7, M8)
-            # exigem árvore NÃO-enraizada. Uma árvore enraizada tem o nó raiz
-            # com exatamente 2 filhos (bifurcação). Desraizamos colapsando um
-            # dos filhos do root para criar uma tricotomia no root.
-            # Branch/Branch-site são excluídos pois exigem árvore enraizada com
-            # marcação de ramo.
-            _SITE_MODELS_UNROOT = {'M0', 'M1a', 'M2a', 'M7', 'M8'}
-            if model_name in _SITE_MODELS_UNROOT:
-                try:
-                    from io import StringIO as _SIO_u
-                    from Bio import Phylo as _Phylo_u
-
-                    # Ler a árvore que está sendo usada (podada ou original)
-                    _usrc = _pruned_tree_path if _pruned_tree_path is not None \
-                            else Path(self.config['tree_file'])
-                    _uraw  = _usrc.read_text(encoding='utf-8', errors='ignore')
-                    _ulines = _uraw.splitlines()
-                    _uhdr   = (
-                        _ulines
-                        and _ulines[0].strip()
-                        and _ulines[0].strip().split()[0].isdigit()
-                    )
-                    _unwk = '\n'.join(_ulines[1:]) if _uhdr else _uraw
-
-                    _utree = _Phylo_u.read(_SIO_u(_unwk), 'newick')
-
-                    # Enraizada ↔ root com exatamente 2 filhos diretos
-                    if len(_utree.root.clades) == 2:
-                        _uc0, _uc1 = _utree.root.clades
-                        if _uc1.clades:
-                            # _uc1 é nó interno → elevar seus filhos ao root
-                            _utree.root.clades = [_uc0] + _uc1.clades
-                        elif _uc0.clades:
-                            # _uc0 é nó interno → elevar seus filhos ao root
-                            _utree.root.clades = _uc0.clades + [_uc1]
-                        # (se ambos forem folhas não há como desraizar — ignorar)
-
-                        _uio = _SIO_u()
-                        _Phylo_u.write(_utree, _uio, 'newick')
-                        _upnwk = _uio.getvalue().strip()
-                        # Remover artefato de branch length no root gerado pelo Bio.Phylo
-                        _upnwk = re.sub(
-                            r'\):[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?;$', ');', _upnwk
-                        )
-                        _un = _utree.count_terminals()
-                        _unrooted_path = temp_dir / 'unrooted_tree.nwk'
-                        _unrooted_path.write_text(
-                            f"{_un}  1\n{_upnwk}\n", encoding='utf-8'
-                        )
-                        _pruned_tree_path = _unrooted_path   # substituir referência
-                except ImportError:
-                    pass  # Bio.Phylo indisponível; prosseguir com árvore original
-                except Exception as _unroot_err:
-                    with open(log_file, 'a', encoding='utf-8') as _log:
-                        _log.write(
-                            f"[WARN] {base_name} [{model_name}]: desenraizamento "
-                            f"automatico falhou: {_unroot_err}\n"
-                        )
-
-            # ── Determinar conteúdo da árvore para este modelo ────────────────
-            labeled_full      = self.config.get('labeled_tree_content')
-            labeled_branchsite = self.config.get('labeled_tree_branchsite')
-
-            # Suporte ao nome antigo (BranchSite*) e novo (Branch-site*)
-            if model_name.startswith('BranchSite') or model_name.startswith('Branch-site'):
-                labeled_content = labeled_branchsite or (
-                    labeled_full if labeled_full and '#1' in labeled_full else None)
+            # Árvore marcada (Branch / Branch-site)
+            labeled_full = cfg.get('labeled_tree_content')
+            labeled_bs = cfg.get('labeled_tree_branchsite')
+            if model_name.startswith(('BranchSite', 'Branch-site')):
+                labeled_content = labeled_bs or (labeled_full if labeled_full and '#1' in labeled_full else None)
             elif model_name == 'Branch':
                 labeled_content = labeled_full
             else:
                 labeled_content = None
 
-            # ── Decidir treefile no .ctl e o que escrever no sandbox ──────────
-            # Prioridade:
-            #   1. Árvore marcada pelo usuário (labeled_content) — obrigatória para Branch/Branch-site
-            #   2. Árvore ajustada do M0 (fitted_tree) — warm-start via fix_blength=2
-            #      (apenas para modelos de sítios; Branch exige marcação específica)
-            #   3. Árvore original do usuário — caminho absoluto; nenhuma cópia necessária
+            fix_bl = 0
             if labeled_content:
-                # ── Strip de branch lengths da árvore labelada ────────────────────
-                # O guia do PAML recomenda remover branch lengths de árvores com
-                # marcação de ramos (#1, $1), pois podem interferir com as labels.
-                # O regex remove ":N.N" mas preserva "#1", "$1" e outras labels.
-                _lbl_clean = re.sub(
-                    r':\s*-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?',
-                    '',
-                    labeled_content
-                )
-                if _lbl_clean != labeled_content:
-                    print(f"  [tree] Branch lengths removidos da arvore labelada "
-                          f"(nao interferem com labels #1).")
-
-                # ── Podar a arvore LABELADA pra bater com o FASTA deste locus ─────
-                # O bloco de poda automatica acima (auto_prune_tree) so poda a
-                # arvore original/nao-labelada -- uma arvore labelada com #1 fixo
-                # nunca era ajustada por locus, entao qualquer gene faltando 1+
-                # taxons dava "Number of sequences different in tree and seq
-                # files" no codeml (achado rodando teste real do clado C: gene
-                # sem 1 dos 5 taxons #1 falhava). _not_in_fasta ja foi calculado
-                # acima (mesmo bloco de poda) a partir da arvore ORIGINAL sem
-                # sufixo #N -- reusa esse mesmo set aqui, so cuidando de casar
-                # nomes com ou sem "#N" no fim.
-                _lbl_missing = locals().get('_not_in_fasta')
-                if _lbl_missing:
+                lbl = re.sub(r':\s*-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?', '', labeled_content)
+                if not_in_fasta or excluded:
                     try:
-                        from io import StringIO as _SIO_lbl
-                        from Bio import Phylo as _Phylo_lbl
-
-                        _lbl_tree = _Phylo_lbl.read(_SIO_lbl(_lbl_clean), 'newick')
-                        _to_prune = [
-                            t for t in _lbl_tree.get_terminals()
-                            if re.sub(r'#\d+$', '', t.name or '') in _lbl_missing
-                        ]
-                        for _t in _to_prune:
-                            _lbl_tree.prune(_t)
-
-                        _lbl_io = _SIO_lbl()
-                        _Phylo_lbl.write(_lbl_tree, _lbl_io, 'newick')
-                        _lbl_clean = _lbl_io.getvalue().strip()
-                        # mesmo artefato de branch length residual no root do Bio.Phylo
-                        _lbl_clean = re.sub(
-                            r'\):[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?;$', ');', _lbl_clean
-                        )
-                        print(f"  [tree] Arvore labelada podada: {len(_to_prune)} "
-                              f"taxon(s) ausente(s) deste locus removido(s) "
-                              f"({[t.name for t in _to_prune]}).")
-                    except Exception as _lbl_prune_err:
-                        with open(log_file, 'a', encoding='utf-8') as _log_lp:
-                            _log_lp.write(
-                                f"[WARN] {base_name} [{model_name}]: poda da arvore "
-                                f"labelada falhou: {_lbl_prune_err}\n"
-                            )
-
-                (temp_dir / 'labeled.nwk').write_text(_lbl_clean, encoding='utf-8')
-                tree_ref  = 'labeled.nwk'   # relativo ao CWD (temp_dir)
-                fix_bl    = 0                # branch lengths estimados normalmente
-
-                # ── Verificação de enraizamento para Branch-site (Figura S1D) ─────
-                # Se os dois ramos ao redor da raiz têm designações DIFERENTES
-                # (um foreground #1, outro background), a árvore enraizada é necessária.
-                # Se ambos têm a mesma designação, a árvore poderia ser não-enraizada.
-                if model_name.startswith('Branch-site') or model_name.startswith('BranchSite'):
-                    _root_status = self._labeled_root_check(_lbl_clean)
-                    if _root_status == 'mixed':
-                        _rs_msg = (
-                            f"  [INFO] Raiz da arvore: ramos com designacoes DIFERENTES "
-                            f"(foreground #1 vs background). "
-                            f"Arvore enraizada esta sendo usada corretamente (Fig. S1D)."
-                        )
-                    elif _root_status == 'same':
-                        _rs_msg = (
-                            f"  [INFO] Raiz da arvore: ambos os ramos com a MESMA "
-                            f"designacao. Uma arvore nao-enraizada poderia ser usada "
-                            f"neste caso (Fig. S1B/S1C). A analise prossegue normalmente."
-                        )
-                    else:
-                        _rs_msg = None
-
-                    if _rs_msg:
-                        print(_rs_msg)
-                        with open(log_file, 'a', encoding='utf-8') as _log_bs:
-                            _log_bs.write(_rs_msg.strip() + '\n')
-            elif (fitted_tree
-                  and not model_name.startswith('Branch')
-                  and model_name != 'M0'):
-                # Warm-start: escrever árvore M0 no sandbox; usar fix_blength=2
-                # Os branch lengths serão RE-ESTIMADOS livremente — sem impacto nos resultados.
-                (temp_dir / 'warm_tree.nwk').write_text(fitted_tree, encoding='utf-8')
-                tree_ref  = 'warm_tree.nwk' # relativo ao CWD (temp_dir)
-                fix_bl    = 2                # inicializar a partir dos valores do M0
-            elif _pruned_tree_path is not None:
-                # Árvore podada/desenraizada — referenciada pelo nome do arquivo no sandbox
-                tree_ref  = _pruned_tree_path.name   # ex: 'pruned_tree.nwk' ou 'unrooted_tree.nwk'
-                fix_bl    = 0
+                        lbl_tree = Phylo.read(StringIO(lbl), 'newick')
+                        for term in [t for t in lbl_tree.get_terminals()
+                                     if re.sub(r'[#$]\d+$', '', t.name or '') not in set(names)]:
+                            lbl_tree.prune(term)
+                        lbl = _newick(lbl_tree)
+                    except Exception as exc:
+                        self._log(f"[WARN] {base_name} [{model_name}]: labeled tree pruning failed: {exc}")
+                tree_out = lbl.strip()
+                tree_note = "labeled (branch lengths removed)"
+                if model_name.startswith(('Branch-site', 'BranchSite')):
+                    status = self._labeled_root_check(tree_out)
+                    self._log(f"[tree] {base_name} [{model_name}]: root designation {status}")
+            elif fitted_tree and not model_name.startswith('Branch') and model_name != 'M0':
+                tree_out = fitted_tree.strip()
+                # fix_blength = 1 ("initial"): os comprimentos do M0 são só o
+                # ponto de partida e continuam sendo estimados. (2 = "fixed"
+                # os prenderia nos valores do M0 -- ver pamlDOC, fix_blength.)
+                fix_bl = 1
+                tree_note = "M0 fitted tree as starting values (fix_blength = 1)"
             else:
-                # Árvore original referenciada por caminho absoluto → sem cópia
-                tree_ref  = str(Path(self.config['tree_file']).absolute())
-                fix_bl    = 0
+                tree_out = _newick(tree_obj)
+            n_tips = len(names)
+            (temp_dir / tree_filename).write_text(f"{n_tips}  1\n{tree_out}\n", encoding='utf-8')
+            self._log(f"[tree] {base_name} [{model_name}]: {tree_filename} ({tree_note})")
 
-            # ── Log da decisão de árvore ─────────────────────────────────────
-            # Visibilidade para o usuário sobre qual árvore está sendo usada e
-            # se branch lengths estão sendo warm-started (fix_blength=2) ou
-            # estimados do zero (fix_blength=0).
-            if tree_ref == 'labeled.nwk':
-                _tlog = "labeled.nwk (branch lengths removidos, estimativa livre)"
-            elif tree_ref == 'warm_tree.nwk':
-                _tlog = "warm_tree.nwk (branch lengths M0 → warm-start, fix_blength=2)"
-            elif tree_ref.endswith('unrooted_tree.nwk'):
-                _tlog = "unrooted_tree.nwk (desraizada, branch lengths estimados do zero)"
-            elif tree_ref.endswith('pruned_tree.nwk'):
-                _tlog = "pruned_tree.nwk (podada, branch lengths estimados do zero)"
-            else:
-                _tlog = f"{Path(tree_ref).name} (arvore original, branch lengths estimados do zero)"
-            with open(log_file, 'a', encoding='utf-8') as _log:
-                _log.write(f"[tree] {base_name} [{model_name}]: {_tlog}\n")
+            # ── .ctl ─────────────────────────────────────────────────────
+            omega_initial = (float(omega_override) if omega_override is not None
+                             else float(cfg.get('omega', model_config.get('omega', 0.5) or 0.5)))
+            cleandata_val = int(cfg.get('cleandata', 1))
+            provided_ctl = (cfg.get('model_ctl_paths', {}) or {}).get(model_name)
+            if provided_ctl and Path(provided_ctl).is_file():
+                raw = Path(provided_ctl).read_text(encoding='utf-8')
 
-            # Nota: seqfile agora aponta para a cópia sanitizada no sandbox.
-
-            # ── Gerar conteúdo do .ctl ────────────────────────────────────────
-            custom_paths  = self.config.get('model_ctl_paths', {}) or {}
-            provided_ctl  = custom_paths.get(model_name)
-            omega_initial = (
-                float(omega_override) if omega_override is not None
-                else float(self.config.get('omega', model_config.get('omega', 0.5) or 0.5))
-            )
-            cleandata_val = int(self.config.get('cleandata', 1))
-
-            if provided_ctl:
-                provided_path = Path(provided_ctl)
-                if provided_path.exists() and provided_path.is_file():
-                    raw = provided_path.read_text(encoding='utf-8')
-
-                    def _replace_setting(content: str, key: str, newval: str) -> str:
-                        pat  = rf'(^\s*{re.escape(key)}\s*=).*?$'
-                        repl = rf"\1 {newval}"
-                        return re.sub(pat, repl, content, flags=re.MULTILINE)
-
-                    ctl_content = _replace_setting(raw,         'seqfile', _seqfile_ref)
-                    ctl_content = _replace_setting(ctl_content, 'treefile', tree_ref)
-                    ctl_content = _replace_setting(ctl_content, 'outfile',  output_filename)
-                else:
-                    with open(log_file, 'a', encoding='utf-8') as log:
-                        log.write(f"Warning: provided .ctl for {model_name} not found: "
-                                  f"{provided_ctl}; generating default .ctl\n")
-                    ctl_content = self.generate_ctl_content(
-                        seqfile=_seqfile_ref,
-                        treefile=tree_ref,
-                        outfile=output_filename,
-                        model_config=model_config,
-                        omega=omega_initial,
-                        cleandata=cleandata_val,
-                        model_name=model_name,
-                        kappa=warm_start_kappa,
-                        fix_blength=fix_bl,
-                    )
+                def _replace_setting(content: str, key: str, newval: str) -> str:
+                    return re.sub(rf'(^\s*{re.escape(key)}\s*=).*?$', rf"\1 {newval}",
+                                  content, flags=re.MULTILINE)
+                ctl_content = _replace_setting(raw, 'seqfile', seq_filename)
+                ctl_content = _replace_setting(ctl_content, 'treefile', tree_filename)
+                ctl_content = _replace_setting(ctl_content, 'outfile', codeml_outfile)
             else:
                 ctl_content = self.generate_ctl_content(
-                    seqfile=_seqfile_ref,
-                    treefile=tree_ref,
-                    outfile=output_filename,
-                    model_config=model_config,
-                    omega=omega_initial,
-                    cleandata=cleandata_val,
-                    model_name=model_name,
-                    kappa=warm_start_kappa,
-                    fix_blength=fix_bl,
-                )
+                    seqfile=seq_filename, treefile=tree_filename, outfile=codeml_outfile,
+                    model_config=self.MODEL_CONFIGS.get(model_name, {}),
+                    omega=omega_initial, cleandata=cleandata_val,
+                    model_name=model_name, kappa=warm_start_kappa, fix_blength=fix_bl)
+            (temp_dir / ctl_filename).write_text(ctl_content, encoding='utf-8')
 
-            # Escrever .ctl no sandbox (para o CODEML) e em model_output_dir (para referência)
-            ctl_in_sandbox = temp_dir / ctl_filename
-            ctl_in_sandbox.write_text(ctl_content, encoding='utf-8')
-            try:
-                ctl_path.write_text(ctl_content, encoding='utf-8')
-            except Exception:
-                pass  # falha ao salvar referência não impede a execução
-
-            exec_start = time.time()
-
-            # Executar CODEML — use absolute bundled binary, fall back to system PATH
-            if _CODEML_BIN.exists():
-                cmd = [str(_CODEML_BIN), ctl_filename]
-            else:
-                cmd = ["codeml", ctl_filename]
-
-            with open(log_file, 'a', encoding='utf-8') as log:
-                log.write(f"[{model_name}] {base_name}: Running command: {cmd} in {temp_dir}\n")
-
+            # ── Executar o codeml ───────────────────────────────────────
+            cmd = [codeml_path, ctl_filename]
+            self._log(f"[{model_name}] {base_name}: Running command: {cmd} in {temp_dir}")
+            popen_kw = {}
+            if platform.system() == 'Windows':
+                popen_kw['creationflags'] = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+            # stdin FECHADO: quando o codeml encontra um stop codon ele imprime
+            # "Press Enter to continue" e chama getchar(); com a entrada padrão
+            # fechada ele segue na hora (tratando a coluna como dado ausente)
+            # em vez de esperar para sempre por um Enter que nunca chega.
             process = subprocess.Popen(
-                cmd,
-                cwd=temp_dir,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                encoding='utf-8',
-                bufsize=1
-            )
+                cmd, cwd=temp_dir, stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, encoding='utf-8', errors='replace', bufsize=1, **popen_kw)
 
-            # Capturar output
-            stdout_lines = []
-            stderr_lines = []
-            # stop codon tracking
-            stop_count = [0]
-            stop_details = []
+            stdout_lines: List[str] = []
+            skip_beb = bool(cfg.get('skip_beb', False)) and model_name in ('M2a', 'M8')
+            beb_was_skipped = [False]
 
-            skip_beb = bool(self.config.get('skip_beb', False)) and model_name in ('M2a', 'M8')
-            beb_was_skipped = [False]  # mutavel p/ ser setado de dentro de read_stream (thread)
-
-            def read_stream(stream, storage):
+            def read_stream(stream):
                 try:
                     for line in iter(stream.readline, ''):
-                        if line is None:
-                            continue
                         text_line = line.rstrip()
-                        storage.append(text_line)
-
-                        # ── Interromper antes do BEB (opcional, skip_beb=True) ────────
-                        # BEB (Bayes Empirical Bayes) é a etapa mais cara do M2a/M8 --
-                        # o proprio CODEML avisa "This may take several minutes" -- e so
-                        # serve para classificar sitios individuais; o lnL/np/omega que o
-                        # LRT (M1a vs M2a, M7 vs M8) precisa ja foi escrito no outfile ANTES
-                        # do BEB comecar (verificado: NEB tambem roda antes do BEB e fica
-                        # preservado, entao o parser de sitios cai para NEB automaticamente
-                        # -- ver sites_parser.parse_sites_from_results_folder). Matar o
-                        # processo aqui preserva o LRT e so sacrifica a classificacao BEB
-                        # por sitio, que fica disponivel via NEB (menos robusto, mas nao
-                        # ausente). Default False -- BEB roda normalmente, como sempre.
-                        if skip_beb and 'BEBing' in text_line:
+                        stdout_lines.append(text_line)
+                        # skip_beb: o lnL/np/omega usados no LRT já foram escritos
+                        # no outfile antes do BEB começar (ver AGENTS.md / METODOS.md)
+                        if skip_beb and 'BEBing' in text_line and not beb_was_skipped[0]:
                             beb_was_skipped[0] = True
-                            with open(log_file, 'a', encoding='utf-8') as log:
-                                log.write(
-                                    f"[{model_name}] {base_name}: skip_beb ativo -- "
-                                    f"interrompendo antes do BEB (lnL/NEB ja escritos no outfile)\n"
-                                )
+                            self._log(f"[{model_name}] {base_name}: skip_beb -- stopping before BEB")
                             try:
                                 process.terminate()
                             except Exception:
                                 pass
-                            continue
-
-                        # Detect possible stop-codon prompt or pause requiring Enter
-                        lower = text_line.lower()
-                        is_stop_codon = 'stop' in lower and 'codon' in lower
-                        is_press_enter = 'press' in lower and 'enter' in lower
-
-                        if is_stop_codon or is_press_enter:
-                            with open(log_file, 'a', encoding='utf-8') as log:
-                                log.write(f"[{model_name}] {base_name}: Detected prompt line: {text_line}\n")
-
-                            # increment stop counter and try to parse details
-                            stop_count[0] += 1
-                            # update object-level counter for GUI polling
-                            try:
-                                self.current_stop_count = stop_count[0]
-                            except Exception:
-                                pass
-                            # try regex: stop codon TAG in seq. #   1 (...), nucleotide site 214
-                            m = re.search(r"stop codon\s+(\w+)\s+in seq\.\s*#\s*(\d+).*?site\s*(\d+)", text_line, re.IGNORECASE)
-                            if m:
-                                codon = m.group(1)
-                                seqnum = m.group(2)
-                                site = m.group(3)
-                                stop_details.append({'codon': codon, 'seqnum': int(seqnum), 'site': int(site), 'line': text_line})
-                            else:
-                                stop_details.append({'line': text_line})
-                            # publish details to object for GUI polling
-                            try:
-                                self.current_stop_details = list(stop_details)
-                            except Exception:
-                                pass
-                        
-
-                            # Notify user (prints are redirected to GUI when used from GUI)
-                            try:
-                                print(f"[{model_name}] {base_name}: Detected stop codon (count={stop_count[0]}).")
-                            except Exception:
-                                pass
-
-                            auto_continue = bool(self.config.get('auto_continue_stop_codons', False))
-                            n_workers = int(self.config.get('n_workers', 1))
-
-                            # In parallel mode, multiple workers share the same
-                            # manual_continue_event.  Blocking on a shared event
-                            # causes all-but-one worker to deadlock → genes appear
-                            # skipped.  Force auto-continue whenever n_workers > 1.
-                            if n_workers > 1 and not auto_continue:
-                                auto_continue = True
-                                with open(log_file, 'a', encoding='utf-8') as log:
-                                    log.write(
-                                        f"[{model_name}] {base_name}: Parallel mode — "
-                                        f"forced auto-continue for stop codon.\n"
-                                    )
-
-                            manual_all_ev = self.config.get('manual_continue_all_event')
-
-                            def _send_enter(reason: str) -> None:
-                                """Write a newline to the subprocess stdin reliably on Windows."""
-                                try:
-                                    if process.stdin:
-                                        # Use the binary buffer when available so the
-                                        # write bypasses TextIOWrapper internal buffering.
-                                        if hasattr(process.stdin, 'buffer'):
-                                            process.stdin.buffer.write(b'\n')
-                                            process.stdin.buffer.flush()
-                                        else:
-                                            process.stdin.write('\n')
-                                            process.stdin.flush()
-                                    with open(log_file, 'a', encoding='utf-8') as log:
-                                        log.write(f"[{model_name}] {base_name}: {reason}\n")
-                                except Exception as exc:
-                                    with open(log_file, 'a', encoding='utf-8') as log:
-                                        log.write(
-                                            f"[{model_name}] {base_name}: "
-                                            f"Failed to send Enter ({reason}): {exc}\n"
-                                        )
-
-                            # If user requested auto-continue, or a manual-all event is set, send Enter
-                            if auto_continue:
-                                _send_enter("Auto-sent Enter to subprocess (stop codon).")
-                            elif manual_all_ev is not None and getattr(manual_all_ev, 'is_set') and manual_all_ev.is_set():
-                                _send_enter("manual-all event set; sent Enter.")
-                            else:
-                                # Wait for GUI/user to signal continuation via event
-                                event = self.config.get('manual_continue_event')
-                                if event is None:
-                                    # no event provided -> fallback to auto
-                                    _send_enter("No manual event provided; auto-sent Enter.")
-                                else:
-                                    with open(log_file, 'a', encoding='utf-8') as log:
-                                        log.write(f"[{model_name}] {base_name}: Waiting for manual continue event...\n")
-                                    # Wait until GUI sets the event
-                                    event.wait()
-                                    # clear event for next prompt
-                                    try:
-                                        event.clear()
-                                    except Exception:
-                                        pass
-                                    _send_enter("Manual continue event received; sent Enter.")
                 except Exception:
                     pass
 
-            stdout_thread = Thread(target=read_stream, args=(process.stdout, stdout_lines))
-            stderr_thread = Thread(target=read_stream, args=(process.stderr, stderr_lines))
-
-            stdout_thread.start()
-            stderr_thread.start()
-
-            # Registrar processo como ativo (stop imediato e monitoramento paralelo)
+            reader = Thread(target=read_stream, args=(process.stdout,), daemon=True)
+            reader.start()
             with self._processes_lock:
                 self._active_processes.add(process)
                 self.current_process = process
 
-            stop_event  = self.config.get('stop_event')
-            pause_event = self.config.get('pause_event')
-            timeout_s   = self.config.get('timeout', 1600)
-            deadline    = time.time() + timeout_s
-            timed_out   = False
-            stopped     = False
-
+            timeout_s = float(cfg.get('timeout', 1600) or 1600)
+            idle_s = float(cfg.get('idle_timeout', 300) or 0)
+            deadline = time.time() + timeout_s
+            last_cpu = None
+            last_progress = time.time()
+            fail_reason = None
+            stopped = False
             try:
                 while process.poll() is None:
-                    # Verificar stop imediato
                     if stop_event is not None and stop_event.is_set():
                         stopped = True
-                        try:
-                            process.terminate()
-                            process.wait(timeout=3)
-                        except Exception:
-                            try:
-                                process.kill()
-                            except Exception:
-                                pass
+                        self._terminate(process)
                         break
-                    # Verificar timeout
-                    if time.time() > deadline:
-                        timed_out = True
-                        try:
-                            process.kill()
-                        except Exception:
-                            pass
+                    paused = pause_event is not None and not pause_event.is_set()
+                    now = time.time()
+                    if paused:
+                        # tempo pausado não conta para timeout nem inatividade
+                        deadline += 0.25
+                        last_progress = now
+                    elif now > deadline:
+                        fail_reason = self._t('reason_timeout', s=int(timeout_s))
+                        self._terminate(process)
                         break
-                    # Aguardar; checar a cada 0.05s (era 0.5s -- em lote grande,
-                    # 0.5s de atraso medio de deteccao x milhares de execucoes
-                    # vira hora de espera morta por nada; 0.05s mantem a
-                    # responsividade do stop_event sem custo de CPU real).
-                    time.sleep(0.05)
+                    elif idle_s > 0:
+                        cpu = self._process_cpu_seconds(process.pid)
+                        if cpu is not None:
+                            if last_cpu is None or cpu > last_cpu + 0.01:
+                                last_cpu = cpu
+                                last_progress = now
+                            elif now - last_progress > idle_s:
+                                last_line = next((l for l in reversed(stdout_lines) if l.strip()), '')
+                                fail_reason = self._t('reason_idle', s=int(idle_s), line=last_line[:200])
+                                self._terminate(process)
+                                break
+                    time.sleep(0.25)
             finally:
                 with self._processes_lock:
                     self._active_processes.discard(process)
                     if self.current_process is process:
                         self.current_process = None
-
-            stdout_thread.join(timeout=1)
-            stderr_thread.join(timeout=1)
-
-            if timed_out:
-                with open(log_file, 'a', encoding='utf-8') as log:
-                    log.write(f"[{model_name}] {base_name}: TIMEOUT after {timeout_s}s\n")
-                    log.write(f"  Captured stdout (last 200 lines):\n")
-                    for L in stdout_lines[-200:]:
-                        log.write(L + "\n")
-                    log.write(f"  Captured stderr (last 200 lines):\n")
-                    for L in stderr_lines[-200:]:
-                        log.write(L + "\n")
-                return None
-
-            if stopped:
-                with open(log_file, 'a', encoding='utf-8') as log:
-                    log.write(f"[{model_name}] {base_name}: STOPPED by user\n")
-                return None
-
-            # Wait for reader threads to finish
-            stdout_thread.join(timeout=1)
-            stderr_thread.join(timeout=1)
-
-            # Close streams to release file handles on Windows
+            reader.join(timeout=5)
+            try:
+                process.wait(timeout=5)
+            except Exception:
+                self._terminate(process)
             try:
                 if process.stdout:
                     process.stdout.close()
             except Exception:
                 pass
-            try:
-                if process.stderr:
-                    process.stderr.close()
-            except Exception:
-                pass
-            try:
-                if process.stdin:
-                    process.stdin.close()
-            except Exception:
-                pass
 
             rc = process.returncode
-            with open(log_file, 'a', encoding='utf-8') as log:
-                log.write(f"[{model_name}] {base_name}: process returncode={rc}\n")
-                if stdout_lines:
-                    log.write(f"  stdout (last 200 lines):\n")
-                    for L in stdout_lines[-200:]:
-                        log.write(L + "\n")
-                if stderr_lines:
-                    log.write(f"  stderr (last 200 lines):\n")
-                    for L in stderr_lines[-200:]:
-                        log.write(L + "\n")
+            self._log(f"[{model_name}] {base_name}: process returncode={rc}")
+            if stdout_lines:
+                self._log("  codeml stdout (last 60 lines):\n" + "\n".join(stdout_lines[-60:]))
 
-            if rc != 0:
-                with open(log_file, 'a', encoding='utf-8') as log:
-                    log.write(f"[{model_name}] {base_name}: Non-zero return code {rc}\n")
-                # continue to attempt to find outputs
+            if stopped:
+                return self._failed(self._t('reason_stopped'), exec_start, status='stopped')
 
-            # Mover arquivos de saída
-            for src_file in temp_dir.glob("*"):
-                # move expected outputs (output file, .rst, .txt), leave input files
-                if src_file.name == ctl_filename:
-                    continue
-                if src_file.name == output_filename or src_file.suffix in ['.rst', '.txt']:
-                    dest = model_output_dir / src_file.name
-                    try:
-                        shutil.move(src_file, dest)
-                    except Exception as e:
-                        with open(log_file, 'a', encoding='utf-8') as log:
-                            log.write(f"Failed to move {src_file} -> {dest}: {e}\n")
-
+            codeml_out = temp_dir / codeml_outfile
             output_path = model_output_dir / output_filename
+            last_line = next((l for l in reversed(stdout_lines) if l.strip()), '')
 
-            # ── Truncar secoes incompletas apos o kill (skip_beb) ─────────────────
-            # O CODEML imprime "BEBing..." no stdout como aviso ANTES de terminar de
-            # escrever o NEB no outfile (as duas saidas -- console e arquivo -- nao
-            # sao sincronizadas), entao o kill pode chegar no meio da escrita do NEB
-            # tambem, nao so do BEB. Sem tratar isso, o parser de resultados acharia
-            # um cabecalho (BEB ou ate NEB) sem nenhuma linha de sitio, e devolveria
-            # "nenhum sitio sob selecao" -- silenciosamente errado, parece real.
-            # Estrategia defensiva: corta sempre a partir do cabecalho BEB (nunca eh
-            # dado completo quando skip_beb mata o processo); se o NEB que sobrar nao
-            # tiver nenhuma linha de sitio real (padrao "<posicao> <aminoacido> ...")
-            # depois do cabecalho, corta o NEB tambem -- fica so lnL/np/omega, que e
-            # o que o LRT precisa de qualquer forma.
-            if beb_was_skipped[0] and output_path.exists():
+            # skip_beb mata o processo de propósito: truncar seções incompletas
+            if beb_was_skipped[0] and codeml_out.exists():
                 try:
-                    text = output_path.read_text(encoding='utf-8', errors='ignore')
+                    text = codeml_out.read_text(encoding='utf-8', errors='ignore')
                     beb_idx = text.find('Bayes Empirical Bayes (BEB) analysis')
                     if beb_idx != -1:
                         text = text[:beb_idx].rstrip() + '\n'
-
                     neb_marker = 'Naive Empirical Bayes (NEB) analysis'
                     neb_idx = text.find(neb_marker)
-                    if neb_idx != -1:
-                        after_neb = text[neb_idx + len(neb_marker):]
-                        has_site_row = re.search(r'^\s*\d+\s+[A-Za-z]\s', after_neb, re.MULTILINE)
-                        if not has_site_row:
-                            text = text[:neb_idx].rstrip() + '\n'
+                    if neb_idx != -1 and not re.search(r'^\s*\d+\s+[A-Za-z]\s',
+                                                       text[neb_idx + len(neb_marker):], re.MULTILINE):
+                        text = text[:neb_idx].rstrip() + '\n'
+                    codeml_out.write_text(text, encoding='utf-8')
+                except Exception as exc:
+                    self._log(f"[{model_name}] {base_name}: truncation after skip_beb failed: {exc}")
 
-                    output_path.write_text(text, encoding='utf-8')
-                except Exception as _trunc_err:
-                    with open(log_file, 'a', encoding='utf-8') as log:
-                        log.write(f"[{model_name}] {base_name}: falha ao truncar secao incompleta: {_trunc_err}\n")
+            # ── Guardar arquivos (reprodutibilidade) ─────────────────────
+            if save_outputs:
+                (model_output_dir / ctl_filename).write_text(ctl_content, encoding='utf-8')
+                for fname in (seq_filename, tree_filename):
+                    shutil.copy2(temp_dir / fname, model_output_dir / fname)
+                if codeml_out.exists():
+                    shutil.move(str(codeml_out), str(output_path))
+                for extra in ('rst',):
+                    if (temp_dir / extra).exists():
+                        try:
+                            shutil.move(str(temp_dir / extra), str(model_output_dir / f"{prefix}_{extra}.txt"))
+                        except Exception:
+                            pass
+            else:
+                output_path = temp_dir / codeml_outfile
+                # resultado temporário (M0 implícito): copiar para fora do sandbox
+                if output_path.exists():
+                    keep = Path(tempfile.mkdtemp(prefix='easypam_m0_')) / codeml_outfile
+                    shutil.copy2(output_path, keep)
+                    output_path = keep
 
-            # Extrair informações
-            lnL = None
-            np_params = None
-            ntime_params = None
-            omega = None
-
+            lnL = np_params = ntime_params = omega = None
             if output_path.exists():
-                stats = self._extract_model_stats(output_path)
-                lnL, np_params, ntime_params = stats['lnL'], stats['np'], stats['ntime']
+                st = self._extract_model_stats(output_path)
+                lnL, np_params, ntime_params = st['lnL'], st['np'], st['ntime']
                 try:
                     omega = SitesParser.extract_omega_robust(output_path)
                 except Exception:
                     omega = None
-            else:
-                with open(log_file, 'a', encoding='utf-8') as log:
-                    log.write(f"[{model_name}] {base_name}: expected output file not found: {output_path}\n")
+
+            # ── Mapa de sítios (numeração original) ──────────────────────
+            if save_outputs and output_path.exists():
+                try:
+                    kept = (cleandata_kept_codons(names, seqs_used) if cleandata_val == 1
+                            else list(range(1, aln.length // 3 + 1)))
+                    ls = codeml_site_count(output_path)
+                    sm = write_sitemap(model_output_dir / f"{base_name}_{model_name}_sitemap.json",
+                                       cleandata=cleandata_val, n_codons=aln.length // 3,
+                                       kept_codons=kept, sequences=names, codeml_sites=ls)
+                    if sm['verified'] is False:
+                        msg = self._t('warn_sitemap', gene=base_name, model=model_name,
+                                      codeml=ls, expected=len(kept))
+                        self._emit('warn', msg)
+                        self._log(f"[WARN] {msg}")
+                except Exception as exc:
+                    self._log(f"[{model_name}] {base_name}: sitemap failed: {exc}")
 
             execution_time = time.time() - exec_start
+            self._log(f"[{model_name}] {base_name}: FINISHED (lnL={lnL}, np={np_params}, "
+                      f"ω={omega}, time={execution_time:.1f}s, rc={rc})")
 
-            # Log sucesso (ou parcial) including stop count
-            with open(log_file, 'a', encoding='utf-8') as log:
-                log.write(f"[{model_name}] {base_name}: FINISHED (lnL={lnL}, np={np_params}, ω={omega}, time={execution_time:.1f}s, stop_count={stop_count[0]})\n")
-                if stop_details:
-                    log.write(f"  Stop details:\n")
-                    for d in stop_details:
-                        log.write(f"    {d}\n")
+            if fail_reason is None:
+                if not output_path.exists():
+                    fail_reason = self._t('reason_no_output', line=last_line[:200])
+                elif rc not in (0, None) and not beb_was_skipped[0]:
+                    fail_reason = self._t('reason_rc', rc=rc, line=last_line[:200])
+                elif lnL is None:
+                    fail_reason = self._t('reason_no_lnl', line=last_line[:200])
 
-            # skip_beb termina o processo de proposito (rc != 0 por SIGTERM) -- isso
-            # e sucesso, nao falha parcial, desde que lnL tenha sido extraido.
-            _run_ok = output_path.exists() and (rc == 0 or beb_was_skipped[0])
             return {
                 'output_file': str(output_path) if output_path.exists() else None,
-                'results_file': str(output_path) if output_path.exists() else None,  # Alias para compatibilidade
-                'lnL': lnL,
-                'np': np_params,
-                'ntime': ntime_params,
-                'omega': omega,
+                'results_file': str(output_path) if output_path.exists() else None,
+                'lnL': lnL, 'np': np_params, 'ntime': ntime_params, 'omega': omega,
                 'execution_time': execution_time,
-                'status': 'success' if _run_ok and lnL is not None else 'partial',
-                'stop_count': stop_count[0],
+                'status': 'failed' if fail_reason else 'success',
+                'fail_reason': fail_reason,
+                'stop_count': 0,
                 'beb_skipped': beb_was_skipped[0],
+                'excluded_sequences': excluded,
             }
 
         except Exception as e:
-            tb = traceback.format_exc()
-            with open(log_file, 'a', encoding='utf-8') as log:
-                log.write(f"[{model_name}] {base_name}: EXCEPTION - {e}\n")
-                log.write(tb + "\n")
-            return None
+            self._log(f"[{model_name}] {base_name}: EXCEPTION - {e}\n{traceback.format_exc()}")
+            return self._failed(self._t('reason_exception', error=e), exec_start)
 
         finally:
-            # Final cleanup: try to remove temp_dir with retries; if fails, log and continue
-            if temp_dir.exists():
-                for attempt in range(8):
-                    try:
-                        shutil.rmtree(temp_dir)
-                        break
-                    except PermissionError as pe:
-                        with open(log_file, 'a', encoding='utf-8') as log:
-                            log.write(f"Cleanup: could not remove {temp_dir} (attempt {attempt+1}/8): {pe}\n")
-                        time.sleep(0.5)
-                    except Exception as e:
-                        with open(log_file, 'a', encoding='utf-8') as log:
-                            log.write(f"Cleanup: unexpected error removing {temp_dir}: {e}\n")
-                        break
-                else:
-                    with open(log_file, 'a', encoding='utf-8') as log:
-                        log.write(f"Cleanup: failed to remove {temp_dir} after retries; leaving it in place.\n")
-    
+            for attempt in range(8):
+                try:
+                    shutil.rmtree(temp_dir)
+                    break
+                except FileNotFoundError:
+                    break
+                except Exception:
+                    time.sleep(0.5)
+
     # Padroes que identificam a linha de resultado final do CODEML, em ordem
     # de preferencia -- cobre as variantes de formato conhecidas ("lnL(ntime:
     # X np: Y): valor" eh a forma padrao; as outras sao formatos mais antigos/
@@ -1788,314 +1481,207 @@ class CodemlBatchAnalysis:
 
     def _lrt_comparisons_for(self, selected_models):
         """Pares (null, alt, nome_da_coluna) validos dado o conjunto de modelos
-        selecionados -- usado tanto pelo header/linhas do TSV quanto pelo LRT,
-        pra nao ter a mesma lista de ifs duplicada em dois metodos."""
-        comparisons = []
-        if 'M0' in selected_models and 'M1a' in selected_models:
-            comparisons.append(('M0', 'M1a', 'lrt_M0_vs_M1a'))
-        if 'M1a' in selected_models and 'M2a' in selected_models:
-            comparisons.append(('M1a', 'M2a', 'lrt_M1a_vs_M2a'))
-        if 'M7' in selected_models and 'M8' in selected_models:
-            comparisons.append(('M7', 'M8', 'lrt_M7_vs_M8'))
-        if 'M0' in selected_models and 'Branch' in selected_models:
-            comparisons.append(('M0', 'Branch', 'lrt_M0_vs_Branch'))
-        # Suporta tanto o nome antigo (BranchSite_A) quanto o novo (Branch-site)
-        if ('BranchSite_A_null' in selected_models and 'BranchSite_A' in selected_models) or \
-           ('Branch-site_null' in selected_models and 'Branch-site' in selected_models):
-            if 'Branch-site_null' in selected_models and 'Branch-site' in selected_models:
-                comparisons.append(('Branch-site_null', 'Branch-site', 'lrt_Branch-site_null_vs_Branch-site'))
-            else:
-                comparisons.append(('BranchSite_A_null', 'BranchSite_A', 'lrt_BranchSite_A_null_vs_BranchSite_A'))
+        selecionados -- fonte unica em lrt_stats.PAIRS (usada tambem pelo
+        painel de resultados)."""
+        comparisons = [(n, a, lrt_stats.lrt_column(n, a))
+                       for n, a in lrt_stats.pairs_for(selected_models)]
+        # Compatibilidade com pastas antigas (BranchSite_A)
+        if 'BranchSite_A_null' in selected_models and 'BranchSite_A' in selected_models:
+            comparisons.append(('BranchSite_A_null', 'BranchSite_A',
+                                'lrt_BranchSite_A_null_vs_BranchSite_A'))
         return comparisons
 
     def _save_summary(self):
-        """Salva sumário em TSV com colunas de LRT (+ q-valor BH, quando
-        _run_lrt_analysis já rodou) e omegas extraídos robustamente."""
+        """Salva analysis_summary.tsv: uma linha por gene com status, lnL/np/
+        ntime/omega por modelo, ω e p₁ da classe positiva (M2a/M8), e para
+        cada par de LRT a estatística 2Δl, o p e o q (BH)."""
         summary_file = self.config['output_folder'] / "analysis_summary.tsv"
-        selected_models = self.config['models']
-        lrt_comparisons = self._lrt_comparisons_for(selected_models)
+        models = self.config['models']
+        comparisons = self._lrt_comparisons_for(models)
         qvalues = getattr(self, '_lrt_qvalues', None) or {}
+        pvalues = getattr(self, '_lrt_pvalues', None) or {}
+        pos_models = [m for m in models if m in ('M2a', 'M8')]
 
-        with open(summary_file, 'w', encoding='utf-8') as f:
-            # Header
-            header = ["Gene"]
-            for model in self.config['models']:
-                header.extend([f"{model}_lnL", f"{model}_np", f"{model}_ntime", f"{model}_omega", f"{model}_time", f"{model}_stops"])
+        header = ["Gene", "status"]
+        for model in models:
+            header.extend([f"{model}_lnL", f"{model}_np", f"{model}_ntime",
+                           f"{model}_omega", f"{model}_time", f"{model}_stops"])
+        for m in pos_models:
+            header.extend([f"{m}_p_pos", f"{m}_w_pos"])
+        for null_model, alt_model, col_name in comparisons:
+            header.append(col_name)
+            if (null_model, alt_model) in pvalues:
+                header.append(lrt_stats.p_column(null_model, alt_model))
+            if (null_model, alt_model) in qvalues:
+                header.append(lrt_stats.q_column(null_model, alt_model))
 
-            for null_model, alt_model, col_name in lrt_comparisons:
-                header.append(col_name)
-                if (null_model, alt_model) in qvalues:
-                    header.append(f"q_{null_model}_vs_{alt_model}")
+        def _fmt(v, f="{:.6f}"):
+            return f.format(v) if v is not None else 'NA'
 
-            f.write("\t".join(header) + "\n")
-
-            # Data
+        with open(summary_file, 'w', encoding='utf-8') as fh:
+            fh.write("\t".join(header) + "\n")
             for gene_name in sorted(self.results.keys()):
-                gene_results = self.results[gene_name]
-                # Remover caracteres que corrompem o formato TSV
-                row = [str(gene_name).replace('\n', '').replace('\r', '').replace('\t', '_')]
-
-                for model in self.config['models']:
-                    if model in gene_results and gene_results[model]:
-                        result = gene_results[model]
-
-                        # Extrair omega robustamente do arquivo de resultados
-                        omega_value = result.get('omega')
-                        if omega_value is None or omega_value == 'NA':
-                            # Tentar extrair do arquivo de resultados
-                            results_file = result.get('results_file')
-                            if results_file:
-                                try:
-                                    from pathlib import Path
-                                    omega_value = SitesParser.extract_omega_robust(Path(results_file))
-                                except Exception:
-                                    omega_value = None
-
-                        row.extend([
-                            f"{result.get('lnL', 'NA'):.6f}" if result.get('lnL') else 'NA',
-                            str(result.get('np', 'NA')),
-                            str(result.get('ntime', 'NA')),
-                            f"{omega_value:.6f}" if omega_value is not None and omega_value != 'NA' else 'NA',
-                            f"{result.get('execution_time', 0):.2f}",
-                            str(result.get('stop_count', 0))
-                        ])
+                gene_results = self.results[gene_name] or {}
+                row = [str(gene_name).replace('\n', '').replace('\r', '').replace('\t', '_'),
+                       getattr(self, 'gene_status', {}).get(gene_name, 'ok')]
+                for model in models:
+                    r = gene_results.get(model)
+                    if r and r.get('status') == 'success':
+                        row.extend([_fmt(r.get('lnL')), str(r.get('np', 'NA')),
+                                    str(r.get('ntime', 'NA')), _fmt(r.get('omega')),
+                                    f"{r.get('execution_time', 0):.2f}",
+                                    str(r.get('stop_count', 0))])
                     else:
-                        row.extend(['NA', 'NA', 'NA', 'NA', '0'])
-
-                for null_model, alt_model, _ in lrt_comparisons:
-                    if (null_model in gene_results and gene_results[null_model] and
-                        alt_model in gene_results and gene_results[alt_model]):
-                        null_lnL = gene_results[null_model].get('lnL')
-                        alt_lnL = gene_results[alt_model].get('lnL')
-                        if null_lnL is not None and alt_lnL is not None:
-                            lrt_stat = 2 * (alt_lnL - null_lnL)
-                            row.append(f"{lrt_stat:.6f}")
-                        else:
-                            row.append('NA')
+                        row.extend(['NA'] * 6)
+                for m in pos_models:
+                    r = gene_results.get(m)
+                    pc = (SitesParser.extract_positive_class(Path(r['results_file']))
+                          if r and r.get('results_file') else None) or {}
+                    row.extend([_fmt(pc.get('p')), _fmt(pc.get('omega'))])
+                for null_model, alt_model, _ in comparisons:
+                    n, a = gene_results.get(null_model), gene_results.get(alt_model)
+                    if n and a and n.get('lnL') is not None and a.get('lnL') is not None:
+                        row.append(f"{2 * (a['lnL'] - n['lnL']):.6f}")
                     else:
                         row.append('NA')
-
+                    if (null_model, alt_model) in pvalues:
+                        pv = pvalues[(null_model, alt_model)].get(gene_name)
+                        row.append(f"{pv:.6e}" if pv is not None else 'NA')
                     if (null_model, alt_model) in qvalues:
                         q = qvalues[(null_model, alt_model)].get(gene_name)
                         row.append(f"{q:.6e}" if q is not None else 'NA')
-
-                # Limpar newlines de todos os valores antes de escrever
                 row = [str(v).replace('\n', '').replace('\r', '') for v in row]
-                f.write("\t".join(row) + "\n")
+                fh.write("\t".join(row) + "\n")
 
-        print(f"  [OK] Summary saved: {summary_file}")
-    
+        self._emit('debug', f"Summary saved: {summary_file}")
+
+    LRT_METHOD_NOTE = (
+        "NOTA METODOLOGICA / METHODS NOTE:\n"
+        "  Estatistica: 2*(lnL_alternativo - lnL_nulo); valores negativos (o\n"
+        "  alternativo nao melhorou) sao truncados em 0 e dao p = 1.\n"
+        "  Graus de liberdade = parametros livres a mais no alternativo\n"
+        "  (os comprimentos de ramo entram igualmente nos dois modelos):\n"
+        "    M0  vs M1a  : df = 2  (p0 e omega0)\n"
+        "    M1a vs M2a  : df = 2  (p2 e omega2)\n"
+        "    M7  vs M8   : df = 2  (p1 e omega_s)\n"
+        "    M8a vs M8   : df = 1  (omega_s livre vs fixo em 1)\n"
+        "    M0  vs Branch : df = numero de grupos foreground (#1, #2, ...)\n"
+        "  Distribuicao nula: chi2 com esses df. Para M8a vs M8 e Branch-site\n"
+        "  (nulo na fronteira, omega = 1 fixo) a significancia usa chi2(1) puro,\n"
+        "  como o manual do PAML recomenda para o branch-site; a mistura\n"
+        "  0.5*chi2(0) + 0.5*chi2(1) (Self & Liang 1987) e reportada so como\n"
+        "  referencia. p-valores calculados com a funcao de sobrevivencia\n"
+        "  (chi2.sf), sem arredondar para zero.\n"
+        "  q-value = p corrigido por Benjamini-Hochberg (FDR) DENTRO de cada\n"
+        "  comparacao (familia = todos os genes testados nesse par de modelos\n"
+        "  nesta execucao).\n"
+        "  M7 vs M8 pode rejeitar M7 so porque ha sitios neutros (omega = 1);\n"
+        "  M8a vs M8 nao tem esse problema (Swanson et al. 2003).\n"
+    )
+
     def _run_lrt_analysis(self):
         """Executa Likelihood Ratio Tests + correcao Benjamini-Hochberg (FDR).
 
         BH precisa da familia COMPLETA de p-valores de uma comparacao antes de
-        corrigir (o q-valor de um gene depende do rank do seu p-valor entre
-        todos os outros) -- por isso o metodo e em duas fases por comparacao:
-        primeiro coleta todos os genes validos, corrige com
-        scipy.stats.false_discovery_control, so depois escreve. Os q-valores
-        ficam em self._lrt_qvalues[(null_model, alt_model)][gene] pra
-        _save_summary() anexar como colunas q_* no TSV (por isso este metodo
-        tem que rodar ANTES de _save_summary() em run_batch_analysis()).
+        corrigir -- por isso o metodo e em duas fases por comparacao. Os
+        q-valores ficam em self._lrt_qvalues[(null_model, alt_model)][gene] e
+        os p em self._lrt_pvalues, que _save_summary() anexa como colunas
+        q_*/p_* no TSV (por isso este metodo roda ANTES de _save_summary()).
         """
         lrt_file = self.config['output_folder'] / "LRT_results.txt"
         self._lrt_qvalues = {}
+        self._lrt_pvalues = {}
 
         with open(lrt_file, 'w', encoding='utf-8') as f:
             f.write("="*80 + "\n")
             f.write("LIKELIHOOD RATIO TEST (LRT) RESULTS\n")
+            f.write(f"EasyPAML {__version__}\n")
             f.write("="*80 + "\n\n")
-            f.write(
-                "NOTA METODOLOGICA:\n"
-                "  Graus de liberdade canonicos (Yang & Nielsen 2002, PAML manual):\n"
-                "    M0  vs M1a  : df = 2  (M1a adiciona p0 e omega0 vs omega unico do M0)\n"
-                "    M1a vs M2a  : df = 2  (M2a adiciona omega2 e uma proporcao vs M1a)\n"
-                "    M7  vs M8   : df = 2  (M8  adiciona omega2 e uma proporcao vs M7)\n"
-                "    M0  vs Branch : df = 1  (modelo dois-omega: 1 omega extra de foreground)\n"
-                "    Branch-site : usa chi2(1) PURO (critico 3.84 a 5%, 5.99 a 1%), NAO a\n"
-                "                  mistura 0.5*chi2(0)+0.5*chi2(1) (critico 2.706/5.412).\n"
-                "                  A mistura e a distribuicao nula assintotica correta\n"
-                "                  (Self & Liang 1987; omega2=1 fica na fronteira do\n"
-                "                  espaco de parametros), mas o proprio manual do PAML\n"
-                "                  (pamlDOC.pdf) recomenda explicitamente NAO usa-la:\n"
-                "                  \"We recommend that you use chi1^2 ... instead of the\n"
-                "                  mixture to guard against violations of model\n"
-                "                  assumptions.\" chi2(1) e mais conservador (corta mais\n"
-                "                  alto) e e o teste de fato usado pelos autores do PAML.\n"
-                "                  A mistura fica reportada por gene so como referencia.\n"
-                "  NOTA: o CODEML reporta ntime>0 no np do M0 mas ntime=0 nos modelos\n"
-                "  NSsites (M1a, M2a, M7, M8) pois usa branch lengths do M0 como partida.\n"
-                "  Por isso df e calculado com valores fixos por par, nao por np_alt - np_null.\n"
-                "  q-value = p-valor corrigido por Benjamini-Hochberg (FDR) DENTRO de\n"
-                "  cada comparacao (familia = todos os genes testados nesse par de\n"
-                "  modelos). E o corte correto quando se testam muitos genes\n"
-                "  simultaneamente -- o p-valor bruto sozinho infla falsos positivos\n"
-                "  nessa escala.\n"
-                "\n"
-            )
+            f.write(self.LRT_METHOD_NOTE + "\n")
 
-            # Determinar comparações relevantes
-            comparisons = []
             selected_models = self.config['models']
-
-            # Site models comparisons
-            if 'M0' in selected_models and 'M1a' in selected_models:
-                comparisons.append(('M0', 'M1a', 'Tests if ω varies among sites'))
-            if 'M1a' in selected_models and 'M2a' in selected_models:
-                comparisons.append(('M1a', 'M2a', 'Tests for positive selection'))
-            if 'M7' in selected_models and 'M8' in selected_models:
-                comparisons.append(('M7', 'M8', 'Alternative test for positive selection'))
-
-            # Branch models
-            if 'M0' in selected_models and 'Branch' in selected_models:
-                comparisons.append(('M0', 'Branch', 'Tests if ω differs in foreground'))
-
-            # Branch-site models
-            if 'Branch-site_null' in selected_models and 'Branch-site' in selected_models:
-                comparisons.append(('Branch-site_null', 'Branch-site',
-                                  'Tests for positive selection in foreground sites (50:50 mixture χ²)'))
+            comparisons = lrt_stats.pairs_for(selected_models)
+            descriptions = {(n, a): d for grp in self.LRT_COMPARISONS.values() for n, a, d in grp}
 
             if not comparisons:
                 f.write("No valid model comparisons found.\n")
                 f.write("For LRT, you need pairs of nested models.\n")
-                print("  [WARN] No valid LRT comparisons found")
+                self._emit('warn', self._t('lrt_none'))
                 return
 
-            print(f"\n  Running {len(comparisons)} LRT comparison(s):\n")
-
-            # df por par de comparação (Yang & Nielsen 2002, PAML manual):
-            # CODEML reporta ntime>0 no np do M0 mas ntime=0 nos modelos
-            # NSsites (M1a/M2a/M7/M8 — branch lengths fixados pelo M0 e não
-            # contados como df).  Isso faz abs(np_alt - np_null) dar df=14
-            # para M0 vs M1a em vez de 2.  Usamos df fixos para esses pares.
-            _CANONICAL_DF = {
-                ('M0',  'M1a'): 2,  # M1a adds p0 + ω0 vs M0's single ω
-                ('M1a', 'M2a'): 2,  # M2a adds ω2 + one proportion vs M1a
-                ('M7',  'M8'):  2,  # M8  adds ω2 + one proportion vs M7
-                # M0 vs Branch: NÃO fixo — veja correção ntime abaixo
-            }
-
-            # Realizar cada comparação
-            for null_model, alt_model, description in comparisons:
-                print(f"    • {null_model} vs {alt_model}")
-
+            for null_model, alt_model in comparisons:
+                info = lrt_stats.PAIRS[(null_model, alt_model)]
+                boundary = info['boundary']
                 f.write("\n" + "="*80 + "\n")
                 f.write(f"COMPARISON: {null_model} (null) vs {alt_model} (alternative)\n")
-                f.write(f"Description: {description}\n")
+                f.write(f"Description: {descriptions.get((null_model, alt_model), '')}\n")
                 f.write("="*80 + "\n\n")
-
-                is_branchsite = (null_model == 'Branch-site_null' and alt_model == 'Branch-site')
 
                 # Fase 1: coletar todos os genes validos ANTES de corrigir por BH
                 collected = []
                 for gene_name in sorted(self.results.keys()):
                     gene_results = self.results[gene_name]
-
-                    if null_model not in gene_results or alt_model not in gene_results:
-                        continue
-
-                    null_res = gene_results[null_model]
-                    alt_res = gene_results[alt_model]
-
+                    null_res = gene_results.get(null_model)
+                    alt_res = gene_results.get(alt_model)
                     if not null_res or not alt_res:
                         continue
-
-                    lnL_null = null_res.get('lnL')
-                    lnL_alt = alt_res.get('lnL')
-                    np_null     = null_res.get('np')
-                    np_alt      = alt_res.get('np')
-                    ntime_null  = null_res.get('ntime')
-                    ntime_alt   = alt_res.get('ntime')
-
+                    lnL_null, lnL_alt = null_res.get('lnL'), alt_res.get('lnL')
                     if lnL_null is None or lnL_alt is None:
                         continue
+                    np_null, np_alt = null_res.get('np'), alt_res.get('np')
+                    ntime_null, ntime_alt = null_res.get('ntime'), alt_res.get('ntime')
 
-                    lrt_stat = 2 * (lnL_alt - lnL_null)
-
-                    df = _CANONICAL_DF.get(
-                        (null_model, alt_model),
-                        abs(np_alt - np_null) if (np_alt and np_null) else 0
-                    )
-
-                    # Corrigir df para M0 vs Branch quando as árvores têm ntime diferente
-                    # (M0 usa árvore não-enraizada [ntime=2n-3], Branch usa a
-                    # rotulada/enraizada [ntime=2n-2] -- a diferença de 1 infla
-                    # abs(np_Branch - np_M0) pra k+1 em vez de k grupos foreground)
-                    if null_model == 'M0' and alt_model == 'Branch' and df > 0:
+                    df = info['df']
+                    if df is None:  # M0 vs Branch: grupos foreground
+                        df = abs(np_alt - np_null) if (np_alt and np_null) else 1
                         if ntime_null is not None and ntime_alt is not None:
                             df = max(1, df - (ntime_alt - ntime_null))
 
-                    if df == 0:
-                        continue
-                    if lrt_stat < 0:
-                        lrt_stat = 0.0
-
-                    p_value_mixture = None
-                    if is_branchsite:
-                        # A distribuicao nula ASSINTOTICA correta (Self & Liang 1987,
-                        # Zhang et al. 2005) e a mistura 50:50 de χ²(0) e χ²(1), porque
-                        # o nulo (ω2=1) fica na FRONTEIRA do espaco de parametros.
-                        # PORTANTO o manual do PAML (pamlDOC.pdf, secao do teste
-                        # branch-site) calcula essa mistura -- e ENTAO recomenda
-                        # explicitamente NAO usa-la: "We recommend that you use χ1²
-                        # (with critical values 3.84 and 5.99) instead of the mixture
-                        # to guard against violations of model assumptions." O χ²(1)
-                        # puro e mais conservador (corta em 3.84 vs 2.71 a 5%) e e o
-                        # teste de fato usado/recomendado pelos autores do PAML, entao
-                        # e o que usamos pra significancia/BH aqui. A mistura fica
-                        # calculada e exibida so como referencia (p_value_mixture).
-                        if lrt_stat <= 0:
-                            p_value = 1.0
-                            p_value_mixture = 1.0
-                        else:
-                            p_value = stats.chi2.sf(lrt_stat, df=1)
-                            p_value_mixture = 0.5 * p_value
-                        df_display = "1 (χ²₁ puro, recomendacao PAML -- nao a mistura)"
-                    else:
-                        p_value = 1 - stats.chi2.cdf(lrt_stat, df)
-                        df_display = str(df)
-
+                    raw_stat = 2 * (lnL_alt - lnL_null)
+                    lrt_stat = max(0.0, raw_stat)
+                    p_value = lrt_stats.p_value(lrt_stat, df, boundary=boundary)
+                    p_mix = lrt_stats.p_value_mixture(lrt_stat) if boundary else None
+                    df_display = (f"{df} (chi2(1) puro / pure; mistura so referencia)"
+                                  if boundary else str(df))
                     collected.append({
                         'gene': gene_name, 'lnL_null': lnL_null, 'lnL_alt': lnL_alt,
                         'np_null': np_null, 'np_alt': np_alt, 'lrt_stat': lrt_stat,
-                        'df_display': df_display, 'p_value': p_value,
-                        'p_value_mixture': p_value_mixture,
+                        'raw_stat': raw_stat, 'df_display': df_display,
+                        'p_value': p_value, 'p_value_mixture': p_mix,
                     })
 
-                # Fase 2: corrigir por BH usando a familia completa desta comparação
-                if collected:
-                    qvals = stats.false_discovery_control([c['p_value'] for c in collected], method='bh')
-                    for c, q in zip(collected, qvals):
-                        c['q_value'] = q
+                # Fase 2: BH na familia completa desta comparacao
+                for c, q in zip(collected, lrt_stats.bh_qvalues([c['p_value'] for c in collected])):
+                    c['q_value'] = q
                 self._lrt_qvalues[(null_model, alt_model)] = {c['gene']: c['q_value'] for c in collected}
+                self._lrt_pvalues[(null_model, alt_model)] = {c['gene']: c['p_value'] for c in collected}
 
-                # Fase 3: escrever (agora com p bruto e q-valor BH lado a lado)
+                # Fase 3: escrever
                 sig_count_05 = sig_count_01 = sig_count_q05 = 0
                 for c in collected:
-                    if c['p_value'] < 0.05:
-                        sig_count_05 += 1
-                    if c['p_value'] < 0.01:
-                        sig_count_01 += 1
-                    if c['q_value'] < 0.05:
-                        sig_count_q05 += 1
-
+                    sig_count_05 += c['p_value'] < 0.05
+                    sig_count_01 += c['p_value'] < 0.01
+                    sig_count_q05 += c['q_value'] < 0.05
                     f.write(f"Gene: {c['gene']}\n")
                     f.write(f"  lnL {null_model}: {c['lnL_null']:.6f} (np={c['np_null']})\n")
                     f.write(f"  lnL {alt_model}: {c['lnL_alt']:.6f} (np={c['np_alt']})\n")
-                    f.write(f"  2Δl = {c['lrt_stat']:.6f}\n")
+                    f.write(f"  2Δl = {c['lrt_stat']:.6f}")
+                    if c['raw_stat'] < 0:
+                        f.write(f"  (bruto {c['raw_stat']:.6f} < 0: otimizacao do alternativo nao "
+                                f"alcancou o nulo; considere rodar de novo)")
+                    f.write("\n")
                     f.write(f"  df = {c['df_display']}\n")
                     f.write(f"  p-value = {c['p_value']:.6e}\n")
                     if c.get('p_value_mixture') is not None:
                         f.write(f"  p-value (mistura 50:50, referencia -- NAO usado pro q-valor) = "
                                 f"{c['p_value_mixture']:.6e}\n")
                     f.write(f"  q-value (BH) = {c['q_value']:.6e}\n")
-
                     if c['q_value'] < 0.01:
-                        f.write(f"  Result: [OK][OK] {alt_model} significantly better (q < 0.01, BH-corrected)\n")
+                        f.write(f"  Result: SIGNIFICANT -- {alt_model} better (q < 0.01, BH-corrected)\n")
                     elif c['q_value'] < 0.05:
-                        f.write(f"  Result: [OK] {alt_model} significantly better (q < 0.05, BH-corrected)\n")
+                        f.write(f"  Result: SIGNIFICANT -- {alt_model} better (q < 0.05, BH-corrected)\n")
                     else:
-                        f.write(f"  Result: [ERROR] No significant difference (q >= 0.05, BH-corrected)\n")
-
+                        f.write(f"  Result: not significant (q >= 0.05, BH-corrected)\n")
                     f.write("\n" + "-"*60 + "\n\n")
 
                 total_valid = len(collected)
@@ -2105,13 +1691,11 @@ class CodemlBatchAnalysis:
                     f.write(f"  Significativo em p bruto < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
                     f.write(f"  Significativo em p bruto < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
                     f.write(f"  Significativo em q (BH) < 0.05: {sig_count_q05} ({100*sig_count_q05/total_valid:.1f}%)\n")
-                else:
-                    f.write(f"  Significativo em p bruto < 0.05: {sig_count_05}\n")
-                    f.write(f"  Significativo em p bruto < 0.01: {sig_count_01}\n")
-                    f.write(f"  Significativo em q (BH) < 0.05: {sig_count_q05}\n")
                 f.write("\n")
+                self._emit('info', self._t('lrt_pair_done', null=null_model, alt=alt_model,
+                                           n=total_valid, sig=sig_count_q05))
 
-        print(f"\n  [OK] LRT results saved: {lrt_file}")
+        self._emit('debug', f"LRT results saved: {lrt_file}")
 
     # ══════════════════════════════════════════════════════════════════
     # WGS / ndata MODE  (genome-scale multi-gene analysis)
@@ -2332,34 +1916,31 @@ class CodemlBatchAnalysis:
                     print(f"  [WARN] Error processing {gene_name} ({model}): {str(e)}")
 
         
-        # Calcular LRTs
+        # Calcular LRTs (pares em lrt_stats.PAIRS) e p-valores
         for gene_name in data:
             row = data[gene_name]
-            
-            # M0 vs M1a
-            if f'M0_lnL' in row and f'M1a_lnL' in row and row[f'M0_lnL'] and row[f'M1a_lnL']:
-                lrt = 2 * (row[f'M1a_lnL'] - row[f'M0_lnL'])
-                row['lrt_M0_vs_M1a'] = lrt
-            
-            # M1a vs M2a
-            if f'M1a_lnL' in row and f'M2a_lnL' in row and row[f'M1a_lnL'] and row[f'M2a_lnL']:
-                lrt = 2 * (row[f'M2a_lnL'] - row[f'M1a_lnL'])
-                row['lrt_M1a_vs_M2a'] = lrt
-            
-            # M7 vs M8
-            if f'M7_lnL' in row and f'M8_lnL' in row and row[f'M7_lnL'] and row[f'M8_lnL']:
-                lrt = 2 * (row[f'M8_lnL'] - row[f'M7_lnL'])
-                row['lrt_M7_vs_M8'] = lrt
-            
-            # M0 vs Branch
-            if f'M0_lnL' in row and f'Branch_lnL' in row and row[f'M0_lnL'] and row[f'Branch_lnL']:
-                lrt = 2 * (row[f'Branch_lnL'] - row[f'M0_lnL'])
-                row['lrt_M0_vs_Branch'] = lrt
-            
-            # Branch-site_null vs Branch-site
-            if f'Branch-site_null_lnL' in row and f'Branch-site_lnL' in row and row[f'Branch-site_null_lnL'] and row[f'Branch-site_lnL']:
-                lrt = 2 * (row[f'Branch-site_lnL'] - row[f'Branch-site_null_lnL'])
-                row['lrt_Branch-site_null_vs_Branch-site'] = lrt
+            for (null_m, alt_m), info in lrt_stats.PAIRS.items():
+                a_l, n_l = row.get(f'{alt_m}_lnL'), row.get(f'{null_m}_lnL')
+                if a_l is None or n_l is None or pd.isna(a_l) or pd.isna(n_l):
+                    continue
+                lrt = 2 * (a_l - n_l)
+                row[lrt_stats.lrt_column(null_m, alt_m)] = lrt
+                df = info['df'] or 1
+                if info['df'] is None:
+                    na, nn = row.get(f'{alt_m}_np'), row.get(f'{null_m}_np')
+                    ta, tn = row.get(f'{alt_m}_ntime'), row.get(f'{null_m}_ntime')
+                    if na and nn:
+                        df = abs(na - nn)
+                        if ta is not None and tn is not None:
+                            df = max(1, df - (ta - tn))
+                row[lrt_stats.p_column(null_m, alt_m)] = lrt_stats.p_value(
+                    max(0.0, lrt), df, boundary=info['boundary'])
+            for m in ('M2a', 'M8'):
+                rf = results_folder / m / f"{gene_name}_{m}_results.txt"
+                if rf.exists():
+                    pc = SitesParser.extract_positive_class(rf) or {}
+                    row[f'{m}_p_pos'] = pc.get('p')
+                    row[f'{m}_w_pos'] = pc.get('omega')
 
         # Anexar q-valores (BH), se fornecidos por _regenerate_lrt_results()
         for (null_model, alt_model), gene_qvals in qvalues.items():
@@ -2549,25 +2130,17 @@ class CodemlBatchAnalysis:
                     gene = results_file.name.split(f'_{folder_name}_results')[0]
                     genes.add(gene)
         
-        # df canonicos por par (Yang & Nielsen 2002, PAML manual):
-        # M0/M1a/M2a/M7/M8 sao NSsites models (ntime=0 no np do CODEML);
-        # M0 tem ntime>0; abs(np_alt-np_null) nao funciona entre essas classes.
-        comparisons = []
-        if 'M0' in models and 'M1a' in models:
-            comparisons.append(('M0', 'M1a', 'Tests if omega varies among sites', 2))
-        if 'M1a' in models and 'M2a' in models:
-            comparisons.append(('M1a', 'M2a', 'Tests for positive selection', 2))
-        if 'M7' in models and 'M8' in models:
-            comparisons.append(('M7', 'M8', 'Tests for positive selection (alternative)', 2))
-        if 'M0' in models and 'Branch' in models:
-            comparisons.append(('M0', 'Branch', 'Tests branch model (independent evolution rates)', 1))
-        if 'Branch-site_null' in models and 'Branch-site' in models:
-            comparisons.append(('Branch-site_null', 'Branch-site', 'Testa selecao positiva no ramo foreground (mistura 50:50 chi2)', 1))
-        
+        # Pares e df: fonte unica em lrt_stats.PAIRS
+        _desc = {(n, a): d for grp in CodemlBatchAnalysis.LRT_COMPARISONS.values() for n, a, d in grp}
+        comparisons = [(n, a, _desc.get((n, a), ''), info['df'] if info['df'] is not None else 1)
+                       for (n, a), info in lrt_stats.PAIRS.items() if n in models and a in models]
+
         with open(lrt_file, 'w', encoding='utf-8') as f:
             f.write("="*80 + "\n")
             f.write("LIKELIHOOD RATIO TEST (LRT) RESULTS (REGENERATED)\n")
+            f.write(f"EasyPAML {__version__}\n")
             f.write("="*80 + "\n\n")
+            f.write(CodemlBatchAnalysis.LRT_METHOD_NOTE + "\n")
             
             if not comparisons:
                 f.write("No valid comparisons found\n")
@@ -2633,19 +2206,15 @@ class CodemlBatchAnalysis:
                         # PAML recomenda explicitamente usar χ²(1) puro em vez dela
                         # ("guard against violations of model assumptions") -- ver
                         # nota completa em _run_lrt_analysis. Consistente com la.
-                        is_branchsite = (null_model == 'Branch-site_null'
-                                         and alt_model == 'Branch-site')
-                        p_value_mixture = None
-                        if is_branchsite:
-                            p_value = stats.chi2.sf(lrt_stat, df=1) if lrt_stat > 0 else 1.0
-                            p_value_mixture = 0.5 * p_value
-                        else:
-                            p_value = 1 - stats.chi2.cdf(lrt_stat, gene_df)
+                        is_boundary = lrt_stats.PAIRS[(null_model, alt_model)]['boundary']
+                        lrt_stat = max(0.0, lrt_stat)
+                        p_value = lrt_stats.p_value(lrt_stat, gene_df, boundary=is_boundary)
+                        p_value_mixture = lrt_stats.p_value_mixture(lrt_stat) if is_boundary else None
 
                         collected.append({
                             'gene': gene, 'lnL_null': lnL_null, 'lnL_alt': lnL_alt,
                             'lrt_stat': lrt_stat, 'df_display':
-                                "1 (χ²₁ puro, recomendacao PAML)" if is_branchsite else str(gene_df),
+                                f"{gene_df} (chi2(1) puro; mistura so referencia)" if is_boundary else str(gene_df),
                             'p_value': p_value, 'p_value_mixture': p_value_mixture,
                         })
 

@@ -44,9 +44,14 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from src.backend.codeml_backend import CodemlBatchAnalysis
+from src.backend import messages
+from src.backend.codeml_backend import CodemlBatchAnalysis, codeml_version, find_codeml
+from src.backend.ctl_params import CODONFREQ_OPTIONS, DEFAULT_CODONFREQ, codonfreq_label
+from src.backend.preflight import run_preflight
+from src.backend.version import __version__
 
-VALID_MODELS = {'M0', 'M1a', 'M2a', 'M7', 'M8', 'Branch', 'Branch-site', 'Branch-site_null'}
+VALID_MODELS = {'M0', 'M1a', 'M2a', 'M7', 'M8', 'M8a', 'Branch', 'Branch-site', 'Branch-site_null'}
+_CODONFREQ_HELP = ", ".join(f"{v}={n}" for v, n, _ in CODONFREQ_OPTIONS)
 
 
 def parse_args():
@@ -55,11 +60,31 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
+    ap.add_argument('--version', action='version', version=f"EasyPAML {__version__}")
     ap.add_argument('--config', type=Path, help="arquivo JSON com todos os parametros abaixo (sobrescreve as flags)")
     ap.add_argument('--input', type=Path, help="pasta com .fas/.fasta/.phy/.phylip (um arquivo por gene)")
     ap.add_argument('--tree', type=Path, help="arquivo de arvore Newick (com ou sem cabecalho 'N  1')")
     ap.add_argument('--output', type=Path, help="pasta de saida")
-    ap.add_argument('--models', default='M1a,M2a,M7,M8', help="modelos separados por virgula (default: M1a,M2a,M7,M8)")
+    ap.add_argument('--models', default='M1a,M2a,M7,M8,M8a',
+                    help="modelos separados por virgula (default: M1a,M2a,M7,M8,M8a)")
+    ap.add_argument('--codonfreq', type=int, default=DEFAULT_CODONFREQ,
+                    help=f"CodonFreq do codeml (default: {DEFAULT_CODONFREQ} = F3x4). Opcoes: {_CODONFREQ_HELP}")
+    ap.add_argument('--ncatg', type=int, default=10, help="categorias da beta em M7/M8 (default: 10)")
+    ap.add_argument('--kappa', type=float, default=2.0, help="kappa inicial (default: 2)")
+    ap.add_argument('--omega', type=float, default=0.5, help="omega inicial (default: 0.5)")
+    ap.add_argument('--cleandata', type=int, choices=(0, 1), default=1,
+                    help="1 = remove colunas com gap/ambiguidade/stop (default); 0 = mantem")
+    ap.add_argument('--ignore-stop-codons', action='store_true',
+                    help="roda genes com stop codon interno (o codeml trata a coluna como dado ausente). "
+                         "Sem esta opcao esses genes sao marcados como FALHOU, com a posicao do stop.")
+    ap.add_argument('--codeml', type=Path, help="caminho do executavel codeml (default: bin/codeml, "
+                                                "variavel EASYPAML_CODEML ou codeml no PATH)")
+    ap.add_argument('--idle-timeout', type=int, default=300,
+                    help="encerra o codeml se ficar N s sem usar CPU (default: 300; 0 desliga)")
+    ap.add_argument('--strict', action='store_true',
+                    help="nao roda nada se a verificacao inicial encontrar erros ou avisos")
+    ap.add_argument('--lang', choices=('pt', 'en'), help="idioma das mensagens (default: idioma do sistema)")
+    ap.add_argument('--verbose', action='store_true', help="mostra mensagens de depuracao")
     ap.add_argument('--workers', type=int, default=4, help="genes em paralelo (default: 4)")
     ap.add_argument('--timeout', type=int, default=1600, help="timeout por execucao codeml, em segundos (default: 1600)")
     ap.add_argument('--no-lrt', action='store_true', help="nao calcular LRT automaticamente no final")
@@ -92,7 +117,18 @@ def parse_args():
         # Mesmos defaults do caminho via flags -- sem isso, uma config.json
         # minima (so input/tree/output) quebra com KeyError la na frente em
         # vez de rodar com o comportamento padrao esperado.
-        cfg.setdefault('models', ['M1a', 'M2a', 'M7', 'M8'])
+        cfg.setdefault('models', ['M1a', 'M2a', 'M7', 'M8', 'M8a'])
+        cfg.setdefault('codonfreq', DEFAULT_CODONFREQ)
+        cfg.setdefault('ncatg', 10)
+        cfg.setdefault('kappa', 2.0)
+        cfg.setdefault('omega', 0.5)
+        cfg.setdefault('cleandata', 1)
+        cfg.setdefault('ignore_stop_codons', False)
+        cfg.setdefault('codeml', None)
+        cfg.setdefault('idle_timeout', 300)
+        cfg.setdefault('strict', False)
+        cfg.setdefault('lang', args.lang)
+        cfg.setdefault('verbose', args.verbose)
         cfg.setdefault('workers', 4)
         cfg.setdefault('timeout', 1600)
         cfg.setdefault('run_lrt', True)
@@ -124,6 +160,17 @@ def parse_args():
         'two_pass': args.two_pass,
         'sig_threshold': args.sig_threshold,
         'warm_start_m0': args.warm_start_m0,
+        'codonfreq': args.codonfreq,
+        'ncatg': args.ncatg,
+        'kappa': args.kappa,
+        'omega': args.omega,
+        'cleandata': args.cleandata,
+        'ignore_stop_codons': args.ignore_stop_codons,
+        'codeml': str(args.codeml) if args.codeml else None,
+        'idle_timeout': args.idle_timeout,
+        'strict': args.strict,
+        'lang': args.lang,
+        'verbose': args.verbose,
     }
 
 
@@ -134,6 +181,16 @@ def _make_app(cfg, input_folder, output_folder, models, skip_beb):
         'models': models, 'timeout': cfg['timeout'], 'run_lrt': cfg['run_lrt'],
         'n_workers': cfg['workers'], 'auto_prune_tree': cfg['auto_prune_tree'], 'skip_beb': skip_beb,
         'warm_start_m0': cfg.get('warm_start_m0', False),
+        'CodonFreq': cfg.get('codonfreq', DEFAULT_CODONFREQ),
+        'ncatG': cfg.get('ncatg', 10),
+        'kappa': cfg.get('kappa', 2.0),
+        'omega': cfg.get('omega', 0.5),
+        'cleandata': cfg.get('cleandata', 1),
+        'ignore_stop_codons': cfg.get('ignore_stop_codons', False),
+        'codeml_path': cfg.get('codeml'),
+        'idle_timeout': cfg.get('idle_timeout', 300),
+        'verbose': cfg.get('verbose', False),
+        'interface': 'cli',
     }
     return app
 
@@ -150,12 +207,12 @@ def run_two_pass(cfg):
     pass1_dir.mkdir(parents=True, exist_ok=True)
     print("### PASSADA 1/2 -- todos os genes, sem BEB (so LRT) ###\n")
     app1 = _make_app(cfg, cfg['input'], pass1_dir, cfg['models'], skip_beb=True)
-    app1.run_batch_analysis()
+    summary1 = app1.run_batch_analysis()
 
     import pandas as pd
     df = pd.read_csv(pass1_dir / 'analysis_summary.tsv', sep='\t')
     sig_genes = set()
-    for null, alt in (('M1a', 'M2a'), ('M7', 'M8')):
+    for null, alt in (('M1a', 'M2a'), ('M7', 'M8'), ('M8a', 'M8')):
         q_col = f'q_{null}_vs_{alt}'
         if null in cfg['models'] and alt in cfg['models'] and q_col in df.columns:
             qvals = pd.to_numeric(df[q_col], errors='coerce')
@@ -164,7 +221,7 @@ def run_two_pass(cfg):
     print(f"\n### {len(sig_genes)}/{len(df)} genes com LRT significativo (q BH<{cfg['sig_threshold']}) -- rerodando com BEB ###\n")
     if not sig_genes:
         print("Nenhum gene significativo -- passada 2 nao tem o que fazer.")
-        return
+        return summary1
 
     pass2_input = cfg['output'] / 'pass2_input'
     pass2_input.mkdir(parents=True, exist_ok=True)
@@ -176,14 +233,17 @@ def run_two_pass(cfg):
     pass2_dir = cfg['output'] / 'pass2_beb'
     pass2_dir.mkdir(parents=True, exist_ok=True)
     app2 = _make_app(cfg, pass2_input, pass2_dir, beb_models, skip_beb=False)
-    app2.run_batch_analysis()
+    summary2 = app2.run_batch_analysis()
 
     print(f"\nScreen completo (todos os genes, sem BEB): {pass1_dir}")
     print(f"BEB detalhado (so os {len(sig_genes)} significativos): {pass2_dir}")
+    return {'failed': summary1.get('failed', 0) + summary2.get('failed', 0)}
 
 
 def main():
     cfg = parse_args()
+    messages.set_language(cfg.get('lang') or messages.system_language())
+    lang = messages.get_language()
 
     bad_models = set(cfg['models']) - VALID_MODELS
     if bad_models:
@@ -195,27 +255,37 @@ def main():
 
     cfg['output'].mkdir(parents=True, exist_ok=True)
 
-    print("=" * 80)
-    print("EasyPAML CLI -- configuracao")
-    print("=" * 80)
+    codeml_path = find_codeml(cfg.get('codeml'))
+    print("=" * 72)
+    print(f"EasyPAML {__version__} -- CLI")
+    print("=" * 72)
     for k, v in cfg.items():
-        print(f"  {k:16s}: {v}")
-    print("=" * 80 + "\n")
+        print(f"  {k:18s}: {v}")
+    print(f"  {'codeml (resolved)':18s}: {codeml_path} (version {codeml_version(codeml_path)})")
+    print(f"  {'CodonFreq':18s}: {codonfreq_label(cfg.get('codonfreq', DEFAULT_CODONFREQ))}")
+    print("=" * 72 + "\n")
 
-    # Grava a config efetivamente usada junto com os resultados -- reprodutibilidade
-    # (permite citar exatamente esse arquivo nos Metodos, ou refazer o run identico).
-    with open(cfg['output'] / 'run_config.json', 'w', encoding='utf-8') as fh:
-        json.dump({k: str(v) if isinstance(v, Path) else v for k, v in cfg.items()}, fh, indent=2, ensure_ascii=False)
+    # Verificacao antes de rodar: stop codons (com posicao), nomes que nao
+    # batem com a arvore, taxons podados, duplicados, comprimento % 3.
+    report = run_preflight(cfg['input'], cfg['tree'], auto_prune=cfg['auto_prune_tree'],
+                           ignore_stop_codons=cfg.get('ignore_stop_codons', False))
+    text = report.format_text(lang, include_info=cfg.get('verbose', False))
+    if text:
+        print("Verificacao dos dados / Data check:" if lang == 'pt' else "Data check:")
+        print(text + "\n")
+    if cfg.get('strict') and report.has_problems:
+        sys.exit(2)
 
     try:
         if cfg['two_pass']:
-            run_two_pass(cfg)
+            summary = run_two_pass(cfg) or {}
         else:
             app = _make_app(cfg, cfg['input'], cfg['output'], cfg['models'], cfg['skip_beb'])
-            app.run_batch_analysis()
+            summary = app.run_batch_analysis() or {}
     except KeyboardInterrupt:
         print("\nInterrompido pelo usuario (Ctrl+C). Resultados parciais ja estao em disco.")
         sys.exit(130)
+    sys.exit(1 if summary.get('failed') else 0)
 
 
 if __name__ == '__main__':
