@@ -25,7 +25,7 @@ from backend.codeml_backend import CodemlBatchAnalysis
 from backend import messages as backend_messages
 from backend.ctl_params import (CODONFREQ_OPTIONS, DEFAULT_CODONFREQ, DEFAULT_CTL_PARAMS,
                                 build_ctl_text, codonfreq_label, parse_codonfreq_label)
-from backend.preflight import list_alignment_files, run_preflight
+from backend.preflight import discover_per_gene_trees, group_by_gene, list_alignment_files, run_preflight
 from .results_viewer import ResultsViewerWindow
 from .gui_texts import TEXTS, set_language, get_language, tr
 from .ui_helpers import (PALETTE, PreflightDialog, ask_yes_no, disable_mouse_wheel,
@@ -838,6 +838,7 @@ class App(ctk.CTk):
         self.show_details_var = ctk.BooleanVar(value=False)
         self._detail_lines = []
         self.input_folder = None
+        self.per_gene_trees = {}
         self.tree_file = None
         self.output_folder = None
         self.analysis_thread = None
@@ -1543,9 +1544,14 @@ class App(ctk.CTk):
         if path:
             self.input_folder = Path(path)
             files = list_alignment_files(self.input_folder)
+            chosen, _ = group_by_gene(files)
+            self.per_gene_trees = discover_per_gene_trees(self.input_folder, genes=set(chosen))
             if files:
                 names = ", ".join(f.name for f in files[:4]) + (" …" if len(files) > 4 else "")
                 text = TEXTS["label_found_alignments"].format(n=len(files), names=names)
+                if self.per_gene_trees:
+                    text += "\n" + TEXTS["label_per_gene_trees"].format(n=len(self.per_gene_trees),
+                                                                       total=len(chosen))
                 color = self.COLORS['text_secondary']
             else:
                 text = TEXTS["label_no_alignments"]
@@ -1902,8 +1908,16 @@ class App(ctk.CTk):
         """Alias para _regenerate_summary_files com novo nome"""
         self._regenerate_summary_files()
 
+    def _all_genes_have_trees(self) -> bool:
+        if not self.input_folder or not self.per_gene_trees:
+            return False
+        chosen, _ = group_by_gene(list_alignment_files(self.input_folder))
+        return bool(chosen) and all(g in self.per_gene_trees for g in chosen)
+
     def _update_models_state(self):
-        enabled = all([self.input_folder, self.tree_file, self.output_folder])
+        # árvore: o arquivo escolhido OU uma árvore por gene (GENE.nwk) para todos
+        has_tree = bool(self.tree_file) or self._all_genes_have_trees()
+        enabled = all([self.input_folder, has_tree, self.output_folder])
         state = "normal" if enabled else "disabled"
         try:
             if enabled:
@@ -2090,7 +2104,8 @@ class App(ctk.CTk):
         def _check():
             try:
                 report = run_preflight(self.input_folder, self.tree_file, auto_prune=prune,
-                                       ignore_stop_codons=ignore)
+                                       ignore_stop_codons=ignore,
+                                       per_gene_trees=self.per_gene_trees)
                 err = None
             except Exception as exc:
                 report, err = None, exc
@@ -2140,6 +2155,7 @@ class App(ctk.CTk):
             analysis.config = {
                 'input_folder': self.input_folder,
                 'tree_file': self.tree_file,
+                'per_gene_trees': dict(self.per_gene_trees),
                 'output_folder': self.output_folder,
                 'models': selected,
                 'custom_model_params': self.custom_model_params,

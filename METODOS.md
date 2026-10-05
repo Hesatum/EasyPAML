@@ -18,7 +18,9 @@ relação a versões anteriores).
   Se houver dois arquivos do mesmo gene (`gene.fasta` e `gene.phy`), usa-se o FASTA
   e o outro é ignorado, com aviso.
 - **Árvore**: Newick, com ou sem raiz, com ou sem comprimentos de ramo e com ou
-  sem cabeçalho `N 1`. Para o modelo Branch/Branch-site, as marcas `#1`, `#2` … são
+  sem cabeçalho `N 1`. Uma árvore por gene é aceita: `GENE.nwk` (`.tree`, `.tre`,
+  `.newick`, `.treefile`) na pasta dos alinhamentos ou em `--tree-folder`, pareada
+  pelo nome do arquivo; para esse gene ela substitui a árvore geral. Para o modelo Branch/Branch-site, as marcas `#1`, `#2` … são
   feitas na janela "Marcar ramos".
 - **Codeml**: o executável é procurado em `--codeml`/configuração, variável
   `EASYPAML_CODEML`, `bin/codeml(.exe)` do projeto e, por fim, no `PATH`. A versão

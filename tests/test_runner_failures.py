@@ -65,7 +65,7 @@ def fake_codeml(tmp_path):
 
 def _app(tmp_path, codeml, models=('M7', 'M8'), **extra):
     inp = tmp_path / 'in'
-    inp.mkdir(exist_ok=True)
+    inp.mkdir(parents=True, exist_ok=True)
     (inp / 'gene.fasta').write_text((DATA / 'gene_exemplo.fasta').read_text())
     app = CodemlBatchAnalysis()
     app.config = {
@@ -204,3 +204,30 @@ def test_real_codeml_problematic_data_never_hangs(tmp_path):
     import json
     sm = json.loads((tmp_path / 'out' / 'M7' / 'gene_M7_sitemap.json').read_text())
     assert sm['verified'] is True and sm['n_codons_used_by_codeml'] == 299
+
+
+def test_per_gene_tree_is_paired_by_file_name(tmp_path, fake_codeml, monkeypatch):
+    """Item 8: GENE.nwk ao lado do alinhamento substitui a árvore geral para aquele gene."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    app = _app(tmp_path, fake_codeml, models=('M7',))
+    inp = app.config['input_folder']
+    (inp / 'g2.fasta').write_text((DATA / 'gene_exemplo.fasta').read_text())
+    # árvore própria do gene 'gene' só com 6 táxons -> 4 sequências excluídas
+    (inp / 'gene.nwk').write_text(
+        "((Homo_sapiens,Pan_troglodytes),Gorilla_gorilla,(Macaca_mulatta,(Papio_anubis,Aotus_nancymaae)));\n")
+    app.config['tree_file'] = None
+    summary = app.run_batch_analysis()
+    # g2 não tem árvore própria nem árvore geral -> falha clara (sem travar)
+    assert summary['failures'].get('g2')
+    tree_used = (tmp_path / 'out' / 'M7' / 'gene_M7_tree.nwk').read_text()
+    assert tree_used.startswith('6  1')
+    assert any('EXCLUDED' in t for _, t in app._test_log)
+
+    app2 = _app(tmp_path / 'second', fake_codeml, models=('M7',))
+    (app2.config['input_folder'] / 'gene.nwk').write_text(
+        "((Homo_sapiens,Pan_troglodytes),Gorilla_gorilla,(Macaca_mulatta,(Papio_anubis,Aotus_nancymaae)));\n")
+    (app2.config['input_folder'] / 'g2.fasta').write_text((DATA / 'gene_exemplo.fasta').read_text())
+    summary2 = app2.run_batch_analysis()          # com árvore geral: g2 usa a geral
+    assert summary2['ok'] == 2
+    assert (tmp_path / 'second' / 'out' / 'M7' / 'g2_M7_tree.nwk').read_text().startswith('10  1')
+    assert (tmp_path / 'second' / 'out' / 'M7' / 'gene_M7_tree.nwk').read_text().startswith('6  1')

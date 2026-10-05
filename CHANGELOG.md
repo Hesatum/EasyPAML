@@ -48,6 +48,8 @@ Correções a partir do teste de usabilidade de 05/10/2026.
   `--ignore-stop-codons`, `--codeml`, `--idle-timeout`, `--strict`, `--lang`,
   `--verbose`; código de saída 1 se algum gene falhar.
 - PHYLIP relaxado (nomes com mais de 10 caracteres), sequencial ou intercalado.
+- Árvore por gene em lote: `GENE.nwk` ao lado de `GENE.fasta` (ou `--tree-folder`)
+  substitui a árvore geral para aquele gene.
 - Testes automatizados (`pytest`) e dados simulados com gabarito (`tests/data`).
 - `METODOS.md` (conteúdo técnico antes só no `AGENTS.md`) e este changelog.
 

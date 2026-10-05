@@ -132,6 +132,25 @@ def group_by_gene(files: Sequence[Path]):
     return chosen, ignored
 
 
+TREE_SUFFIXES = ('.nwk', '.tree', '.tre', '.newick', '.treefile')
+
+
+def discover_per_gene_trees(alignment_folder, tree_folder=None, genes=None) -> Dict[str, Path]:
+    """Árvore por gene, pareada pelo nome do arquivo: gene.fasta <-> gene.nwk
+    (ou .tree/.tre/.newick/.treefile), procurada na pasta dos alinhamentos e,
+    se dada, numa pasta de árvores. {gene: arquivo}."""
+    found: Dict[str, Path] = {}
+    folders = [Path(alignment_folder)] + ([Path(tree_folder)] if tree_folder else [])
+    for folder in folders:
+        if not folder.is_dir():
+            continue
+        for p in sorted(folder.iterdir()):
+            if p.is_file() and p.suffix.lower() in TREE_SUFFIXES:
+                if genes is None or p.stem in genes:
+                    found[p.stem] = p
+    return found
+
+
 # ── Verificação principal ──────────────────────────────────────────────────
 
 def run_preflight(input_folder, tree_file, auto_prune: bool = True,
@@ -145,6 +164,13 @@ def run_preflight(input_folder, tree_file, auto_prune: bool = True,
     files = list_alignment_files(input_folder)
     chosen, ignored = group_by_gene(files)
     issues: List[Issue] = []
+    if per_gene_trees is None:
+        per_gene_trees = discover_per_gene_trees(input_folder, genes=set(chosen))
+    for gene in chosen:
+        if gene not in per_gene_trees and not tree_file:
+            issues.append(Issue(gene, 'no_tree', ERROR, {}))
+    if per_gene_trees:
+        issues.append(Issue('', 'per_gene_trees', INFO, {'n': len(per_gene_trees)}))
 
     if not files:
         issues.append(Issue('', 'no_alignments', ERROR, {'folder': str(input_folder)}))
@@ -157,6 +183,8 @@ def run_preflight(input_folder, tree_file, auto_prune: bool = True,
 
     def taxa_for(gene: str):
         tf = (per_gene_trees or {}).get(gene) or tree_file
+        if not tf:
+            return None
         key = str(tf)
         if key not in tree_cache:
             try:
@@ -268,6 +296,14 @@ _MESSAGES = {
     'tree_taxa_pruned': {
         'pt': "{count} táxon(s) da árvore não estão neste gene{prune_pt}: {list}",
         'en': "{count} tree taxon/taxa are not in this gene{prune_en}: {list}",
+    },
+    'no_tree': {
+        'pt': "Nenhuma árvore para este gene (escolha um arquivo de árvore ou ponha GENE.nwk na pasta).",
+        'en': "No tree for this gene (choose a tree file or put GENE.nwk in the folder).",
+    },
+    'per_gene_trees': {
+        'pt': "{n} gene(s) com árvore própria (GENE.nwk na pasta); para eles ela substitui o arquivo de árvore.",
+        'en': "{n} gene(s) with their own tree (GENE.nwk in the folder); for them it replaces the tree file.",
     },
     'too_few_shared_taxa': {
         'pt': "Só {n} sequência(s) em comum entre alinhamento e árvore; são necessárias pelo menos 3.",

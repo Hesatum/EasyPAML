@@ -63,7 +63,10 @@ def parse_args():
     ap.add_argument('--version', action='version', version=f"EasyPAML {__version__}")
     ap.add_argument('--config', type=Path, help="arquivo JSON com todos os parametros abaixo (sobrescreve as flags)")
     ap.add_argument('--input', type=Path, help="pasta com .fas/.fasta/.phy/.phylip (um arquivo por gene)")
-    ap.add_argument('--tree', type=Path, help="arquivo de arvore Newick (com ou sem cabecalho 'N  1')")
+    ap.add_argument('--tree', type=Path, help="arquivo de arvore Newick (com ou sem cabecalho 'N  1'); "
+                                              "opcional se cada gene tiver GENE.nwk ao lado do alinhamento")
+    ap.add_argument('--tree-folder', type=Path, help="pasta com uma arvore por gene (GENE.nwk/.tree/.tre), "
+                                                     "pareada pelo nome do arquivo do alinhamento")
     ap.add_argument('--output', type=Path, help="pasta de saida")
     ap.add_argument('--models', default='M1a,M2a,M7,M8,M8a',
                     help="modelos separados por virgula (default: M1a,M2a,M7,M8,M8a)")
@@ -108,11 +111,14 @@ def parse_args():
         with open(args.config, encoding='utf-8') as fh:
             cfg = json.load(fh)
 
-        missing = [k for k in ('input', 'tree', 'output') if k not in cfg]
+        missing = [k for k in ('input', 'output') if k not in cfg]
         if missing:
             ap.error(f"--config {args.config}: faltando chave(s) obrigatoria(s) {missing}")
-        for key in ('input', 'tree', 'output'):
-            cfg[key] = Path(cfg[key])
+        for key in ('input', 'tree', 'output', 'tree_folder'):
+            if cfg.get(key):
+                cfg[key] = Path(cfg[key])
+        cfg.setdefault('tree', None)
+        cfg.setdefault('tree_folder', None)
 
         # Mesmos defaults do caminho via flags -- sem isso, uma config.json
         # minima (so input/tree/output) quebra com KeyError la na frente em
@@ -144,12 +150,13 @@ def parse_args():
 
         return cfg
 
-    if not (args.input and args.tree and args.output):
-        ap.error("--input, --tree e --output sao obrigatorios (ou use --config)")
+    if not (args.input and args.output):
+        ap.error("--input e --output sao obrigatorios (ou use --config)")
 
     return {
         'input': args.input,
         'tree': args.tree,
+        'tree_folder': args.tree_folder,
         'output': args.output,
         'models': [m.strip() for m in args.models.split(',') if m.strip()],
         'workers': args.workers,
@@ -178,6 +185,7 @@ def _make_app(cfg, input_folder, output_folder, models, skip_beb):
     app = CodemlBatchAnalysis()
     app.config = {
         'input_folder': input_folder, 'tree_file': cfg['tree'], 'output_folder': output_folder,
+        'tree_folder': cfg.get('tree_folder'),
         'models': models, 'timeout': cfg['timeout'], 'run_lrt': cfg['run_lrt'],
         'n_workers': cfg['workers'], 'auto_prune_tree': cfg['auto_prune_tree'], 'skip_beb': skip_beb,
         'warm_start_m0': cfg.get('warm_start_m0', False),
@@ -226,9 +234,10 @@ def run_two_pass(cfg):
     pass2_input = cfg['output'] / 'pass2_input'
     pass2_input.mkdir(parents=True, exist_ok=True)
     for gene in sig_genes:
-        src = next(cfg['input'].glob(f'{gene}.*'), None)
-        if src:
-            shutil.copy(src, pass2_input / src.name)
+        # alinhamento e, se houver, a árvore própria do gene (GENE.nwk)
+        for src in cfg['input'].glob(f'{gene}.*'):
+            if src.stem == gene and src.is_file():
+                shutil.copy(src, pass2_input / src.name)
 
     pass2_dir = cfg['output'] / 'pass2_beb'
     pass2_dir.mkdir(parents=True, exist_ok=True)
@@ -250,8 +259,12 @@ def main():
         sys.exit(f"Modelo(s) invalido(s): {sorted(bad_models)}. Validos: {sorted(VALID_MODELS)}")
     if not cfg['input'].is_dir():
         sys.exit(f"Pasta de input nao existe: {cfg['input']}")
-    if not cfg['tree'].is_file():
+    if cfg.get('tree') and not cfg['tree'].is_file():
         sys.exit(f"Arquivo de arvore nao existe: {cfg['tree']}")
+    from src.backend.preflight import discover_per_gene_trees
+    per_gene = discover_per_gene_trees(cfg['input'], cfg.get('tree_folder'))
+    if not cfg.get('tree') and not per_gene:
+        sys.exit("Informe --tree (ou ponha uma arvore GENE.nwk por gene na pasta / em --tree-folder)")
 
     cfg['output'].mkdir(parents=True, exist_ok=True)
 
@@ -267,8 +280,9 @@ def main():
 
     # Verificacao antes de rodar: stop codons (com posicao), nomes que nao
     # batem com a arvore, taxons podados, duplicados, comprimento % 3.
-    report = run_preflight(cfg['input'], cfg['tree'], auto_prune=cfg['auto_prune_tree'],
-                           ignore_stop_codons=cfg.get('ignore_stop_codons', False))
+    report = run_preflight(cfg['input'], cfg.get('tree'), auto_prune=cfg['auto_prune_tree'],
+                           ignore_stop_codons=cfg.get('ignore_stop_codons', False),
+                           per_gene_trees=per_gene)
     text = report.format_text(lang, include_info=cfg.get('verbose', False))
     if text:
         print("Verificacao dos dados / Data check:" if lang == 'pt' else "Data check:")

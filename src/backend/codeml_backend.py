@@ -29,7 +29,7 @@ from .alignment_io import (AlignmentError, cleandata_kept_codons, find_stop_codo
                            read_alignment, to_fasta)
 from .ctl_params import (DEFAULT_CODONFREQ, DEFAULT_CTL_PARAMS, build_ctl_text,
                          codonfreq_label)
-from .preflight import group_by_gene, list_alignment_files
+from .preflight import discover_per_gene_trees, group_by_gene, list_alignment_files
 from .site_map import codeml_site_count, write_sitemap
 from .version import __version__
 
@@ -652,6 +652,10 @@ class CodemlBatchAnalysis:
         files = list_alignment_files(cfg['input_folder'])
         chosen, ignored = group_by_gene(files)
         genes = list(chosen.items())
+        # Árvore por gene (GENE.nwk ao lado do alinhamento): substitui tree_file
+        if cfg.get('per_gene_trees') is None and cfg.get('auto_per_gene_trees', True):
+            cfg['per_gene_trees'] = discover_per_gene_trees(
+                cfg['input_folder'], cfg.get('tree_folder'), genes=set(chosen))
         self.current_total_genes = len(genes)
         self.current_processed_genes = 0
         n_workers = max(1, int(cfg.get('n_workers', 1)))
@@ -666,6 +670,9 @@ class CodemlBatchAnalysis:
             log.write(f"Input folder: {cfg['input_folder']}\n")
             log.write(f"Output folder: {output_folder}\n")
             log.write(f"Tree file: {cfg.get('tree_file')}\n")
+            if cfg.get('per_gene_trees'):
+                log.write(f"Per-gene trees: {len(cfg['per_gene_trees'])} "
+                          f"({', '.join(sorted(cfg['per_gene_trees'])[:10])})\n")
             log.write(f"Models: {', '.join(cfg['models'])}\n")
             log.write(f"Base .ctl parameters: {dict(ctl_defaults)}\n")
             log.write("=" * 80 + "\n\n")
@@ -1106,7 +1113,9 @@ class CodemlBatchAnalysis:
             per_gene = (cfg.get('per_gene_trees') or {}).get(base_name)
             if per_gene:
                 tree_path = Path(per_gene)
-            tree_text = tree_path.read_text(encoding='utf-8', errors='ignore') if tree_path else ''
+            if tree_path is None:
+                return self._failed(self._t('reason_exception', error='no tree for this gene'), exec_start)
+            tree_text = tree_path.read_text(encoding='utf-8', errors='ignore')
             t_lines = tree_text.splitlines()
             if t_lines and t_lines[0].strip() and t_lines[0].strip().split()[0].isdigit() \
                     and not t_lines[0].strip().startswith('('):

@@ -85,6 +85,9 @@ Benjamini-Hochberg e tabela de sítios (BEB).
    alinhamentos encontrou.
 2. **Arquivo de árvore**: árvore Newick (`.nwk`, `.tree`, `.tre`, `.txt`), com ou
    sem raiz; pode ter táxons a mais (são podados em cada gene).
+   **Uma árvore por gene**: ponha `GENE.nwk` (ou `.tree`/`.tre`) ao lado de
+   `GENE.fasta` na pasta de alinhamentos; para esse gene ela substitui o arquivo de
+   árvore (se todos os genes tiverem a sua, o arquivo de árvore é dispensado).
 3. **Pasta de resultados**: escolha ou digite o nome de uma pasta nova (ela é criada).
 4. Ligue os modelos. Com **Modelos nulos automáticos** ligado, o nulo de cada teste
    entra sozinho (M8 → M7 e M8a; M2a → M1a).
@@ -143,6 +146,7 @@ Opções principais (`--help` mostra todas):
 | Opção | Padrão | Significado |
 |---|---|---|
 | `--models` | `M1a,M2a,M7,M8,M8a` | modelos a rodar |
+| `--tree-folder` | — | pasta com uma árvore por gene (`GENE.nwk`), pareada pelo nome; também vale `GENE.nwk` na própria pasta de alinhamentos |
 | `--codonfreq` | `2` (F3x4) | CodonFreq do codeml (0 Fequal, 1 F1x4, 2 F3x4, 3 F61, 7 FMutSel …) |
 | `--ncatg` | `10` | categorias da beta (M7/M8/M8a) |
 | `--cleandata` | `1` | remove colunas com gap/ambiguidade/stop |
