@@ -195,8 +195,14 @@ Para refazer uma execução à mão: `cd SAIDA/M8 && codeml GENE_M8.ctl`.
 3. **Pasta de resultados**: uma pasta nova
 4. Ligue **M8** e clique em **Iniciar**
 
-`exemplos_teste/resultados/` traz o resultado dessa execução (M1a, M2a, M7, M8, M8a,
-codeml 4.9j; 25 de 25 genes concluídos) para comparação — ver o `LEIAME.md` da pasta. `tests/data/` tem um conjunto simulado com resposta conhecida.
+Os resultados do exemplo não vêm no repositório; para gerá-los (cerca de 1 h com 12 processos):
+
+```bash
+.venv/bin/python easypaml_cli.py --input exemplos_teste/amostras \
+    --tree exemplos_teste/arvore_amostras.nwk --output exemplos_teste/resultados --workers 8
+```
+
+`tests/data` tem um conjunto simulado com resposta conhecida.
 
 ---
 

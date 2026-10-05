@@ -32,7 +32,6 @@ lnf
 # Analysis outputs (keep examples, ignore user runs)
 outputs/
 resultados/
-!exemplos_teste/resultados/
 
 # Runtime logs
 app_log.txt
@@ -83,3 +82,6 @@ desktop.ini
 tmp/
 temp/
 bin/codeml
+
+# Resultados do exemplo (gerados localmente, ver README)
+exemplos_teste/resultados/
