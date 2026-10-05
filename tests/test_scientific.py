@@ -132,3 +132,18 @@ def test_ctl_comment_never_glued_to_long_values():
     line = next(l for l in text.splitlines() if l.strip().startswith('seqfile'))
     assert f"{long}   *" in line
     assert parse_ctl_text(text)['seqfile'] == long
+
+
+def test_regenerated_summary_keeps_tiny_p_values(tmp_path):
+    """Regenerar o TSV não pode transformar p = 4e-23 em 0.000000."""
+    import pandas as pd
+    for model, lnl, np_ in (('M7', -4174.199719, 20), ('M8', -4122.628318, 22)):
+        d = tmp_path / model
+        d.mkdir()
+        (d / f'g_{model}_results.txt').write_text(
+            f"CODONML\nns =  10  ls = 300\nlnL(ntime: 17  np: {np_}):  {lnl}      +0.000000\n")
+    CodemlBatchAnalysis.regenerate_summary_files(tmp_path)
+    df = pd.read_csv(tmp_path / 'analysis_summary.tsv', sep='\t')
+    p = float(df.loc[0, 'p_M7_vs_M8'])
+    assert 1e-24 < p < 1e-22
+    assert float(df.loc[0, 'q_M7_vs_M8']) > 0

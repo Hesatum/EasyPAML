@@ -434,14 +434,14 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             if pd.isna(lrt):
                 continue
             p = row.get(pcol) if pcol in self.df.columns else np.nan
-            if pd.isna(p):
+            if pd.isna(p) or p <= 0:   # p = 0 só aparece por arredondamento: recalcula
                 df_ = info['df'] or 1
                 p = lrt_stats.p_value(max(0.0, float(lrt)), df_, boundary=info['boundary'])
             genes.append(row['Gene']); lrts.append(float(lrt)); ps.append(float(p))
         if qcol in self.df.columns:
             qmap = dict(zip(self.df['Gene'], self.df[qcol]))
             qs = [qmap.get(g, np.nan) for g in genes]
-            if any(pd.isna(q) for q in qs):
+            if any(pd.isna(q) or q <= 0 for q in qs):
                 qs = lrt_stats.bh_qvalues(ps)
         else:
             qs = lrt_stats.bh_qvalues(ps)

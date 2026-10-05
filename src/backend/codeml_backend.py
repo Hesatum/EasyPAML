@@ -2022,8 +2022,13 @@ class CodemlBatchAnalysis:
             if 'Branch-site_null_class_data' in row:
                 del row['Branch-site_null_class_data']
         
-        # Converter para DataFrame e salvar
+        # Converter para DataFrame e salvar. p/q em notação científica: com
+        # '%.6f' um p de 4e-23 virava "0.000000" (o "p = 0" de volta).
         df = pd.DataFrame(list(data.values()))
+        for col in df.columns:
+            if col.startswith(('p_', 'q_')):
+                df[col] = [f"{v:.6e}" if isinstance(v, (int, float)) and pd.notna(v) else 'NA'
+                           for v in df[col]]
         df.to_csv(summary_file, sep='\t', index=False, float_format='%.6f')
 
         # Alertar sobre genes com .ctl mas sem resultado (worker crash / sessão interrompida)
