@@ -2313,7 +2313,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 continue  # per-tag columns added below
             omega_col = f'{mn}_omega'
             if omega_col in df_f.columns:
-                out[f'ω ({mn})'] = pd.to_numeric(df_f[omega_col].values, errors='coerce').round(4)
+                out[tr(f'ω médio ({mn})', f'mean ω ({mn})')] = pd.to_numeric(
+                    df_f[omega_col].values, errors='coerce').round(4)
+            for col, label in ((f'{mn}_w_pos', tr(f'ω classe positiva ({mn})', f'positive-class ω ({mn})')),
+                               (f'{mn}_p_pos', tr(f'p₁ classe positiva ({mn})', f'positive-class p₁ ({mn})'))):
+                if col in df_f.columns:
+                    out[label] = pd.to_numeric(df_f[col].values, errors='coerce').round(4)
 
         # ── Per-tag ω columns for Branch model ───────────────────────────
         # PAML's "w (dN/dS) for branches:" lists groups as [bg, #1, #2, ...]
