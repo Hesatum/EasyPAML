@@ -22,8 +22,14 @@ _FONT_UI   = "Roboto" if not _ON_LINUX else "DejaVu Sans"
 _FONT_MONO = "Cascadia Code" if _ON_WIN else "DejaVu Sans Mono"
 
 from backend.codeml_backend import CodemlBatchAnalysis
+from backend import messages as backend_messages
+from backend.ctl_params import (CODONFREQ_OPTIONS, DEFAULT_CODONFREQ, DEFAULT_CTL_PARAMS,
+                                build_ctl_text, codonfreq_label, parse_codonfreq_label)
+from backend.preflight import list_alignment_files, run_preflight
 from .results_viewer import ResultsViewerWindow
 from .gui_texts import TEXTS, set_language, get_language
+from .ui_helpers import (PALETTE, PreflightDialog, ask_yes_no, disable_mouse_wheel,
+                         fit_to_screen, hover_tint, mix, open_folder, show_about, show_message)
 
 try:
     from Bio import Phylo
@@ -40,124 +46,147 @@ ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
 class StdoutRedirect:
+    """print() de bibliotecas/partes antigas vira mensagem 'debug' (escondida
+    até o usuário marcar "Mostrar detalhes técnicos")."""
     def __init__(self, append_func):
         self.append = append_func
     def write(self, s):
-        if s and s.strip() != "": self.append(s)
+        for line in str(s).splitlines():
+            if line.strip():
+                self.append(line, 'debug')
     def flush(self): pass
 
 class ModelConfigWindow(ctk.CTkToplevel):
-    """Janela para editar os parâmetros do .ctl em memória - Estilo Premium"""
-    
+    """Edita os parâmetros do .ctl de um modelo (em memória). CodonFreq é uma
+    lista suspensa com número e nome de cada opção; embaixo, a prévia de
+    TODOS os parâmetros que irão para o .ctl."""
+
     COLORS = {
         'bg_dark':        '#0c0c0e',
         'bg_card':        '#16161a',
         'text_primary':   '#ededef',
-        'text_secondary': '#9898a6',
-        'accent_blue':    '#6366f1',
-        'accent_blue_hover': '#4f46e5',
-        'success':        '#22c55e',
-        'success_hover':  '#16a34a',
-        'danger':         '#f87171',
+        'text_secondary': '#a3a3b8',
+        'success':        '#15803d',
+        'success_hover':  '#166534',
     }
-    
+
+    _NUMERIC_FIELDS = (('NSsites', 'cfg_field_nssites'), ('model', 'cfg_field_model'),
+                       ('fix_omega', 'cfg_field_fix_omega'), ('omega', 'cfg_field_omega'),
+                       ('ncatG', 'cfg_field_ncatg'), ('kappa', 'cfg_field_kappa'))
+
     def __init__(self, parent, model_code: str, initial: dict):
         super().__init__(parent)
-        self.title(f"Configurar {model_code}")
-        self.geometry("500x500")
+        self.title(TEXTS["model_config_header"].format(model_code=model_code))
+        fit_to_screen(self, 560, 720, min_w=480, min_h=480)
         self.parent = parent
         self.model_code = model_code
         self.entries = {}
-        
         self.configure(fg_color=self.COLORS['bg_dark'])
-        self.attributes("-topmost", True)
-        self.grab_set()
+        self.transient(parent)
+        self.after(50, self._grab)
+        self.bind("<Escape>", lambda e: self.destroy())
 
-        # ═══ HEADER ═══
-        header = ctk.CTkFrame(self, fg_color='transparent')
-        header.pack(fill="x", padx=20, pady=(20, 10))
-        
-        ctk.CTkLabel(header, text=TEXTS["model_config_header"].format(model_code=model_code),
-                    font=(_FONT_UI, 16, "bold"),
-                    text_color=self.COLORS['text_primary']).pack(side="left")
-        
-        # ═══ FORM FRAME ═══
-        form_frame = ctk.CTkScrollableFrame(self, fg_color=self.COLORS['bg_card'],
-                                           corner_radius=10, border_width=1,
-                                           border_color='#2a2a2a')
-        form_frame.pack(fill="both", expand=True, padx=20, pady=(0, 15))
+        ctk.CTkLabel(self, text=TEXTS["model_config_header"].format(model_code=model_code),
+                     font=(_FONT_UI, 16, "bold"),
+                     text_color=self.COLORS['text_primary']).pack(anchor='w', padx=20, pady=(18, 8))
 
-        fields = [
-            ('NSsites', 'NSsites', '0=M0  1=M1a  2=M2a  7=M7  8=M8'),
-            ('model',   'model (CODEML)', '0=NSsites (sítios)  2=Branch (ramos)'),
-            ('fix_omega', 'fix_omega', '0=estima ω livremente  1=fixa ω'),
-            ('omega',   'omega inicial', 'Valor inicial de dN/dS (ex: 0.5)'),
-            ('CodonFreq', 'CodonFreq', '7=F3×4 (recomendado)'),
-            ('description', 'Descrição', 'Texto descritivo'),
-        ]
+        form = ctk.CTkScrollableFrame(self, fg_color=self.COLORS['bg_card'], corner_radius=10,
+                                      border_width=1, border_color='#2a2a2a')
+        form.pack(fill="both", expand=True, padx=20, pady=(0, 12))
 
-        for name, label, placeholder in fields:
-            # Label com ícone
-            lbl_frame = ctk.CTkFrame(form_frame, fg_color='transparent')
-            lbl_frame.pack(fill="x", padx=12, pady=(12, 4))
-            
-            ctk.CTkLabel(lbl_frame, text=f"{label}:", font=(_FONT_UI, 13, "bold"),
-                        text_color=self.COLORS['text_primary']).pack(anchor="w")
+        current = dict(initial)
+        current.update(parent.custom_model_params.get(model_code, {}))
+        defaults = parent._global_ctl_options()
 
-            ctk.CTkLabel(lbl_frame, text=placeholder, font=(_FONT_UI, 13),
-                        text_color='#999999').pack(anchor="w", pady=(0, 4))
-            
-            # Entry com estilo premium
-            ent = ctk.CTkEntry(form_frame, placeholder_text=placeholder,
-                              fg_color=self.COLORS['bg_dark'],
-                              border_color='#32323e',
-                              border_width=1,
-                              corner_radius=8,
-                              text_color=self.COLORS['text_primary'],
-                              placeholder_text_color='#666666')
-            ent.pack(fill="x", padx=12, pady=(0, 8))
-            
-            val = self._initial_val(name, initial)
-            ent.insert(0, str(val))
-            self.entries[name] = ent
+        def _label(key_text):
+            name, hint = TEXTS[key_text]
+            ctk.CTkLabel(form, text=name, font=(_FONT_UI, 13, "bold"),
+                         text_color=self.COLORS['text_primary']).pack(anchor="w", padx=12, pady=(10, 0))
+            ctk.CTkLabel(form, text=hint, font=(_FONT_UI, 12), wraplength=460, justify='left',
+                         text_color=self.COLORS['text_secondary']).pack(anchor="w", padx=12, pady=(0, 4))
 
-        # ═══ BUTTONS ═══
+        for key, text_key in self._NUMERIC_FIELDS[:4]:
+            _label(text_key)
+            ent = ctk.CTkEntry(form, fg_color=self.COLORS['bg_dark'], border_color='#32323e',
+                               text_color=self.COLORS['text_primary'])
+            ent.pack(fill="x", padx=12, pady=(0, 4))
+            ent.insert(0, str(current.get(key, '')))
+            ent.bind('<KeyRelease>', lambda e: self._refresh_preview())
+            self.entries[key] = ent
+
+        _label('cfg_field_codonfreq')
+        cf_values = [codonfreq_label(v) for v, _, _ in CODONFREQ_OPTIONS]
+        self.codonfreq_menu = ctk.CTkOptionMenu(
+            form, values=cf_values, command=lambda _v: self._refresh_preview(),
+            fg_color='#262632', button_color='#3a3a4e', text_color=self.COLORS['text_primary'])
+        self.codonfreq_menu.set(codonfreq_label(current.get('CodonFreq', defaults['CodonFreq'])))
+        self.codonfreq_menu.pack(fill='x', padx=12, pady=(0, 4))
+
+        for key, text_key in self._NUMERIC_FIELDS[4:]:
+            _label(text_key)
+            ent = ctk.CTkEntry(form, fg_color=self.COLORS['bg_dark'], border_color='#32323e',
+                               text_color=self.COLORS['text_primary'])
+            ent.pack(fill="x", padx=12, pady=(0, 4))
+            ent.insert(0, str(current.get(key, defaults.get(key, ''))))
+            ent.bind('<KeyRelease>', lambda e: self._refresh_preview())
+            self.entries[key] = ent
+
+        ctk.CTkLabel(form, text=TEXTS["cfg_preview"], font=(_FONT_UI, 12, "bold"),
+                     text_color=self.COLORS['text_secondary']).pack(anchor='w', padx=12, pady=(12, 2))
+        self.preview = ctk.CTkTextbox(form, height=260, font=(_FONT_MONO, 11),
+                                      fg_color=self.COLORS['bg_dark'],
+                                      text_color=self.COLORS['text_secondary'])
+        self.preview.pack(fill='x', padx=12, pady=(0, 12))
+        self._refresh_preview()
+
         btn_frame = ctk.CTkFrame(self, fg_color='transparent')
-        btn_frame.pack(fill="x", padx=20, pady=(0, 20))
-        
-        btn_cancel = ctk.CTkButton(btn_frame, text=TEXTS["model_config_btn_cancel"],
-                                   fg_color='#3d3d3d',
-                                   hover_color='#4d4d4d', command=self.destroy,
-                                   font=(_FONT_UI, 13, "bold"), corner_radius=6)
-        btn_cancel.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        btn_frame.pack(fill="x", padx=20, pady=(0, 18))
+        ctk.CTkButton(btn_frame, text=TEXTS["model_config_btn_cancel"], fg_color='#3d3d4a',
+                      hover_color='#4d4d5a', command=self.destroy, text_color='#ffffff',
+                      font=(_FONT_UI, 13, "bold"), corner_radius=6).pack(side="left", fill="x",
+                                                                          expand=True, padx=(0, 8))
+        ctk.CTkButton(btn_frame, text=TEXTS["model_config_btn_save"], fg_color=self.COLORS['success'],
+                      hover_color=self.COLORS['success_hover'], text_color='#ffffff',
+                      command=self._on_save, font=(_FONT_UI, 13, "bold"),
+                      corner_radius=6).pack(side="left", fill="x", expand=True)
 
-        btn_save = ctk.CTkButton(btn_frame, text=TEXTS["model_config_btn_save"],
-                                 fg_color=self.COLORS['success'],
-                                 hover_color=self.COLORS['success_hover'],
-                                 command=self._on_save, font=(_FONT_UI, 13, "bold"), corner_radius=6)
-        btn_save.pack(side="left", fill="x", expand=True)
+    def _grab(self):
+        try:
+            self.grab_set()
+            self.focus_force()
+        except Exception:
+            pass
 
-    def _initial_val(self, name, initial):
-        if name in self.parent.custom_model_params.get(self.model_code, {}):
-            return self.parent.custom_model_params[self.model_code][name]
-        return initial.get(name, "")
+    @staticmethod
+    def _parse(val: str):
+        val = val.strip()
+        try:
+            return float(val) if any(c in val for c in '.eE') else int(val)
+        except ValueError:
+            return val
+
+    def _values(self) -> dict:
+        out = {k: self._parse(ent.get()) for k, ent in self.entries.items() if ent.get().strip() != ''}
+        out['CodonFreq'] = parse_codonfreq_label(self.codonfreq_menu.get())
+        return out
+
+    def _refresh_preview(self):
+        params = dict(DEFAULT_CTL_PARAMS)
+        params.update(self.parent._global_ctl_options())
+        params.update(self._values())
+        params['seqfile'] = f"GENE_{self.model_code}_seq.fasta"
+        params['treefile'] = f"GENE_{self.model_code}_tree.nwk"
+        params['outfile'] = f"GENE_{self.model_code}_results.txt"
+        self.preview.configure(state='normal')
+        self.preview.delete('1.0', 'end')
+        self.preview.insert('end', build_ctl_text(params))
+        self.preview.configure(state='disabled')
 
     def _on_save(self):
-        out = {}
-        for k, ent in self.entries.items():
-            val = ent.get().strip()
-            try:
-                if '.' in val:
-                    out[k] = float(val)
-                else:
-                    out[k] = int(val)
-            except Exception:
-                out[k] = val  # valor mantido como string se não for numérico
-        
-        self.parent.custom_model_params[self.model_code] = out
+        self.parent.custom_model_params[self.model_code] = self._values()
         self.parent.model_ctl_labels[self.model_code].configure(
             text=TEXTS["model_status_configured"], text_color="#fbbf24")
-        self.parent.append_log(f"[OK] Parâmetros de {self.model_code} salvos com sucesso!\n")
+        self.parent.append_log(TEXTS["cfg_saved"].format(model=self.model_code) + "\n", 'ok')
         self.destroy()
 
 
@@ -756,8 +785,8 @@ class App(ctk.CTk):
         # Text hierarchy — higher contrast than before
         'text_primary':   '#eeeef2',
         'text_secondary': '#a0a0b4',
-        'text_tertiary':  '#686880',
-        'text_muted':     '#424252',
+        'text_tertiary':  '#8e8ea4',   # contraste >= 4,5:1 nos cartões
+        'text_muted':     '#8a8aa0',
 
         # Primary accent — indigo
         'accent_blue':        '#6366f1',
@@ -790,8 +819,9 @@ class App(ctk.CTk):
     
     def __init__(self):
         super().__init__()
-        self.title("EasyPAML")
-        self.geometry("1400x850")
+        from backend.version import __version__
+        self.title(f"EasyPAML {__version__}")
+        fit_to_screen(self, 1400, 850)
         
         # Aplicar tema escuro profissional
         ctk.set_appearance_mode("dark")
@@ -803,15 +833,16 @@ class App(ctk.CTk):
         # Inicializar backend
         self.codeml_backend = CodemlBatchAnalysis()
 
-        self.custom_model_params = {} 
+        self.custom_model_params = {}
+        self.last_run_summary = None
+        self.show_details_var = ctk.BooleanVar(value=False)
+        self._detail_lines = []
         self.input_folder = None
         self.tree_file = None
         self.output_folder = None
         self.analysis_thread = None
         self.analysis_instance = None
         self.pause_event = threading.Event()
-        self.manual_event = threading.Event()
-        self.manual_all_event = threading.Event()
         self.stop_event = threading.Event()
         
         # Opção para incluir modelos neutros automaticamente
@@ -974,6 +1005,36 @@ class App(ctk.CTk):
         self.entry_omega.insert(0, "0.5")
         self.entry_omega.pack(fill='x', pady=(4, 10))
 
+        # Frequências de códons (global; a janela "editar" de cada modelo pode mudar)
+        row_cf = ctk.CTkFrame(ci, fg_color='transparent')
+        row_cf.pack(fill='x')
+        ctk.CTkLabel(row_cf, text=TEXTS["label_codonfreq"],
+                     font=(_FONT_UI, 13, "bold"), anchor='w',
+                     text_color=self.COLORS['text_secondary']).pack(side='left')
+        ctk.CTkButton(row_cf, text="?", width=22, height=22, corner_radius=11,
+                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
+                      hover_color=self.COLORS['border_hover'],
+                      text_color=self.COLORS['text_primary'],
+                      command=lambda: self._show_help(
+                          TEXTS["label_codonfreq"], TEXTS["label_codonfreq_hint"])
+                      ).pack(side='right')
+        self.codonfreq_var = ctk.StringVar(value=codonfreq_label(DEFAULT_CODONFREQ))
+        ctk.CTkOptionMenu(ci, variable=self.codonfreq_var,
+                          values=[codonfreq_label(v) for v, _, _ in CODONFREQ_OPTIONS],
+                          fg_color=self.COLORS['bg_card_hover'], button_color=self.COLORS['border_hover'],
+                          text_color=self.COLORS['text_primary'], height=30
+                          ).pack(fill='x', pady=(4, 10))
+
+        ctk.CTkLabel(ci, text=TEXTS["label_ncatg"],
+                     font=(_FONT_UI, 13, "bold"), anchor='w',
+                     text_color=self.COLORS['text_secondary']).pack(anchor='w')
+        self.entry_ncatg = ctk.CTkEntry(ci, fg_color=self.COLORS['bg_card_hover'],
+                                        border_color=self.COLORS['border_hover'], border_width=1,
+                                        corner_radius=8, text_color=self.COLORS['text_primary'],
+                                        height=32)
+        self.entry_ncatg.insert(0, str(DEFAULT_CTL_PARAMS['ncatG']))
+        self.entry_ncatg.pack(fill='x', pady=(4, 10))
+
         # Remover gaps toggle
         self.cleandata_var = ctk.BooleanVar(value=True)
         row_g = ctk.CTkFrame(ci, fg_color='transparent')
@@ -992,9 +1053,9 @@ class App(ctk.CTk):
             fg_color=self.COLORS['border'])
         self.cb_cleandata.pack(side='right')
         ctk.CTkButton(row_g, text="?", width=18, height=18, corner_radius=9,
-                      font=(_FONT_UI, 13, "bold"), fg_color=self.COLORS['border'],
+                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
                       hover_color=self.COLORS['border_hover'],
-                      text_color=self.COLORS['text_muted'],
+                      text_color=self.COLORS['text_primary'],
                       command=lambda: self._show_help(
                           TEXTS["label_remove_gaps"], TEXTS["label_remove_gaps_hint"])
                       ).pack(side='right', padx=(0, 4))
@@ -1014,11 +1075,12 @@ class App(ctk.CTk):
             button_color=self.COLORS['accent_blue'],
             progress_color=self.COLORS['accent_blue'])
         self.cores_slider.pack(fill='x', side='left', expand=True)
+        disable_mouse_wheel(self.cores_slider)   # rolar o painel não muda o valor
         self.cores_disp = ctk.CTkLabel(
             cores_row, text=f"{_max}×",
             font=(_FONT_UI, 12, "bold"),
-            text_color=self.COLORS['accent_blue'],
-            width=32)
+            text_color=self.COLORS['accent_blue_light'],
+            width=40)
         self.cores_disp.pack(side='right', padx=(6, 0))
         ctk.CTkLabel(ci, text=TEXTS["label_cpus_detected"].format(n=_max),
                      font=(_FONT_UI, 13),
@@ -1041,9 +1103,9 @@ class App(ctk.CTk):
             fg_color=self.COLORS['border'])
         self.cb_ignore_stops.pack(side='right')
         ctk.CTkButton(row_stops, text="?", width=18, height=18, corner_radius=9,
-                      font=(_FONT_UI, 13, "bold"), fg_color=self.COLORS['border'],
+                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
                       hover_color=self.COLORS['border_hover'],
-                      text_color=self.COLORS['text_muted'],
+                      text_color=self.COLORS['text_primary'],
                       command=lambda: self._show_help(
                           TEXTS["label_ignore_stops"], TEXTS["label_ignore_stops_hint"])
                       ).pack(side='right', padx=(0, 4))
@@ -1065,9 +1127,9 @@ class App(ctk.CTk):
             fg_color=self.COLORS['border'])
         self.cb_auto_prune.pack(side='right')
         ctk.CTkButton(row_prune, text="?", width=18, height=18, corner_radius=9,
-                      font=(_FONT_UI, 13, "bold"), fg_color=self.COLORS['border'],
+                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
                       hover_color=self.COLORS['border_hover'],
-                      text_color=self.COLORS['text_muted'],
+                      text_color=self.COLORS['text_primary'],
                       command=lambda: self._show_help(
                           TEXTS["label_auto_prune"], TEXTS["label_auto_prune_hint"])
                       ).pack(side='right', padx=(0, 4))
@@ -1075,10 +1137,15 @@ class App(ctk.CTk):
         self.main_frame = ctk.CTkFrame(self, fg_color=self.COLORS['bg_dark'])
         self.main_frame.pack(side="right", fill="both", expand=True, padx=20, pady=20)
 
+        self.files_hint = ctk.CTkLabel(self.main_frame, text=TEXTS["hint_select_files"],
+                                       font=(_FONT_UI, 13, "bold"), anchor='w', justify='left',
+                                       text_color=self.COLORS['warning'], wraplength=900)
+        self.files_hint.pack(fill='x', pady=(0, 6))
         self.tabs = ctk.CTkTabview(self.main_frame, fg_color=self.COLORS['bg_card'],
                                    segmented_button_fg_color=self.COLORS['bg_card'],
-                                   segmented_button_selected_color=self.COLORS['accent_blue'],
-                                   text_color=self.COLORS['text_primary'],
+                                   segmented_button_selected_color=PALETTE['accent_fill'],
+                                   segmented_button_selected_hover_color=self.COLORS['accent_blue_hover'],
+                                   text_color='#ffffff',
                                    corner_radius=10)
         self.tabs.pack(fill="both", expand=True, padx=0, pady=(0, 15))
         self.tabs.add(TEXTS["tab_site_models"])
@@ -1136,25 +1203,39 @@ class App(ctk.CTk):
             font=(_FONT_UI, 12, "bold"),
             fg_color=self.COLORS['border'],
             hover_color=self.COLORS['accent_blue'],
-            text_color=self.COLORS['accent_blue'],
+            text_color=self.COLORS['accent_blue_light'],
             border_width=1, border_color=self.COLORS['accent_blue'],
             command=self._show_neutral_models_info,
             corner_radius=6
         )
         help_btn.pack(side="right", padx=(0, 12))
 
+        # Barra de progresso "gene X de N"
+        prog_row = ctk.CTkFrame(self.ctrl_frame, fg_color='transparent')
+        prog_row.pack(fill='x', padx=14, pady=(0, 2))
+        self.progress_bar = ctk.CTkProgressBar(prog_row, height=10,
+                                               progress_color=self.COLORS['success'])
+        self.progress_bar.pack(side='left', fill='x', expand=True, padx=(0, 10))
+        self.progress_bar.set(0)
+        self.progress_label = ctk.CTkLabel(prog_row, text=TEXTS["progress_idle"],
+                                           font=(_FONT_UI, 12),
+                                           text_color=self.COLORS['text_secondary'])
+        self.progress_label.pack(side='right')
+
         # Botões de controle
         btn_frame = ctk.CTkFrame(self.ctrl_frame, fg_color='transparent')
         btn_frame.pack(fill="x", padx=0, pady=(0, 10))
 
         def _action_btn(parent, text, cmd, color):
+            # hover = tom escuro da cor, para o texto (na cor) continuar legível
             return ctk.CTkButton(
                 parent, text=text, command=cmd,
                 fg_color=self.COLORS['bg_card'],
-                hover_color=color,
+                hover_color=hover_tint(color, self.COLORS['bg_card']),
                 text_color=color,
+                text_color_disabled=self.COLORS['text_tertiary'],
                 border_width=1, border_color=color,
-                font=(_FONT_UI, 12, "bold"),
+                font=(_FONT_UI, 13, "bold"),
                 height=44, corner_radius=8)
 
         self.btn_run = _action_btn(btn_frame, TEXTS["btn_run"],
@@ -1169,9 +1250,9 @@ class App(ctk.CTk):
                                     self._stop_analysis, self.COLORS['danger'])
         self.btn_stop.pack(side="left", fill="both", expand=True, padx=4, pady=10)
 
-        self.btn_resolve_stops = _action_btn(btn_frame, TEXTS["btn_resolve_stops"],
-                                              self._continue_all_for_gene, self.COLORS['info'])
-        self.btn_resolve_stops.pack(side="left", fill="both", expand=True, padx=(4, 12), pady=10)
+        self.btn_open_output = _action_btn(btn_frame, TEXTS["btn_open_output"],
+                                           self._open_output_folder, self.COLORS['info'])
+        self.btn_open_output.pack(side="left", fill="both", expand=True, padx=(4, 12), pady=10)
 
         # ═══ LOG FRAME COM HEADER ═══
         log_container = ctk.CTkFrame(self.main_frame, fg_color='transparent')
@@ -1188,8 +1269,12 @@ class App(ctk.CTk):
 
         ctk.CTkLabel(log_header, text=TEXTS["log_header_subtitle"],
                     font=(_FONT_UI, 13), text_color=self.COLORS['text_muted']).pack(side="left", padx=0)
+        ctk.CTkCheckBox(log_header, text=TEXTS["chk_show_details"], variable=self.show_details_var,
+                        command=self._toggle_details, font=(_FONT_UI, 12),
+                        text_color=self.COLORS['text_secondary'], checkbox_width=18,
+                        checkbox_height=18).pack(side="right")
 
-        self.log = ctk.CTkTextbox(log_container, font=(_FONT_MONO, 11),
+        self.log = ctk.CTkTextbox(log_container, font=(_FONT_MONO, 12), wrap='word',
                                   fg_color=self.COLORS['bg_dark'],
                                   text_color=self.COLORS['text_secondary'],
                                   border_color=self.COLORS['border'],
@@ -1201,27 +1286,58 @@ class App(ctk.CTk):
         self.log.tag_config("error", foreground=self.COLORS['danger'])
         self.log.tag_config("warning", foreground=self.COLORS['warning'])
         self.log.tag_config("info", foreground=self.COLORS['accent_cyan'])
-        self.log.tag_config("header", foreground=self.COLORS['accent_blue'])
+        self.log.tag_config("header", foreground=self.COLORS['accent_blue_light'])
+        self.log.tag_config("debug", foreground=self.COLORS['text_tertiary'], elide=True)
 
-        # Welcome message — editar em gui_texts.py › "log_welcome"
+        # Mensagem inicial — editar em gui_texts.py › "log_welcome"
         self.log.insert("end", TEXTS["log_welcome"])
+        backend_messages.set_language(get_language())
 
         self._update_models_state()
         self._poll_stop_count()
+        self.bind_all("<Control-q>", lambda e: self.destroy())
+
+    def _global_ctl_options(self) -> dict:
+        """Opções globais do .ctl escolhidas em Configurações."""
+        try:
+            ncatg = int(self.entry_ncatg.get().strip() or DEFAULT_CTL_PARAMS['ncatG'])
+        except (ValueError, AttributeError):
+            ncatg = DEFAULT_CTL_PARAMS['ncatG']
+        try:
+            cf = parse_codonfreq_label(self.codonfreq_var.get())
+        except (ValueError, AttributeError):
+            cf = DEFAULT_CODONFREQ
+        return {'CodonFreq': cf, 'ncatG': ncatg, 'kappa': DEFAULT_CTL_PARAMS['kappa']}
+
+    def _open_output_folder(self):
+        if not self.output_folder:
+            self.append_log(TEXTS["log_no_output_folder"], 'warn')
+            return
+        self.output_folder.mkdir(parents=True, exist_ok=True)
+        open_folder(self.output_folder)
+
+    def _toggle_details(self):
+        """Mostra/esconde as mensagens de depuração no log."""
+        show = self.show_details_var.get()
+        try:
+            self.log.tag_config("debug", elide=not show)
+        except Exception:
+            pass
 
     def _show_help(self, title: str, body: str) -> None:
         win = ctk.CTkToplevel(self)
         win.title(title)
         win.resizable(False, False)
-        win.grab_set()
-        win.focus_set()
-        ctk.CTkLabel(win, text=title, font=(_FONT_UI, 13, "bold"),
+        win.transient(self)
+        win.after(50, lambda: (win.grab_set(), win.focus_set()))
+        win.bind("<Escape>", lambda e: win.destroy())
+        ctk.CTkLabel(win, text=title, font=(_FONT_UI, 14, "bold"),
                      text_color=self.COLORS['text_primary']).pack(padx=18, pady=(16, 4), anchor='w')
-        ctk.CTkLabel(win, text=body, font=(_FONT_UI, 12), wraplength=290,
+        ctk.CTkLabel(win, text=body, font=(_FONT_UI, 13), wraplength=420,
                      justify='left',
                      text_color=self.COLORS['text_secondary']).pack(padx=18, pady=(0, 12))
-        ctk.CTkButton(win, text="OK", width=80, command=win.destroy,
-                      fg_color=self.COLORS['accent_blue']).pack(pady=(0, 14))
+        ctk.CTkButton(win, text="OK", width=80, command=win.destroy, text_color='#ffffff',
+                      fg_color=PALETTE['accent_fill']).pack(pady=(0, 14))
 
     def _update_cores_label(self, value=None):
         n = int(self.cores_var.get())
@@ -1254,6 +1370,10 @@ class App(ctk.CTk):
                 'desc': 'Beta(p,q) + classe discreta com ω > 1. LRT M8 vs M7 é o teste mais '
                         'robusto para seleção positiva por sítio. Requer comparação com M7.'
             },
+            'M8a': {
+                'color': '#f472b6',
+                'desc': '',
+            },
             'Branch': {
                 'color': '#f59e0b',
                 'desc': 'Estima ω independente por ramo etiquetado. LRT com M0 testa se há '
@@ -1272,7 +1392,7 @@ class App(ctk.CTk):
         }
 
         models = {
-            TEXTS["tab_site_models"]:  ['M0', 'M1a', 'M2a', 'M7', 'M8'],
+            TEXTS["tab_site_models"]:  ['M0', 'M1a', 'M2a', 'M7', 'M8', 'M8a'],
             TEXTS["tab_branch_model"]: ['Branch'],
             TEXTS["tab_branchsite"]:   ['Branch-site', 'Branch-site_null'],
         }
@@ -1297,7 +1417,7 @@ class App(ctk.CTk):
                 card = ctk.CTkFrame(outer, fg_color=self.COLORS['bg_feed'],
                                     corner_radius=8, border_width=1,
                                     border_color=self.COLORS['border'],
-                                    height=58)
+                                    height=64)
                 card.pack_propagate(False)
                 card.grid(row=row, column=col, sticky='ew', pady=3, padx=3)
 
@@ -1311,9 +1431,9 @@ class App(ctk.CTk):
                 btn_col.pack(side="right", padx=(0, 4), pady=4)
 
                 info_btn = ctk.CTkButton(
-                    btn_col, text="?", width=20, height=20,
+                    btn_col, text="?", width=22, height=22,
                     fg_color=self.COLORS['bg_card_hover'],
-                    hover_color=accent,
+                    hover_color=hover_tint(accent, self.COLORS['bg_card_hover']),
                     text_color=accent,
                     corner_radius=4,
                     border_width=1, border_color=self.COLORS['border_hover'],
@@ -1323,13 +1443,14 @@ class App(ctk.CTk):
                 info_btn.pack(pady=(0, 2))
 
                 gear = ctk.CTkButton(
-                    btn_col, text="cfg", width=20, height=20,
+                    btn_col, text=TEXTS["cfg_btn"], width=52, height=22,
                     fg_color=self.COLORS['bg_card'],
-                    hover_color=self.COLORS['accent_purple'],
-                    text_color=self.COLORS['text_secondary'],
+                    hover_color=hover_tint(self.COLORS['accent_purple'], self.COLORS['bg_card']),
+                    text_color=self.COLORS['text_primary'],
+                    text_color_disabled=self.COLORS['text_tertiary'],
                     corner_radius=4,
                     border_width=1, border_color=self.COLORS['border_hover'],
-                    font=(_FONT_UI, 8),
+                    font=(_FONT_UI, 11),
                     command=lambda c=code: self._open_config_window(c)
                 )
                 gear.pack()
@@ -1356,8 +1477,9 @@ class App(ctk.CTk):
                 )
                 cb.pack(anchor='w')
 
-                lbl = ctk.CTkLabel(content, text=TEXTS["model_status_default"],
-                                   font=(_FONT_UI, 13),
+                lbl = ctk.CTkLabel(content, text=TEXTS["model_desc"].get(code, TEXTS["model_status_default"]),
+                                   font=(_FONT_UI, 11), anchor='w', justify='left',
+                                   wraplength=330,
                                    text_color=self.COLORS['text_tertiary'])
                 lbl.pack(anchor='w', padx=(2, 0))
 
@@ -1377,7 +1499,7 @@ class App(ctk.CTk):
             command=lambda: self._open_tree_labeler(mode='branch'),
             height=40,
             font=(_FONT_UI, 13, "bold"),
-            text_color=self.COLORS['accent_blue'],
+            text_color=self.COLORS['accent_blue_light'],
             border_width=1, border_color=self.COLORS['border_hover'],
             corner_radius=8
         )
@@ -1394,7 +1516,7 @@ class App(ctk.CTk):
             command=lambda: self._open_tree_labeler(mode='branchsite'),
             height=40,
             font=(_FONT_UI, 13, "bold"),
-            text_color=self.COLORS['accent_blue'],
+            text_color=self.COLORS['accent_blue_light'],
             border_width=1, border_color=self.COLORS['border_hover'],
             corner_radius=8
         )
@@ -1416,161 +1538,95 @@ class App(ctk.CTk):
             self.append_log(f"{traceback.format_exc()}\n")
 
     def select_input_folder(self):
-        path = filedialog.askdirectory()
+        start = str(self.input_folder) if self.input_folder else str(Path.home())
+        path = filedialog.askdirectory(initialdir=start, title=TEXTS["btn_input_folder"])
         if path:
             self.input_folder = Path(path)
-            self.label_input.configure(text=str(self.input_folder.name))
+            files = list_alignment_files(self.input_folder)
+            if files:
+                names = ", ".join(f.name for f in files[:4]) + (" …" if len(files) > 4 else "")
+                text = TEXTS["label_found_alignments"].format(n=len(files), names=names)
+                color = self.COLORS['text_secondary']
+            else:
+                text = TEXTS["label_no_alignments"]
+                color = self.COLORS['warning']
+            self.label_input.configure(text=f"{self.input_folder.name}\n{text}", text_color=color)
             self._update_models_state()
 
     def select_tree_file(self):
-        path = filedialog.askopenfilename(filetypes=[('Tree files', '*.tree *.tre *.nwk *.txt'), ('All files', '*.*')])
+        start = str(self.tree_file.parent) if self.tree_file else (
+            str(self.input_folder) if self.input_folder else str(Path.home()))
+        path = filedialog.askopenfilename(
+            initialdir=start, title=TEXTS["btn_tree_file"],
+            filetypes=[('Newick', '*.nwk *.tree *.tre *.newick *.txt'), ('*', '*.*')])
         if path:
             self.tree_file = Path(path)
-            self.label_tree.configure(text=str(self.tree_file.name))
+            self.label_tree.configure(text=str(self.tree_file.name),
+                                      text_color=self.COLORS['text_secondary'])
             self._update_models_state()
 
     def select_output_folder(self):
-        path = filedialog.askdirectory()
-        if path:
-            self.output_folder = Path(path)
-            self.label_output.configure(text=str(self.output_folder.name))
-            self._update_models_state()
+        """Aceita uma pasta que ainda não existe (digitada no diálogo) e a cria."""
+        start = str(self.output_folder.parent if self.output_folder else
+                    (self.input_folder.parent if self.input_folder else Path.home()))
+        path = filedialog.askdirectory(initialdir=start, mustexist=False,
+                                       title=TEXTS["dialog_choose_output"])
+        if not path:
+            return
+        folder = Path(path)
+        created = not folder.exists()
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            show_message(self, TEXTS["msg_error"],
+                         TEXTS["msg_output_folder_error"].format(error=exc), 'error')
+            return
+        self.output_folder = folder
+        label = (TEXTS["label_output_created"].format(name=folder.name) if created else folder.name)
+        self.label_output.configure(text=label, text_color=self.COLORS['text_secondary'])
+        self._update_models_state()
 
     def _show_neutral_models_info(self):
-        """Mostra informações sobre todos os pares de modelos nulos/alternativos para o LRT"""
-        info_window = ctk.CTkToplevel(self)
-        info_window.title("Modelos Nulos – Comparações LRT")
-        info_window.geometry("740x640")
-        info_window.attributes("-topmost", True)
-        info_window.grab_set()
-        info_window.configure(fg_color=self.COLORS['bg_dark'])
+        """Pares de modelos nulo/alternativo do LRT (texto em gui_texts › lrt_pairs)."""
+        win = ctk.CTkToplevel(self)
+        win.title(TEXTS["neutral_window_title"])
+        fit_to_screen(win, 760, 680, min_w=520, min_h=400)
+        win.transient(self)
+        win.after(50, lambda: (win.grab_set(), win.focus_set()))
+        win.bind("<Escape>", lambda e: win.destroy())
+        win.configure(fg_color=self.COLORS['bg_dark'])
 
-        # ── Header ──────────────────────────────────────────────────────────
-        hdr = ctk.CTkFrame(info_window, fg_color='transparent')
+        hdr = ctk.CTkFrame(win, fg_color='transparent')
         hdr.pack(fill='x', padx=18, pady=(16, 4))
-        ctk.CTkLabel(hdr, text="Modelos Nulos e Comparacoes LRT",
-                     font=(_FONT_UI, 14, "bold"),
-                     text_color=self.COLORS['accent_blue']).pack(anchor='w')
-        ctk.CTkLabel(hdr,
-                     text="Quando ativado, o EasyPAML adiciona automaticamente o modelo nulo de cada par LRT "
-                          "— sem precisar marcá-lo manualmente. Cada comparação usa o Teste da Razão de "
-                          "Verossimilhança (LRT): 2ΔlnL comparado ao χ² com os graus de liberdade corretos.",
-                     font=(_FONT_UI, 12),
-                     wraplength=690, justify='left',
-                     text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(4, 0))
+        ctk.CTkLabel(hdr, text=TEXTS["neutral_header"], font=(_FONT_UI, 15, "bold"),
+                     text_color=self.COLORS['accent_blue_light']).pack(anchor='w')
+        ctk.CTkLabel(hdr, text=TEXTS["neutral_intro"], font=(_FONT_UI, 13), wraplength=700,
+                     justify='left', text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(4, 0))
 
-        ctk.CTkFrame(info_window, fg_color=self.COLORS['border'], height=1
-                     ).pack(fill='x', padx=18, pady=(10, 0))
-
-        # ── Scrollable content ───────────────────────────────────────────────
-        scroll = ctk.CTkScrollableFrame(info_window, fg_color='transparent')
+        scroll = ctk.CTkScrollableFrame(win, fg_color='transparent')
         scroll.pack(fill='both', expand=True, padx=14, pady=6)
-
-        LRT_PAIRS = [
-            {
-                'null': 'M1a', 'alt': 'M2a', 'color': '#10b981',
-                'title': 'M2a  vs  M1a',
-                'test': 'Testa seleção positiva por sítio — Site Models',
-                'detail': (
-                    '2 graus de liberdade (χ²). M1a permite apenas purificação (ω < 1) e '
-                    'neutralidade (ω = 1). M2a acrescenta uma classe com ω > 1 (seleção '
-                    'positiva). Se 2ΔlnL > 5.99 (α=0.05), há evidência de seleção positiva; '
-                    'os sítios são identificados por BEB/NEB.'
-                ),
-                'note': 'M1a não precisa de fix_omega=1 — o CODEML restringe ω₁=1 internamente via NSsites=1.',
-            },
-            {
-                'null': 'M7', 'alt': 'M8', 'color': '#ec4899',
-                'title': 'M8  vs  M7',
-                'test': 'Testa seleção positiva com distribuição Beta — teste mais robusto',
-                'detail': (
-                    '2 graus de liberdade (χ²). M7 restringe toda a distribuição de ω ao '
-                    'intervalo (0, 1) via Beta(p, q). M8 acrescenta uma classe discreta com '
-                    'ω > 1. Este par é o mais recomendado para identificar seleção positiva '
-                    'por sítio, pois a distribuição Beta é mais biológica que classes discretas.'
-                ),
-                'note': 'M7 não precisa de fix_omega=1.',
-            },
-            {
-                'null': 'M0', 'alt': 'Branch', 'color': '#f59e0b',
-                'title': 'Branch  vs  M0',
-                'test': 'Testa variação de ω entre linhagens — Branch Model',
-                'detail': (
-                    'Os graus de liberdade dependem do número de ramos etiquetados. '
-                    'M0 usa um único ω global para todos os ramos e sítios. O Branch Model '
-                    'estima ω independente para cada ramo ou grupo marcado. Rejeitar M0 indica '
-                    'que a pressão seletiva varia entre as linhagens analisadas.'
-                ),
-                'note': 'M0 não precisa de fix_omega=1 — ω é estimado livremente como baseline.',
-            },
-            {
-                'null': 'Branch-site_null', 'alt': 'Branch-site', 'color': '#ef4444',
-                'title': 'Branch-site  vs  Branch-site_null',
-                'test': 'Testa seleção episódica em sítios do ramo foreground (#1)',
-                'detail': (
-                    'Distribuição MISTA 50:50 (χ²₀ + χ²₁) — não o χ² convencional! '
-                    'Valor crítico: 2.706 (α=0.05) e 5.412 (α=0.01). '
-                    'Branch-site_null fixa ω₂=1 no foreground (Yang et al. 2005, Zhang et al. 2005). '
-                    'Este é o teste mais poderoso para detectar seleção positiva episódica em '
-                    'linhagens específicas, combinando variação por sítio e por ramo.'
-                ),
-                'note': 'Branch-site_null requer fix_omega=1 e omega=1.0 no .ctl — configurado automaticamente.',
-            },
-        ]
-
-        for info in LRT_PAIRS:
-            card = ctk.CTkFrame(scroll, fg_color=self.COLORS['bg_card'],
-                                corner_radius=10, border_width=1,
-                                border_color=self.COLORS['border'])
+        for null, alt, color, title, test, detail, note in TEXTS["lrt_pairs"]:
+            card = ctk.CTkFrame(scroll, fg_color=self.COLORS['bg_card'], corner_radius=10,
+                                border_width=1, border_color=self.COLORS['border'])
             card.pack(fill='x', padx=6, pady=5)
-
-            # Color bar
-            ctk.CTkFrame(card, fg_color=info['color'], width=5,
-                         corner_radius=2).pack(side='left', fill='y', padx=(6, 10), pady=8)
-
+            ctk.CTkFrame(card, fg_color=color, width=5, corner_radius=2).pack(
+                side='left', fill='y', padx=(6, 10), pady=8)
             content = ctk.CTkFrame(card, fg_color='transparent')
             content.pack(side='left', fill='both', expand=True, pady=10, padx=(0, 10))
-
-            # Title row
-            title_row = ctk.CTkFrame(content, fg_color='transparent')
-            title_row.pack(fill='x', anchor='w')
-            ctk.CTkLabel(title_row, text=info['title'],
-                         font=(_FONT_UI, 12, "bold"),
-                         text_color=info['color']).pack(side='left')
-            ctk.CTkLabel(title_row,
-                         text=f"   null: {info['null']}  →  alternativo: {info['alt']}",
-                         font=(_FONT_UI, 12),
-                         text_color=self.COLORS['text_secondary']).pack(side='left')
-
-            # Test label
-            ctk.CTkLabel(content, text=f"  {info['test']}",
-                         font=(_FONT_UI, 12, "bold"),
-                         text_color=self.COLORS['text_primary'],
-                         anchor='w').pack(anchor='w', pady=(4, 2))
-
-            # Detail
-            ctk.CTkLabel(content, text=info['detail'],
-                         font=(_FONT_UI, 12),
-                         text_color=self.COLORS['text_secondary'],
-                         wraplength=590, justify='left',
-                         anchor='w').pack(anchor='w', pady=(0, 3))
-
-            # Implementation note
-            ctk.CTkLabel(content, text=f"  Nota: {info['note']}",
-                         font=(_FONT_UI, 13, "italic"),
-                         text_color=self.COLORS['text_tertiary'],
-                         wraplength=590, justify='left',
+            row = ctk.CTkFrame(content, fg_color='transparent')
+            row.pack(fill='x', anchor='w')
+            ctk.CTkLabel(row, text=title, font=(_FONT_UI, 13, "bold"), text_color=color).pack(side='left')
+            ctk.CTkLabel(row, text="   " + TEXTS["neutral_null_alt"].format(null=null, alt=alt),
+                         font=(_FONT_UI, 12), text_color=self.COLORS['text_secondary']).pack(side='left')
+            ctk.CTkLabel(content, text=test, font=(_FONT_UI, 13, "bold"),
+                         text_color=self.COLORS['text_primary'], anchor='w').pack(anchor='w', pady=(4, 2))
+            ctk.CTkLabel(content, text=detail, font=(_FONT_UI, 12), wraplength=600, justify='left',
+                         text_color=self.COLORS['text_secondary'], anchor='w').pack(anchor='w', pady=(0, 3))
+            ctk.CTkLabel(content, text=TEXTS["neutral_note"].format(note=note), font=(_FONT_UI, 12, "italic"),
+                         wraplength=600, justify='left', text_color=self.COLORS['text_tertiary'],
                          anchor='w').pack(anchor='w')
-
-        # ── Footer ───────────────────────────────────────────────────────────
-        ctk.CTkFrame(info_window, fg_color=self.COLORS['border'], height=1
-                     ).pack(fill='x', padx=18)
-        ctk.CTkLabel(info_window,
-                     text="[OK]  Com a opcao ATIVADA, o modelo nulo de cada par selecionado e "
-                          "adicionado automaticamente — voce nao precisa marca-lo.",
-                     font=(_FONT_UI, 12),
-                     text_color=self.COLORS['success'],
-                     wraplength=690).pack(padx=18, pady=12)
+        ctk.CTkLabel(win, text=TEXTS["neutral_footer"], font=(_FONT_UI, 12),
+                     text_color=self.COLORS['success'], wraplength=700).pack(padx=18, pady=12)
 
     def _show_model_info(self, model_code: str):
         """Mostra informações detalhadas sobre um modelo específico"""
@@ -1581,17 +1637,18 @@ class App(ctk.CTk):
         
         # Criar janela de informações
         info_window = ctk.CTkToplevel(self)
-        info_window.title(f"Modelo: {model_code}")
-        info_window.geometry("750x600")
-        info_window.attributes("-topmost", True)
-        info_window.grab_set()
+        info_window.title(TEXTS["model_config_header"].format(model_code=model_code))
+        fit_to_screen(info_window, 750, 600, min_w=480, min_h=360)
+        info_window.transient(self)
+        info_window.after(50, lambda: (info_window.grab_set(), info_window.focus_set()))
+        info_window.bind("<Escape>", lambda e: info_window.destroy())
         
         # Header com nome do modelo
         display_name = self.codeml_backend.MODEL_CONFIGS[model_code].get('display_name', model_code)
         header = ctk.CTkLabel(info_window, 
                              text=f"{model_code} - {model_info.get('full_name', '')}",
                              font=(_FONT_UI, 13, "bold"),
-                             text_color=self.COLORS['accent_blue'])
+                             text_color=self.COLORS['accent_blue_light'])
         header.pack(padx=15, pady=15)
         
         # Scrollable frame para conteúdo
@@ -1680,14 +1737,19 @@ class App(ctk.CTk):
 
     @staticmethod
     def load_language_pref() -> None:
-        """Lê o idioma salvo e ativa antes da janela ser construída."""
+        """Idioma inicial: o salvo pelo usuário; sem preferência salva, o do
+        sistema (português -> PT; qualquer outro -> EN, o padrão)."""
+        lang = None
         try:
             p = App._lang_pref_path()
             if p.exists():
                 lang = p.read_text(encoding='utf-8').strip()
-                set_language(lang)
         except Exception:
-            pass
+            lang = None
+        if lang not in ('pt', 'en'):
+            lang = backend_messages.system_language()
+        set_language(lang)
+        backend_messages.set_language(lang)
 
     def _save_language_pref(self, lang: str) -> None:
         try:
@@ -1707,8 +1769,6 @@ class App(ctk.CTk):
         inner = ctk.CTkFrame(footer, fg_color='transparent')
         inner.pack(fill='x', padx=10, pady=6)
 
-        ctk.CTkLabel(inner, text="🌐", font=(_FONT_UI, 13),
-                     text_color=self.COLORS['text_tertiary']).pack(side='left', padx=(0, 6))
 
         current = get_language()
 
@@ -1727,6 +1787,10 @@ class App(ctk.CTk):
 
         _make_btn('pt', 'PT')
         _make_btn('en', 'EN')
+        ctk.CTkButton(inner, text=TEXTS["btn_about"], width=70, height=24,
+                      font=(_FONT_UI, 12), corner_radius=6,
+                      fg_color=self.COLORS['border'], hover_color=self.COLORS['border_hover'],
+                      text_color='#ffffff', command=lambda: show_about(self)).pack(side='right', padx=2)
 
     def _switch_language(self, lang: str) -> None:
         """Salva preferência e reinicia o app para aplicar o idioma."""
@@ -1737,17 +1801,14 @@ class App(ctk.CTk):
         self._save_language_pref(lang)
         set_language(lang)
 
-        from tkinter import messagebox
-        restart = messagebox.askyesno(
-            "EasyPAML",
-            f"{TEXTS['lang_switch_message']}\n\n{TEXTS['lang_switch_confirm']}"
-        )
+        restart = ask_yes_no(self, TEXTS['lang_restart_title'],
+                             f"{TEXTS['lang_switch_message']}\n\n{TEXTS['lang_switch_confirm']}")
         if restart:
             try:
                 subprocess.Popen([sys.executable] + sys.argv)
                 self.destroy()
             except Exception as exc:
-                messagebox.showerror("EasyPAML", TEXTS["lang_switch_err"].format(error=exc))
+                show_message(self, "EasyPAML", TEXTS["lang_switch_err"].format(error=exc), 'error')
 
     def _open_results_viewer(self):
         if not self.output_folder:
@@ -1848,6 +1909,13 @@ class App(ctk.CTk):
     def _update_models_state(self):
         enabled = all([self.input_folder, self.tree_file, self.output_folder])
         state = "normal" if enabled else "disabled"
+        try:
+            if enabled:
+                self.files_hint.pack_forget()
+            elif not self.files_hint.winfo_ismapped():
+                self.files_hint.pack(fill='x', pady=(0, 6), before=self.tabs)
+        except Exception:
+            pass
         
         for btn in self.model_gear_buttons.values(): 
             btn.configure(state=state)
@@ -1878,67 +1946,74 @@ class App(ctk.CTk):
             except Exception:
                 pass
 
-    def append_log(self, text: str):
-        """Adiciona mensagem ao log com tag de cor apropriada e feedback visual premium"""
+    _LEVEL_TAGS = {'ok': 'success', 'error': 'error', 'warn': 'warning', 'info': None,
+                   'header': 'header', 'debug': 'debug'}
+
+    def append_log(self, text: str, level: str = None):
+        """Uma mensagem por linha. level: ok | error | warn | info | header | debug.
+        Sem level, a cor é deduzida do texto (mensagens antigas). Mensagens
+        'debug' só aparecem com "Mostrar detalhes técnicos"."""
         def _append():
-            tag = None
-            
-            # Detectar tipo de mensagem por palavra-chave
-            if any(x in text for x in ["[OK]", "SUCESSO", "COMPLETADO", "FINALIZADO", "OK", "SALVO"]):
+            if level is not None:
+                tag = self._LEVEL_TAGS.get(level)
+            elif any(x in text for x in ("[OK]", "SUCESSO", "CONCLUÍD")):
                 tag = "success"
-            elif any(x in text for x in ["[Erro]", "ERRO", "TIMEOUT", "FALHA", "PROBLEMA"]):
+            elif any(x in text for x in ("[Erro]", "ERRO", "FALHOU", "FAILED", "Error")):
                 tag = "error"
-            elif any(x in text for x in ["[!]", "[AVISO]", "AVISO", "CUIDADO", "ATENÇÃO"]):
+            elif any(x in text for x in ("[!]", "AVISO", "WARNING")):
                 tag = "warning"
-            elif any(x in text for x in ["[+]", "[-]", "[tag]", "[edit]", "INFO", "INICIANDO", "PROCESSANDO"]):
-                tag = "info"
-            elif any(x in text for x in ["═", "───", "╔", "╚", "║"]):
-                tag = "header"
-            
-            self.log.insert("end", text, tag)
-            self.log.see("end")  # Auto-scroll para o final
-        
+            else:
+                tag = None
+            line = text if text.endswith("\n") else text + "\n"
+            tags = (tag,) if tag else ()
+            if level == 'debug':
+                tags = ('debug',)
+            self.log.insert("end", line, tags)
+            self.log.see("end")
         self.after(0, _append)
 
-    def _poll_stop_count(self):
-        if self.analysis_instance:
-            cnt = getattr(self.analysis_instance, 'current_stop_count', 0)
-            self.stop_label.configure(text=TEXTS["status_stops_template"].format(n=cnt))
-        self.after(1000, self._poll_stop_count)
+    def _backend_log(self, level: str, text: str):
+        """log_callback do backend (chamado de threads de trabalho)."""
+        self.append_log(text, level)
 
-    def _continue_all_for_gene(self):
-        if self.manual_all_event:
-            self.manual_all_event.set()
-            if self.manual_event: 
-                self.manual_event.set()
-            self.append_log(TEXTS["log_resolving_stops"])
+    def _backend_progress(self, done: int, total: int, gene: str = ''):
+        def _upd():
+            frac = (done / total) if total else 0
+            self.progress_bar.set(frac)
+            self.progress_label.configure(text=TEXTS["progress_template"].format(
+                done=done, total=total))
+        self.after(0, _upd)
+
+    def _set_pause_button(self, paused: bool):
+        if paused:
+            self.btn_pause.configure(text=TEXTS["btn_resume"], fg_color=PALETTE['success_fill'],
+                                     hover_color=mix(PALETTE['success_fill'], '#000000', 0.2),
+                                     text_color='#ffffff', border_color=PALETTE['success_fill'])
+        else:
+            self.btn_pause.configure(text=TEXTS["btn_pause"], fg_color=self.COLORS['bg_card'],
+                                     hover_color=hover_tint(self.COLORS['warning'], self.COLORS['bg_card']),
+                                     text_color=self.COLORS['warning'], border_color=self.COLORS['warning'])
 
     def _toggle_pause(self):
         if not self.pause_event:
             return
         if not self.analysis_thread or not self.analysis_thread.is_alive():
             return
-
         if self.pause_event.is_set():
-            # Pausar: bloquear próximos genes/modelos + suspender processos em curso
             self.pause_event.clear()
             self._suspend_active_codeml()
-            self.btn_pause.configure(text=TEXTS["btn_resume"], fg_color="#10b981")
+            self._set_pause_button(True)
             self.status_indicator.configure(text=TEXTS["status_paused"],
                                             text_color=self.COLORS['warning'])
-            self.append_log("|| Analise pausada (CODEML suspenso).\n")
         else:
-            # Retomar: desbloquear threads + retomar processos suspensos
             self._resume_active_codeml()
             self.pause_event.set()
-            self.btn_pause.configure(text=TEXTS["btn_pause"],
-                                     fg_color=self.COLORS['warning'])
+            self._set_pause_button(False)
             self.status_indicator.configure(text=TEXTS["status_running"],
                                             text_color=self.COLORS['success'])
-            self.append_log(">> Analise retomada.\n")
 
     def _suspend_active_codeml(self):
-        """Suspende todos os processos CODEML ativos usando psutil."""
+        """Suspende os processos codeml ativos (psutil)."""
         try:
             import psutil
             procs = list(getattr(self.analysis_instance, '_active_processes', []) if self.analysis_instance else [])
@@ -1951,7 +2026,6 @@ class App(ctk.CTk):
             pass  # psutil indisponível — pausa só entre genes
 
     def _resume_active_codeml(self):
-        """Retoma todos os processos CODEML suspensos usando psutil."""
         try:
             import psutil
             procs = list(getattr(self.analysis_instance, '_active_processes', []) if self.analysis_instance else [])
@@ -1965,174 +2039,169 @@ class App(ctk.CTk):
 
     def _stop_analysis(self):
         if not self.analysis_thread or not self.analysis_thread.is_alive():
-            self.append_log("[!] Nenhuma analise em execucao.\n")
             return
-
-        self.append_log("[STOP] PARANDO ANALISE...\n")
-        # 1. Sinalizar para o backend parar de iniciar novos genes/modelos
+        # 1. backend para de iniciar genes/modelos; 2. encerra e recolhe os codeml
         self.stop_event.set()
-        self.status_indicator.configure(text=TEXTS["status_stopped"], text_color=self.COLORS['danger'])
-
-        # 2. Matar TODOS os processos CODEML ativos imediatamente
-        if self.analysis_instance:
-            try:
-                procs = list(getattr(self.analysis_instance, '_active_processes', []))
-                if procs:
-                    self.append_log(f">> Terminando {len(procs)} processo(s) CODEML...\n")
-                for proc in procs:
-                    try:
-                        if proc.poll() is None:
-                            proc.terminate()
-                            proc.wait(timeout=2)
-                    except Exception:
-                        try:
-                            proc.kill()
-                        except Exception:
-                            pass
-            except Exception as e:
-                self.append_log(f"[!] Erro ao terminar processos: {e}\n")
-
-        # 3. Desbloquear qualquer evento de pausa/manual para não travar threads
         if self.pause_event:
             self.pause_event.set()
-        if self.manual_event:
-            self.manual_event.set()
-        if self.manual_all_event:
-            self.manual_all_event.set()
+        self._resume_active_codeml()
+        self.status_indicator.configure(text=TEXTS["status_stopped"], text_color=self.COLORS['danger'])
+        if self.analysis_instance:
+            try:
+                self.analysis_instance.stop_all_processes()
+            except Exception as e:
+                self.append_log(f"{e}", 'debug')
 
-        self.btn_run.configure(state="normal", fg_color=self.COLORS['success'],
-                               text_color=self.COLORS['text_primary'])
-        self.append_log("[STOP] Analise interrompida pelo usuario.\n")
+    def _selected_models(self):
+        selected = [k for k, v in self.model_vars.items() if v.get()]
+        if self.include_neutral_models.get():
+            selected = CodemlBatchAnalysis.auto_complete_null_models(selected, include_neutral=True)
+        return selected
 
     def start_analysis(self):
-        selected = [k for k, v in self.model_vars.items() if v.get()]
-        if not selected:
-            self.append_log("[!] Selecione pelo menos um modelo.\n")
+        """Iniciar: valida os dados ANTES de rodar e mostra um diálogo com os
+        problemas encontrados ("corrigir e voltar" / "continuar mesmo assim")."""
+        if self.analysis_thread and self.analysis_thread.is_alive():
             return
-        
-        # ═══ AUTO-COMPLETAR MODELOS NULOS ═══
-        original_selected = selected.copy()
-        include_neutral = self.include_neutral_models.get()
-        selected = CodemlBatchAnalysis.auto_complete_null_models(selected, include_neutral=include_neutral)
-        
-        # Informar ao usuário quais modelos foram auto-adicionados
-        if len(selected) > len(original_selected):
-            added = set(selected) - set(original_selected)
-            self.append_log(f"[OK] Modelos auto-adicionados: {', '.join(sorted(added))}\n")
-            self.append_log(f"   (Necessários para comparação LRT automática)\n\n")
-        
-        self.stop_event.clear()
-        self.btn_run.configure(state="disabled")
-        self.pause_event.set()
-        self.manual_all_event.clear()
-        self.manual_event.clear()
-        
-        # Feedback visual: mudar cor do botão e status
-        self.btn_run.configure(fg_color=self.COLORS['bg_card'],
-                               text_color=self.COLORS['text_muted'])
-        self.status_indicator.configure(text=TEXTS["status_running"], text_color=self.COLORS['success'])
+        original = [k for k, v in self.model_vars.items() if v.get()]
+        if not original:
+            self.append_log("Selecione pelo menos um modelo." if get_language() == 'pt'
+                            else "Select at least one model.", 'warn')
+            return
+        needs_branchsite = any('Branch-site' in m for m in original)
+        if needs_branchsite and not self.tree_branchsite_labeled:
+            self.append_log(("Branch-site precisa de um ramo marcado: use "
+                             f"'{TEXTS['btn_label_branchsite']}'.") if get_language() == 'pt' else
+                            (f"Branch-site needs a labelled branch: use '{TEXTS['btn_label_branchsite']}'."),
+                            'error')
+            return
+        if 'Branch' in original and not self.tree_branch_labeled:
+            self.append_log(("O modelo Branch precisa de ramos marcados: use "
+                             f"'{TEXTS['btn_label_branch']}'.") if get_language() == 'pt' else
+                            (f"The Branch model needs labelled branches: use '{TEXTS['btn_label_branch']}'."),
+                            'error')
+            return
+        selected = self._selected_models()
+        added = sorted(set(selected) - set(original))
+        if added:
+            self.append_log(("Modelos nulos adicionados automaticamente: " if get_language() == 'pt'
+                             else "Null models added automatically: ") + ", ".join(added), 'info')
 
-        self.analysis_thread = threading.Thread(target=self._run_thread, args=(selected,), daemon=True)
+        self.btn_run.configure(state="disabled")
+        self.status_indicator.configure(text=TEXTS["preflight_running"], text_color=self.COLORS['info'])
+        ignore = bool(self.ignore_stop_codons_var.get())
+        prune = bool(self.auto_prune_tree_var.get())
+
+        def _check():
+            try:
+                report = run_preflight(self.input_folder, self.tree_file, auto_prune=prune,
+                                       ignore_stop_codons=ignore)
+                err = None
+            except Exception as exc:
+                report, err = None, exc
+            self.after(0, lambda: self._after_preflight(selected, report, err))
+        threading.Thread(target=_check, daemon=True).start()
+
+    def _after_preflight(self, selected, report, error):
+        self.status_indicator.configure(text=TEXTS["status_ready"], text_color=self.COLORS['text_tertiary'])
+        ignore_stops = bool(self.ignore_stop_codons_var.get())
+        if error is not None:
+            self.append_log(f"{error}", 'error')
+        elif report is not None and report.has_problems:
+            for line in report.format_text(get_language(), include_info=False).splitlines():
+                self.append_log(line, 'warn')
+            choice = PreflightDialog(self, report).show()
+            if choice != 'continue':
+                self.btn_run.configure(state="normal")
+                return
+            # "Continuar mesmo assim": o codeml trata stop codons como dado ausente
+            if any(i.kind == 'stop_codon' for i in report.issues):
+                ignore_stops = True
+        self._launch(selected, ignore_stops)
+
+    def _launch(self, selected, ignore_stops: bool):
+        self.stop_event.clear()
+        self.pause_event.set()
+        self._set_pause_button(False)
+        self.progress_bar.set(0)
+        self.progress_label.configure(text=TEXTS["progress_template"].format(done=0, total='…'))
+        self.status_indicator.configure(text=TEXTS["status_running"], text_color=self.COLORS['success'])
+        self.analysis_thread = threading.Thread(target=self._run_thread, args=(selected, ignore_stops),
+                                                daemon=True)
         self.analysis_thread.start()
 
-    def _run_thread(self, selected):
+    def _run_thread(self, selected, ignore_stops=False):
+        old_stdout = sys.stdout
         sys.stdout = StdoutRedirect(self.append_log)
+        summary = None
         try:
             analysis = CodemlBatchAnalysis()
             self.analysis_instance = analysis
-            
-            needs_branchsite = any('Branch-site' in m for m in selected)
-            needs_branch = 'Branch' in selected
-            
-            # ═══ VALIDAÇÕES ═══
-            if needs_branchsite and not self.tree_branchsite_labeled:
-                self.append_log("\n[Erro] ERRO: Modelo Branch-Site sem arvore etiquetada!\n")
-                self.append_log("   -> Use 'Marcar Branch-site' na aba Branch-Site.\n\n")
-                self.btn_run.configure(state="normal", 
-                                      fg_color=self.COLORS['success'],
-                                      text_color=self.COLORS['text_primary'])
-                return
-            
-            if needs_branch and not self.tree_branch_labeled:
-                self.append_log("\n[Erro] ERRO: Modelo Branch sem arvore etiquetada!\n")
-                self.append_log("   -> Use 'Marcar Ramos (Multiplas Tags)' na aba Branch Model.\n\n")
-                self.btn_run.configure(state="normal",
-                                      fg_color=self.COLORS['success'],
-                                      text_color=self.COLORS['text_primary'])
-                return
-
-            # ═══ PREPARAR CONFIGURAÇÃO ═══
-            # Auto-completar modelos nulos se checkbox estiver ativado
-            models_to_run = selected
-            if self.include_neutral_models.get():
-                models_to_run = CodemlBatchAnalysis.auto_complete_null_models(
-                    selected, 
-                    include_neutral=True
-                )
-                if models_to_run != selected:
-                    self.append_log(f"\n[OK] Auto-adicionados modelos nulos: {', '.join(set(models_to_run) - set(selected))}\n")
-            
+            try:
+                omega = float(self.entry_omega.get() or 0.5)
+            except ValueError:
+                omega = 0.5
+            opts = self._global_ctl_options()
             analysis.config = {
                 'input_folder': self.input_folder,
                 'tree_file': self.tree_file,
                 'output_folder': self.output_folder,
-                'models': models_to_run,
+                'models': selected,
                 'custom_model_params': self.custom_model_params,
                 'labeled_tree_content': self.tree_branch_labeled,
                 'labeled_tree_branchsite': self.tree_branchsite_labeled,
-                'omega': float(self.entry_omega.get() or 0.5),
+                'omega': omega,
+                'CodonFreq': opts['CodonFreq'],
+                'ncatG': opts['ncatG'],
                 'cleandata': int(self.cleandata_var.get()),
-                'timeout': 1600,
+                'timeout': 6 * 3600,
+                'idle_timeout': 300,
                 'run_lrt': True,
                 'n_workers': int(self.cores_var.get()),
-                'auto_continue_stop_codons': self.ignore_stop_codons_var.get(),
+                'ignore_stop_codons': ignore_stops,
                 'auto_prune_tree': self.auto_prune_tree_var.get(),
                 'pause_event': self.pause_event,
-                'manual_continue_event': self.manual_event,
-                'manual_continue_all_event': self.manual_all_event,
-                'stop_event': self.stop_event
+                'stop_event': self.stop_event,
+                'log_callback': self._backend_log,
+                'progress_callback': self._backend_progress,
+                'interface': 'gui',
             }
-            
-            self.append_log("╔" + "═"*58 + "╗\n")
-            self.append_log("║     STARTING POSITIVE SELECTION ANALYSIS      " + " "*10 + "║\n")
-            self.append_log("╚" + "═"*58 + "╝\n\n")
-            self.append_log(TEXTS["log_analysis_start"])
-            self.append_log("="*60 + "\n")
-            
-            analysis.run_batch_analysis()
-            
+            self.append_log(TEXTS["log_analysis_start"], 'header')
+            summary = analysis.run_batch_analysis()
         except Exception as e:
-            self.append_log(f"[Erro] Erro critico: {e}\n")
-            self.append_log(f"{traceback.format_exc()}\n")
+            self.append_log(f"{e}", 'error')
+            self.append_log(traceback.format_exc(), 'debug')
         finally:
+            sys.stdout = old_stdout
             self.analysis_instance = None
+            self.last_run_summary = summary
+            self.after(0, lambda: self._on_run_finished(summary))
 
-            if self.stop_event.is_set():
-                self.append_log("\n" + "="*60 + "\n")
-                self.append_log(TEXTS["log_analysis_stopped"])
-                self.append_log("="*60 + "\n")
-            else:
-                self.append_log("\n" + "="*60 + "\n")
-                self.append_log(TEXTS["log_analysis_done"])
-                self.append_log("="*60 + "\n")
+    def _on_run_finished(self, summary):
+        self.btn_run.configure(state="normal")
+        self.status_indicator.configure(text=TEXTS["status_ready"], text_color=self.COLORS['text_tertiary'])
+        self._set_pause_button(False)
+        self._update_models_state()
+        if not summary:
+            return
+        total, done = summary.get('total', 0), summary.get('ok', 0) + summary.get('failed', 0)
+        self.progress_label.configure(text=TEXTS["progress_done"].format(done=done, total=total))
+        if summary.get('failed'):
+            items = "\n".join(f"• {g}: {r}" for g, r in sorted(summary['failures'].items())[:30])
+            if len(summary['failures']) > 30:
+                items += f"\n… (+{len(summary['failures']) - 30})"
+            show_message(self, TEXTS["failures_title"], TEXTS["failures_text"].format(
+                failed=summary['failed'], total=total, items=items,
+                path=Path(summary['output_folder']) / 'genes_status.tsv'), 'error')
+        # Abre os resultados ao terminar (como o README promete), se algum gene rodou
+        if summary.get('ok') and not summary.get('stopped'):
+            self._open_results_viewer()
 
-            def _reset_ui():
-                self.btn_run.configure(
-                    state="normal",
-                    fg_color=self.COLORS['success'],
-                    text_color=self.COLORS['text_primary']
-                )
-                self.status_indicator.configure(
-                    text=TEXTS["status_ready"],
-                    text_color=self.COLORS['text_tertiary']
-                )
-                self.btn_pause.configure(
-                    text=TEXTS["btn_pause"],
-                    fg_color=self.COLORS['warning']
-                )
-                self._update_models_state()
-
-            self.after(0, _reset_ui)
+    def _poll_stop_count(self):
+        if self.analysis_instance:
+            cnt = getattr(self.analysis_instance, 'current_stop_count', 0)
+            self.stop_label.configure(text=TEXTS["status_stops_template"].format(n=cnt))
+        self.after(1000, self._poll_stop_count)
 
 
 if __name__ == "__main__":
