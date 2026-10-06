@@ -145,10 +145,12 @@ Main options (`--help` lists all of them):
 | Option | Default | Meaning |
 |---|---|---|
 | `--models` | `M1a,M2a,M7,M8,M8a` | models to run |
+| `--no-auto-nulls` | | run only the listed models; by default the null of each listed model is added, as in the window (`--models M8` runs M7, M8 and M8a) |
 | `--no-m8a` | | do not run M8a (no M8a vs M8 test); in the window, click the M8a card |
 | `--tree-folder` | | folder with one tree per gene (`GENE.nwk`), matched by name; `GENE.nwk` in the alignments folder also works |
 | `--codonfreq` | `2` (F3x4) | codeml CodonFreq (0 Fequal, 1 F1x4, 2 F3x4, 3 F61, 7 FMutSel …) |
 | `--ncatg` | `10` | beta categories (M7/M8/M8a) |
+| `--kappa` | `2` | initial κ (estimated) |
 | `--cleandata` | `1` | remove columns with gaps, ambiguities or stop codons |
 | `--ignore-stop-codons` | off | without it, genes with an internal stop codon fail and the stop position is reported |
 | `--workers` | `4` | genes run in parallel |

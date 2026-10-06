@@ -54,6 +54,9 @@ def parse_args():
                     help="comma-separated models (default: M1a,M2a,M7,M8,M8a)")
     ap.add_argument('--no-m8a', action='store_true',
                     help="do not run M8a (the second null of M8; no M8a vs M8 test)")
+    ap.add_argument('--no-auto-nulls', action='store_true',
+                    help="run only the listed models; by default the null model of each listed "
+                         "alternative is added, as in the window (M8 adds M7 and M8a, M2a adds M1a)")
     ap.add_argument('--codonfreq', type=int, default=DEFAULT_CODONFREQ,
                     help=f"codeml CodonFreq (default: {DEFAULT_CODONFREQ} = F3x4). Options: {_CODONFREQ_HELP}")
     ap.add_argument('--ncatg', type=int, default=10, help="beta categories in M7/M8/M8a (default: 10)")
@@ -117,6 +120,7 @@ def parse_args():
         cfg.setdefault('lang', args.lang)
         cfg.setdefault('verbose', args.verbose)
         cfg.setdefault('no_m8a', args.no_m8a)
+        cfg.setdefault('auto_nulls', not args.no_auto_nulls)
         cfg.setdefault('workers', 4)
         cfg.setdefault('timeout', 0)
         cfg.setdefault('run_lrt', True)
@@ -161,6 +165,7 @@ def parse_args():
         'lang': args.lang,
         'verbose': args.verbose,
         'no_m8a': args.no_m8a,
+        'auto_nulls': not args.no_auto_nulls,
     }
 
 
@@ -236,11 +241,19 @@ def main():
     messages.set_language(cfg.get('lang') or messages.system_language())
     lang = messages.get_language()
 
-    if cfg.get('no_m8a') and 'M8a' in cfg['models']:
-        cfg['models'] = [m for m in cfg['models'] if m != 'M8a']
     bad_models = set(cfg['models']) - VALID_MODELS
     if bad_models:
         sys.exit(f"Unknown model(s): {sorted(bad_models)}. Valid: {sorted(VALID_MODELS)}")
+    if cfg.get('auto_nulls', True):
+        listed = list(cfg['models'])
+        cfg['models'] = CodemlBatchAnalysis.auto_complete_null_models(
+            listed, include_neutral=True, include_m8a=not cfg.get('no_m8a'))
+        added = [m for m in cfg['models'] if m not in listed]
+        if added:
+            print(("Modelos nulos acrescentados: " if lang == 'pt' else "Null models added: ")
+                  + ", ".join(added) + "  (--no-auto-nulls)")
+    if cfg.get('no_m8a') and 'M8a' in cfg['models']:
+        cfg['models'] = [m for m in cfg['models'] if m != 'M8a']
     if not cfg['input'].is_dir():
         sys.exit(f"Input folder not found: {cfg['input']}")
     if cfg.get('tree') and not cfg['tree'].is_file():

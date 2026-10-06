@@ -492,3 +492,22 @@ def test_progress_moves_during_a_model_and_heartbeat_prints_it(tmp_path, fake_co
     assert seen and max(seen) > min(seen) > 0
     assert app.progress_snapshot()['frac'] == pytest.approx(1.0)
     assert any('% ·' in t and 'elapsed' in t for _, t in app._test_log)
+
+
+@pytest.mark.parametrize('extra, expected', [([], {'M7', 'M8', 'M8a'}),
+                                             (['--no-m8a'], {'M7', 'M8'}),
+                                             (['--no-auto-nulls'], {'M8'})])
+def test_cli_adds_null_models_like_the_window(tmp_path, fake_codeml, monkeypatch, extra, expected):
+    import easypaml_cli
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    inp = tmp_path / 'in'
+    inp.mkdir()
+    (inp / 'gene.fasta').write_text((DATA / 'gene_example.fasta').read_text())
+    out = tmp_path / 'out'
+    monkeypatch.setattr(sys, 'argv', ['easypaml_cli.py', '--input', str(inp), '--tree',
+                                      str(DATA / 'gene_example.nwk'), '--output', str(out),
+                                      '--models', 'M8', '--codeml', fake_codeml, '--workers', '1',
+                                      '--lang', 'en'] + extra)
+    with pytest.raises(SystemExit):
+        easypaml_cli.main()
+    assert {p.name for p in out.iterdir() if p.is_dir()} == expected
