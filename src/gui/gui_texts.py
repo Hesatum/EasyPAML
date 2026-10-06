@@ -519,6 +519,11 @@ TEXTS_PT: dict[str, object] = {
         "de sítios neutros (ω = 1)."
     ),
     "conclusion_none": "Sem seleção positiva detectada (nenhum teste com q < 0,05).",
+    "conclusion_weak": (
+        "Sinal fraco: {tests} significativo(s), mas nenhum sítio com Pr(ω>1) ≥ 0,95{detail}. "
+        "Sinais assim costumam vir de poucos códons mal alinhados; confira o alinhamento."
+    ),
+    "conclusion_weak_class": " (classe positiva com ω = {w} em {p1}% dos sítios)",
     "conclusion_no_m8a": (
         "Possível seleção positiva: só M8 vs M7 é significativo e o M8a não rodou, então sítios "
         "neutros (ω = 1) não foram descartados. Rode o M8a para conferir."
@@ -1091,6 +1096,11 @@ TEXTS_EN: dict[str, object] = {
         "come from neutral sites (ω = 1)."
     ),
     "conclusion_none": "No positive selection detected (no test with q < 0.05).",
+    "conclusion_weak": (
+        "Weak signal: {tests} significant, but no site has Pr(ω>1) ≥ 0.95{detail}. Signals "
+        "like this often come from a few misaligned codons; check the alignment."
+    ),
+    "conclusion_weak_class": " (positive class with ω = {w} on {p1}% of sites)",
     "conclusion_no_m8a": (
         "Possible positive selection: only M8 vs M7 is significant and M8a was not run, so "
         "neutral sites (ω = 1) are not ruled out. Run M8a to check."

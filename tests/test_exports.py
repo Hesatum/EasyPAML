@@ -76,3 +76,11 @@ def test_chart_figure_is_written_for_few_and_many_genes(tmp_path, n):
     out = tmp_path / 'fig.png'
     charts.export_figure(out, [test], whole, pos)
     assert out.stat().st_size > 10_000
+
+
+def test_significant_without_sites_is_a_weak_signal():
+    W = rv.ResultsViewerWindow
+    rows = [('M8 vs M7', False, '0.03', '0.1', '', None, 100.6, 0.0115),
+            ('M8 vs M8a', True, '0.009', '0.028', '', 0, 100.6, 0.0115)]
+    text, _ = W._conclusion({('M7', 'M8'): False, ('M8a', 'M8'): True}, rows)
+    assert text.startswith('⚠ Weak signal') and 'ω = 101' in text and '1.1%' in text

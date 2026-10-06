@@ -730,7 +730,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         w, p1 = pc.get('omega', np.nan), pc.get('p', np.nan)
                 effect = (f"ω = {w:.3f}  p₁ = {p1:.3f}" if pd.notna(w) and pd.notna(p1) else "")
                 test_rows.append((test, sig, lrt_stats.format_p(p),
-                                  lrt_stats.format_p(q), effect, n_sites))
+                                  lrt_stats.format_p(q), effect, n_sites, w, p1))
 
             card = ctk.CTkFrame(scroll, fg_color=PALETTE['bg_surface'] if i % 2 == 0 else PALETTE['row_alt'],
                                 corner_radius=RADIUS['card'])
@@ -765,7 +765,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             body.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
             for c, m in enumerate(col_min):
                 body.grid_columnconfigure(c, minsize=m)
-            for r, (test, sig, p_txt, q_txt, effect, n_sites) in enumerate(test_rows):
+            for r, (test, sig, p_txt, q_txt, effect, n_sites, *_) in enumerate(test_rows):
                 ctk.CTkLabel(body, text=test, font=self._font('sm'), anchor='w',
                              text_color=PALETTE['text_secondary']).grid(row=r, column=0, sticky='w')
                 self._chip(body, TEXTS["summary_verdict_sig"] if sig else TEXTS["summary_verdict_nonsig"],
@@ -796,6 +796,15 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         if not sig_tests:
             return TEXTS["conclusion_none"], PALETTE['text_secondary']
         n = max((r[5] for r in test_rows if r[1] and r[5] is not None), default=None)
+        if n == 0:
+            # significant, but carried by a tiny class with no well-supported site:
+            # often a few misaligned codons
+            w = max((r[6] for r in test_rows if r[1] and len(r) > 6 and pd.notna(r[6])), default=np.nan)
+            p1 = max((r[7] for r in test_rows if r[1] and len(r) > 7 and pd.notna(r[7])), default=np.nan)
+            detail = (TEXTS["conclusion_weak_class"].format(w=f"{w:.3g}", p1=f"{100 * p1:.1f}")
+                      if pd.notna(w) and pd.notna(p1) else "")
+            return ("⚠ " + TEXTS["conclusion_weak"].format(tests=", ".join(sig_tests), detail=detail),
+                    PALETTE['warning_fg'])
         sites = TEXTS["conclusion_sites"].format(n=n) if n is not None else ""
         return (TEXTS["conclusion_supported"].format(tests=", ".join(sig_tests), sites=sites),
                 PALETTE['success_fg'])
