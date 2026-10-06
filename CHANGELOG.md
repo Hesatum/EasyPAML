@@ -36,6 +36,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Output files `methods_text.txt`, `sites_BEB.tsv` and `genes_status.tsv`; the
   EasyPAML commit in About, `--version` and `run_config.json`.
 - Progress by model with the time elapsed and an estimate of the time left.
+- Charts of each test's 2Δℓ distribution and of ω per gene, in the Summary (with the
+  genes under the mouse) and in the exported figure.
 - Exports include lnL, np and df of each test, without rounding.
 - Light theme, following the system by default.
 - Command-line options for every `.ctl` setting; exit code 1 if any gene fails.

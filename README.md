@@ -104,7 +104,8 @@ at the bottom left change them, and the choice is kept for the next session.
 
 The results panel has these tabs:
 
-- Summary: a sentence per gene, such as "Positive selection: M8 vs M7, M8 vs M8a
+- Summary: a chart of the 2Δℓ distribution of a test and one of ω per gene (move the
+  mouse along the x axis to see the genes), then a sentence per gene, such as "Positive selection: M8 vs M7, M8 vs M8a
   significant (q < 0.05), 21 site(s) with Pr(ω>1) ≥ 0.95", and below it p, q, ω and
   p₁ of the positive class for each test.
 - LRT and p-values: lnL of each model, 2Δℓ, p (in scientific notation), q (BH), and
@@ -113,7 +114,8 @@ The results panel has these tabs:
   file (they differ when columns with gaps or stop codons are removed), amino acid,
   Pr(ω>1), `*` (≥ 0.95) or `**` (≥ 0.99), and mean ω ± SE. Buttons copy or export the
   table as TSV.
-- Export: Excel, CSV, PNG and HTML. "Open results folder" opens the folder itself.
+- Export: Excel, CSV, HTML and a figure (PNG or PDF) with those charts, one panel per
+  test. "Open results folder" opens the folder itself.
 - Candidates & GO: significant genes, and GO enrichment (Fisher's exact test) if you load a GO annotation TSV.
 
 > The mean ω of a gene is not a criterion for positive selection. It stays below 1

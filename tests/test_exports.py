@@ -62,3 +62,17 @@ def test_m8_vs_m7_alone_is_not_called_positive_selection():
     text, _ = W._conclusion({('M7', 'M8'): True, ('M8a', 'M8'): True},
                             rows + [('M8 vs M8a', True, '1e-4', '1e-4', '', 3)])
     assert text.startswith('Positive selection')
+
+
+@pytest.mark.parametrize('n', [3, 40])
+def test_chart_figure_is_written_for_few_and_many_genes(tmp_path, n):
+    import numpy as np
+    from src.gui import charts
+    rng = np.random.default_rng(1)
+    test = charts.TestData('M8a', 'M8', 1, [charts.Point(f"g{i}", float(rng.chisquare(1) * (1 + 20 * (i % 4 == 0))),
+                                                         i % 4 == 0) for i in range(n)])
+    whole = [charts.Point(f"g{i}", float(rng.lognormal(-1, 0.5)), False) for i in range(n)]
+    pos = [charts.Point(f"g{i}", float(rng.lognormal(1, 0.5)), i % 4 == 0) for i in range(n)]
+    out = tmp_path / 'fig.png'
+    charts.export_figure(out, [test], whole, pos)
+    assert out.stat().st_size > 10_000

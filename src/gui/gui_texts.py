@@ -337,8 +337,9 @@ TEXTS_PT: dict[str, object] = {
     "dialog_save_as":           "Salvar como",
 
     # ── Charts (matplotlib) ─────────────────────────────────────────────
-    "chart_omega_dist":         "Distribuição de ω",
-    "chart_freq":               "Frequência",
+    "chart_whole_gene":         "gene inteiro",
+    "chart_positive_class":     "classe positiva",
+    "chart_hint":               "Passe o mouse sobre o eixo x para ver os genes. Laranja: q < 0,05.",
 
     # ── Novas chaves (0.3.0) ─────────────────────────────────────────────
     "picker_up": "Acima",
@@ -908,8 +909,9 @@ TEXTS_EN: dict[str, object] = {
     "dialog_save_as":           "Save as",
 
     # ── Charts (matplotlib) ───────────────────────────────────────────────
-    "chart_omega_dist":         "ω Distribution",
-    "chart_freq":               "Frequency",
+    "chart_whole_gene":         "whole gene",
+    "chart_positive_class":     "positive class",
+    "chart_hint":               "Move the mouse along the x axis to see the genes. Orange: q < 0.05.",
 
     # ── New keys (0.3.0) ─────────────────────────────────────────────────
     "picker_up": "Up",

@@ -18,8 +18,9 @@ from src.backend.branch_extractor import BranchExtractor
 from src.backend import lrt_stats
 from src.backend.site_map import attach_original_positions
 from src.backend.version import version_string
+from . import charts
 from .gui_texts import TEXTS, get_language, tr
-from .ui_helpers import (FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE, fit_to_screen,
+from .ui_helpers import (CURRENT_THEME, FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE, fit_to_screen,
                          ask_open_file, ask_save_file, hover_tint, mix, open_folder,
                          show_message)
 
@@ -492,6 +493,102 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         self.destroy()
         ResultsViewerWindow(parent, folder)
 
+    def _chart_data(self):
+        """Tests, gene-wide ω and positive-class ω for the charts, with hover text."""
+        tests = []
+        for (null, alt), info in lrt_stats.PAIRS.items():
+            vals = self._pair_values(null, alt)
+            if not vals or not info['df']:
+                continue
+            t = charts.TestData(null, alt, 1 if info['boundary'] else info['df'])
+            for gene, (lrt, p, q) in vals.items():
+                t.points.append(charts.Point(
+                    gene, float(lrt), bool(pd.notna(q) and q < 0.05),
+                    f"{gene}  2Δℓ {max(0.0, lrt):.2f}  q {lrt_stats.format_p(q)}"))
+            tests.append(t)
+        order = {pair: i for i, pair in enumerate((('M8a', 'M8'), ('M1a', 'M2a'), ('M7', 'M8')))}
+        tests.sort(key=lambda t: order.get((t.null, t.alt), len(order)))
+
+        alt = 'M8' if 'M8_w_pos' in self.df.columns else ('M2a' if 'M2a_w_pos' in self.df.columns else None)
+        whole_col = next((c for c in ('M0_omega', f'{alt}_omega') if c in self.df.columns), None)
+        sig_pair = next(((n, a) for n, a in (('M8a', 'M8'), ('M7', 'M8'), ('M1a', 'M2a'))
+                         if a == alt and self._pair_values(n, a)), None)
+        qs = {g: v[2] for g, v in (self._pair_values(*sig_pair) or {}).items()} if sig_pair else {}
+        whole, positive = [], []
+        for _, row in self.df.iterrows():
+            if row.get('status') == 'failed':
+                continue
+            gene = row['Gene']
+            q = qs.get(gene, np.nan)
+            sig = bool(pd.notna(q) and q < 0.05)
+            if whole_col and pd.notna(row.get(whole_col)):
+                whole.append(charts.Point(gene, float(row[whole_col]), sig,
+                                          f"{gene}  ω {float(row[whole_col]):.3f} ({whole_col.split('_')[0]})"))
+            if alt and pd.notna(row.get(f'{alt}_w_pos')):
+                p1 = row.get(f'{alt}_p_pos')
+                positive.append(charts.Point(
+                    gene, float(row[f'{alt}_w_pos']), sig,
+                    f"{gene}  ω {float(row[f'{alt}_w_pos']):.2f}"
+                    + (f"  p₁ {float(p1):.3f}" if pd.notna(p1) else "")
+                    + (f"  q {lrt_stats.format_p(q)}" if pd.notna(q) else "")))
+        return tests, whole, positive
+
+    def _summary_charts(self, parent) -> None:
+        """Compact LRT density of the main test and ω per gene, with a hover box."""
+        tests, whole, positive = self._chart_data()
+        if not tests and not (whole or positive):
+            return
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg as _Canvas
+        from matplotlib.figure import Figure as _Figure
+        c = charts.DARK if CURRENT_THEME['mode'] == 'dark' else charts.LIGHT
+        c = dict(c, bg=PALETTE['bg_surface'], box=PALETTE['bg_elevated'])
+        n = (1 if tests else 0) + (1 if (whole or positive) else 0)
+        fig = _Figure(figsize=(6.2 * n, 2.5), facecolor=c['bg'])
+        k = 1
+        holder = ctk.CTkFrame(parent, fg_color=PALETTE['bg_surface'], corner_radius=RADIUS['card'])
+        holder.pack(fill='x', padx=SPACE['xs'], pady=(0, SPACE['sm']))
+        canvas = _Canvas(fig, master=holder)
+        if tests:
+            ax = fig.add_subplot(1, n, k)
+            hover = {'cid': charts.enable_hover(fig, ax, charts.draw_lrt(ax, tests[0], c, compact=True), c)}
+            k += 1
+            if len(tests) > 1:
+                by_title = {t.title: t for t in tests}
+
+                def _show(title):
+                    canvas.mpl_disconnect(hover['cid'])
+                    ax.clear()
+                    hover['cid'] = charts.enable_hover(
+                        fig, ax, charts.draw_lrt(ax, by_title[title], c, compact=True), c)
+                    canvas.draw_idle()
+                seg = ctk.CTkSegmentedButton(holder, values=list(by_title), command=_show,
+                                             font=self._font('xs', 'bold'), height=24,
+                                             selected_color=PALETTE['accent_fill'],
+                                             selected_hover_color=PALETTE['accent_fill'],
+                                             unselected_color=PALETTE['bg_elevated'],
+                                             text_color=PALETTE['text_primary'])
+                seg.set(tests[0].title)
+                seg.pack(anchor='w', padx=SPACE['md'], pady=(SPACE['sm'], 0))
+        if whole or positive:
+            ax = fig.add_subplot(1, n, k)
+            charts.enable_hover(fig, ax, charts.draw_omega(ax, whole, positive, c, compact=True,
+                                                          whole_label=TEXTS["chart_whole_gene"],
+                                                          positive_label=TEXTS["chart_positive_class"]), c)
+        fig.subplots_adjust(left=0.05, right=0.98, top=0.86, bottom=0.2, wspace=0.18)
+        widget = canvas.get_tk_widget()
+        widget.configure(height=230, highlightthickness=0, bg=c['bg'])
+        widget.pack(fill='x', padx=SPACE['sm'], pady=SPACE['sm'])
+        scroller = getattr(parent, '_parent_canvas', None)
+        if scroller is not None:     # the wheel over the chart still scrolls the list
+            widget.bind('<MouseWheel>', lambda e: scroller.yview_scroll(-int(e.delta / 120) or -1 if e.delta > 0 else 1, 'units'))
+            widget.bind('<Button-4>', lambda e: scroller.yview_scroll(-1, 'units'))
+            widget.bind('<Button-5>', lambda e: scroller.yview_scroll(1, 'units'))
+        canvas.draw()
+        self._summary_canvas = canvas
+        ctk.CTkLabel(holder, text=TEXTS["chart_hint"], font=self._font('xs'), anchor='w',
+                     text_color=PALETTE['text_tertiary']).pack(fill='x', padx=SPACE['md'],
+                                                              pady=(0, SPACE['sm']))
+
     def _sort_by_significance(self) -> None:
         """Order genes by their smallest q (then p) over the positive-selection tests,
         or over every test when there is none; failed genes go last."""
@@ -590,6 +687,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         tests = self._positive_tests()
         scroll = ctk.CTkScrollableFrame(parent, fg_color='transparent', corner_radius=0)
         scroll.pack(fill='both', expand=True, padx=SPACE['xs'], pady=(0, SPACE['xs']))
+        try:
+            self._summary_charts(scroll)
+        except Exception as exc:
+            print(f"[WARN] summary charts: {exc}")
         if not tests and 'status' not in self.df.columns:
             ctk.CTkLabel(scroll, text=TEXTS["summary_no_tests"], font=self._font('md'),
                          text_color=PALETTE['text_secondary']).pack(pady=40)
@@ -2761,66 +2862,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             return
         
         try:
-            fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-            fig.patch.set_facecolor('#0f0f0f')
-            
-            omega_cols = [col for col in self.df.columns if '_omega' in col]
-            if omega_cols:
-                omega_data = []
-                for col in omega_cols:
-                    vals = pd.to_numeric(self.df[col], errors='coerce').dropna()
-                    omega_data.extend(vals.tolist())
-                
-                if omega_data:
-                    axes[0, 0].hist(omega_data, bins=30, color='#10b981', alpha=0.7, edgecolor='white')
-                    axes[0, 0].set_title(TEXTS["chart_omega_dist"], color='white', fontsize=12)
-                    axes[0, 0].set_xlabel('ω', color='white')
-                    axes[0, 0].set_ylabel(TEXTS["chart_freq"], color='white')
-                    axes[0, 0].set_facecolor('#1e1e1e')
-                    axes[0, 0].tick_params(colors='white')
-            
-            lrt_cols = [col for col in self.df.columns if col.startswith('lrt_')]
-            if lrt_cols:
-                lrt_data = pd.to_numeric(self.df[lrt_cols[0]], errors='coerce').dropna()
-                if not lrt_data.empty:
-                    axes[0, 1].hist(lrt_data, bins=20, color='#3b82f6', alpha=0.7, edgecolor='white')
-                    axes[0, 1].set_title('2Δℓ Distribution', color='white', fontsize=12)
-                    axes[0, 1].set_xlabel('2Δℓ', color='white')
-                    axes[0, 1].set_ylabel(TEXTS["chart_freq"], color='white')
-                    axes[0, 1].set_facecolor('#1e1e1e')
-                    axes[0, 1].tick_params(colors='white')
-            
-            positive_genes = self._detect_positive_selection()
-            if positive_genes:
-                gene_names = list(positive_genes.keys())[:10]
-                gene_counts = [len(positive_genes[g]) for g in gene_names]
-                axes[1, 0].barh(gene_names, gene_counts, color='#10b981', alpha=0.8)
-                axes[1, 0].set_title('Top 10 genes with positive selection', color='white', fontsize=12)
-                axes[1, 0].set_xlabel('Significant tests', color='white')
-                axes[1, 0].set_facecolor('#1e1e1e')
-                axes[1, 0].tick_params(colors='white')
-            
-            axes[1, 1].axis('off')
-            summary_text = f"""
-            SUMMARY
-
-            Genes: {len(self.df)}
-            Significant LRT (q < 0.05): {len(positive_genes)}
-            Failed: {self._n_failed()}
-            Models: {self._count_models()}
-            """
-            axes[1, 1].text(0.1, 0.5, summary_text, color='white', fontsize=11,
-                          verticalalignment='center', family='monospace',
-                          bbox=dict(boxstyle='round', facecolor='#1e1e1e', alpha=0.8))
-            
-            plt.tight_layout()
-            plt.savefig(filepath, dpi=300, facecolor='#0f0f0f')
-            plt.close()
-            
+            tests, whole, positive = self._chart_data()
+            charts.export_figure(filepath, tests, whole, positive)
             show_message(self, TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=filepath))
         except Exception as e:
             show_message(self, TEXTS["msg_error"], TEXTS["msg_export_err"].format(error=e), 'error')
-    
+
     def _export_html(self):
         """Export an HTML report, one section per test."""
         filepath = ask_save_file(self, TEXTS["dialog_save_as"], self.output_folder,
