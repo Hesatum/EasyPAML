@@ -28,6 +28,11 @@ Correções a partir do teste de usabilidade de 05/10/2026.
 
 ### Adicionado
 
+- Tempo limite automático por execução, proporcional ao modelo e ao tamanho do gene
+  (5 × o tempo esperado, mínimo 30 min), igual na janela e no CLI; calibrado em
+  [docs/benchmark_tempos.md](docs/benchmark_tempos.md). Antes era fixo: 1600 s no
+  CLI (cortava, por exemplo, um M8 normal de 30 táxons × 1500 códons) e 6 h na
+  janela. `--timeout` e o novo campo em Configurações fixam outro valor.
 - Modelo **M8a** (M8 com ω = 1 fixo) e teste **M8a vs M8** (df = 1, χ²₁; mistura
   50:50 reportada como referência). Ao escolher M8 com modelos nulos automáticos,
   entram M7 e M8a.

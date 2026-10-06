@@ -71,8 +71,10 @@ MESSAGES = {
               "original site numbering will not be shown.",
     },
     'reason_timeout': {
-        'pt': "o codeml passou do tempo limite ({s} s)",
-        'en': "codeml exceeded the time limit ({s} s)",
+        'pt': "o codeml passou do tempo limite ({s} s); para aumentar, use Configurações > "
+              "Tempo limite ou --timeout",
+        'en': "codeml exceeded the time limit ({s} s); to raise it, use Settings > Time limit "
+              "or --timeout",
     },
     'reason_idle': {
         'pt': "o codeml ficou {s} s sem usar CPU (provavelmente esperando uma resposta); última linha: {line}",

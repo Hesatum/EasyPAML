@@ -153,7 +153,7 @@ Opções principais (`--help` mostra todas):
 | `--cleandata` | `1` | remove colunas com gap/ambiguidade/stop |
 | `--ignore-stop-codons` | desligado | sem ela, genes com stop codon interno falham com a posição do stop |
 | `--workers` | `4` | genes em paralelo |
-| `--timeout` / `--idle-timeout` | 1600 s / 300 s | limite por execução / codeml sem usar CPU |
+| `--timeout` / `--idle-timeout` | automático / 300 s | limite por execução ([como é calculado](docs/benchmark_tempos.md)) / codeml sem usar CPU |
 | `--skip-beb`, `--two-pass` | — | para milhares de genes (ver METODOS.md) |
 | `--codeml` | — | caminho do codeml |
 | `--strict` | — | não roda nada se a verificação inicial achar problemas |

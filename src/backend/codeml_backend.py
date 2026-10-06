@@ -31,6 +31,7 @@ from .ctl_params import (DEFAULT_CODONFREQ, DEFAULT_CTL_PARAMS, build_ctl_text,
                          codonfreq_label)
 from .preflight import discover_per_gene_trees, group_by_gene, list_alignment_files
 from .site_map import codeml_site_count, write_sitemap
+from .timeouts import resolve_timeout, user_timeout
 from .version import __version__
 
 # Absolute path to the bundled codeml binary — works regardless of CWD.
@@ -1319,7 +1320,11 @@ class CodemlBatchAnalysis:
                 self._active_processes.add(process)
                 self.current_process = process
 
-            timeout_s = float(cfg.get('timeout', 1600) or 1600)
+            n_codons = max((len(sq) for sq in seqs_used.values()), default=0) // 3
+            timeout_s = float(resolve_timeout(cfg.get('timeout'), model_name, len(names), n_codons))
+            self._log(f"[{model_name}] {base_name}: time limit {int(timeout_s)} s "
+                      f"({len(names)} taxa × {n_codons} codons"
+                      f"{', user value' if user_timeout(cfg.get('timeout')) else ', automatic'})")
             idle_s = float(cfg.get('idle_timeout', 300) or 0)
             deadline = time.time() + timeout_s
             last_cpu = None

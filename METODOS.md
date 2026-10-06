@@ -91,8 +91,11 @@ reproduz a execução.
 
 - O codeml roda com a entrada padrão **fechada**: quando ele pede "Press Enter"
   (por exemplo, ao encontrar um stop codon), segue na hora em vez de esperar.
-- Cada execução tem tempo limite (`--timeout`, padrão 1600 s no CLI e 6 h na
-  janela) e é encerrada se ficar `--idle-timeout` segundos sem usar CPU
+- Cada execução tem tempo limite, igual na janela e no CLI. O padrão é automático:
+  5 × o tempo esperado para o modelo e o tamanho do gene (táxons × códons), no
+  mínimo 30 min; a calibração está em [docs/benchmark_tempos.md](docs/benchmark_tempos.md).
+  O usuário pode fixar outro valor (`--timeout`, ou Configurações na janela). A
+  execução também é encerrada se ficar `--idle-timeout` segundos sem usar CPU
   (padrão 300 s). Nos dois casos o gene aparece como FALHOU, com o motivo e a
   última linha que o codeml escreveu.
 - Um gene **falha** se algum modelo pedido termina com código ≠ 0, sem arquivo de

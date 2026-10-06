@@ -92,7 +92,9 @@ def parse_args():
     ap.add_argument('--lang', choices=('pt', 'en'), help="idioma das mensagens (default: idioma do sistema)")
     ap.add_argument('--verbose', action='store_true', help="mostra mensagens de depuracao")
     ap.add_argument('--workers', type=int, default=4, help="genes em paralelo (default: 4)")
-    ap.add_argument('--timeout', type=int, default=1600, help="timeout por execucao codeml, em segundos (default: 1600)")
+    ap.add_argument('--timeout', type=int, default=0,
+                    help="tempo limite por execucao do codeml, em segundos. 0 (default) = automatico, "
+                         "proporcional a taxons x codons de cada gene e ao modelo (ver docs/benchmark_tempos.md)")
     ap.add_argument('--no-lrt', action='store_true', help="nao calcular LRT automaticamente no final")
     ap.add_argument('--skip-beb', action='store_true', help="interrompe M2a/M8 antes do BEB (mantem LRT, perde tabela de sitio BEB -- ver docstring)")
     ap.add_argument('--no-prune-tree', action='store_true', help="desativa poda automatica da arvore por locus (default: poda ativada)")
@@ -140,7 +142,7 @@ def parse_args():
         cfg.setdefault('verbose', args.verbose)
         cfg.setdefault('no_m8a', args.no_m8a)
         cfg.setdefault('workers', 4)
-        cfg.setdefault('timeout', 1600)
+        cfg.setdefault('timeout', 0)
         cfg.setdefault('run_lrt', True)
         cfg.setdefault('skip_beb', False)
         cfg.setdefault('auto_prune_tree', True)

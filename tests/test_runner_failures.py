@@ -142,6 +142,16 @@ def test_timeout_is_failure(tmp_path, fake_codeml, monkeypatch):
     assert summary['failed'] == 1 and 'time limit' in summary['failures']['gene']
 
 
+def test_timeout_unset_uses_automatic_limit(tmp_path, fake_codeml, monkeypatch):
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    app = _app(tmp_path, fake_codeml, models=('M7',))
+    app.config['timeout'] = 0
+    summary = app.run_batch_analysis()
+    assert summary['ok'] == 1
+    log = (tmp_path / 'out' / 'batch_analysis_log.txt').read_text()
+    assert 'time limit 1800 s' in log and 'automatic' in log
+
+
 def test_stop_kills_codeml_without_orphans(tmp_path, fake_codeml, monkeypatch):
     monkeypatch.setenv('FAKE_CODEML_MODE', 'slow')
     app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))

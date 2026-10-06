@@ -1037,6 +1037,25 @@ class App(ctk.CTk):
         self.entry_ncatg.insert(0, str(DEFAULT_CTL_PARAMS['ncatG']))
         self.entry_ncatg.pack(fill='x', pady=(4, 10))
 
+        row_to = ctk.CTkFrame(ci, fg_color='transparent')
+        row_to.pack(fill='x')
+        ctk.CTkLabel(row_to, text=TEXTS["label_timeout"],
+                     font=(_FONT_UI, 13, "bold"), anchor='w',
+                     text_color=self.COLORS['text_secondary']).pack(side='left')
+        ctk.CTkButton(row_to, text="?", width=22, height=22, corner_radius=11,
+                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
+                      hover_color=self.COLORS['border_hover'],
+                      text_color=self.COLORS['text_primary'],
+                      command=lambda: self._show_help(
+                          TEXTS["label_timeout"], TEXTS["label_timeout_hint"])
+                      ).pack(side='right')
+        self.entry_timeout = ctk.CTkEntry(ci, placeholder_text=TEXTS["label_timeout_auto"],
+                                          fg_color=self.COLORS['bg_card_hover'],
+                                          border_color=self.COLORS['border_hover'], border_width=1,
+                                          corner_radius=8, text_color=self.COLORS['text_primary'],
+                                          height=32)
+        self.entry_timeout.pack(fill='x', pady=(4, 10))
+
         # Remover gaps toggle
         self.cleandata_var = ctk.BooleanVar(value=True)
         row_g = ctk.CTkFrame(ci, fg_color='transparent')
@@ -2160,6 +2179,14 @@ class App(ctk.CTk):
                                                 daemon=True)
         self.analysis_thread.start()
 
+    def _timeout_seconds(self) -> int:
+        """Minutos digitados em Configurações -> segundos; vazio ou inválido = 0 (automático)."""
+        try:
+            minutes = float((self.entry_timeout.get() or '').replace(',', '.'))
+        except ValueError:
+            return 0
+        return int(minutes * 60) if minutes > 0 else 0
+
     def _run_thread(self, selected, ignore_stops=False):
         old_stdout = sys.stdout
         sys.stdout = StdoutRedirect(self.append_log)
@@ -2185,7 +2212,7 @@ class App(ctk.CTk):
                 'CodonFreq': opts['CodonFreq'],
                 'ncatG': opts['ncatG'],
                 'cleandata': int(self.cleandata_var.get()),
-                'timeout': 6 * 3600,
+                'timeout': self._timeout_seconds(),
                 'idle_timeout': 300,
                 'run_lrt': True,
                 'n_workers': int(self.cores_var.get()),

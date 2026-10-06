@@ -82,6 +82,17 @@ TEXTS_PT: dict[str, object] = {
     "label_update_results_hint": "Recalcular os arquivos de síntese de uma pasta de resultados",
 
     "label_omega_initial":    "ω (dN/dS) inicial:",
+    "label_timeout":          "Tempo limite por modelo (min):",
+    "label_timeout_auto":     "automático",
+    "label_timeout_hint": (
+        "Quanto tempo cada execução do codeml (um gene × um modelo) pode levar.\n\n"
+        "Vazio = automático: o EasyPAML estima o tempo pelo modelo e pelo tamanho\n"
+        "do gene (táxons × códons) e dá 5 vezes essa estimativa, no mínimo 30 min.\n"
+        "Ex.: M8 com 30 táxons × 500 códons ≈ 33 min medidos → limite de 2,7 h.\n\n"
+        "Preencha só se quiser um limite fixo (por exemplo, numa máquina muito\n"
+        "lenta). Um codeml que pare de usar CPU por 5 min é encerrado de qualquer\n"
+        "forma. Tabela das medições: docs/benchmark_tempos.md."
+    ),
     "label_remove_gaps":      "Remover colunas com gaps (cleandata = 1)",
     "label_remove_gaps_hint": (
         "cleandata = 1 no codeml (recomendado).\n"
@@ -555,6 +566,17 @@ TEXTS_EN: dict[str, object] = {
     "label_update_results_hint": "Regenerate analysis files",
 
     "label_omega_initial":    "Initial ω (dN/dS):",
+    "label_timeout":          "Time limit per model (min):",
+    "label_timeout_auto":     "automatic",
+    "label_timeout_hint": (
+        "How long each codeml run (one gene × one model) may take.\n\n"
+        "Empty = automatic: EasyPAML estimates the time from the model and the\n"
+        "gene size (taxa × codons) and allows 5 times that, at least 30 min.\n"
+        "E.g. M8 with 30 taxa × 500 codons ≈ 33 min measured → 2.7 h limit.\n\n"
+        "Fill it in only if you want a fixed limit (e.g. on a very slow\n"
+        "machine). A codeml that stops using CPU for 5 min is stopped anyway.\n"
+        "Measurements: docs/benchmark_tempos.md."
+    ),
     "label_remove_gaps":      "Remove gap columns (cleandata = 1)",
     "label_remove_gaps_hint": (
         "cleandata = 1 in codeml (recommended).\n"
