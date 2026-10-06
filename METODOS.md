@@ -87,6 +87,21 @@ O `.ctl`, o alinhamento e a árvore exatamente como o codeml leu ficam em
 `SAIDA/MODELO/` com caminhos relativos: `cd SAIDA/M8 && codeml GENE_M8.ctl`
 reproduz a execução.
 
+O que o próprio codeml faz com os valores iniciais (conferido em `codeml.c`,
+PAML 4.10.10; o EasyPAML não interfere):
+
+- **M8**: se o ω inicial do `.ctl` for < 1 (o padrão é 0,5), o codeml o troca por
+  um valor sorteado entre 2 e 3 e escreve `initial w for M8:NSbetaw>1 reset.` no
+  log. Ou seja, no M8 o ω inicial efetivo não é 0,5.
+- **M7, M8 e M8a**: os parâmetros p e q da beta partem de valores sorteados
+  (p entre 0,2 e 1,2; q entre 1 e 2; o p₀ do M8/M8a parte de 0,9). Por isso duas execuções do mesmo `.ctl` podem dar lnL
+  diferentes na 3ª ou 4ª casa decimal (o revisor do teste de usabilidade viu
+  ~0,003 no M7); a conclusão do LRT não muda nesses casos, mas um gene com 2Δℓ
+  muito perto do limiar pode valer a pena rodar de novo.
+- **Comprimentos de ramo**: com `fix_blength = 0` o codeml ignora os comprimentos
+  da árvore. Se a árvore de entrada não tem comprimentos, a árvore gravada em
+  `SAIDA/MODELO/` também não tem; se tem, eles são copiados como estão.
+
 ## 4. Execução
 
 - O codeml roda com a entrada padrão **fechada**: quando ele pede "Press Enter"
@@ -164,6 +179,18 @@ reproduz a execução.
   comprimentos de ramo dele como **valores iniciais** dos modelos de sítio
   (`fix_blength = 1`, "initial" no pamlDOC), com multi-start de ω (0,2 / 1,0 / 2,5)
   e escolha do maior lnL. Não é garantia de resultado idêntico à estimativa do zero.
+
+## 7a. Aba Interpretação (candidatos e GO)
+
+- **Candidato**: gene com q < 0,05 em M1a×M2a ou em M8a×M8, usando os mesmos p e q
+  (BH dentro de cada teste) do `LRT_results.txt` e do painel. O M7×M8 só conta
+  quando o M8a×M8 não rodou, porque o M8 pode vencer o M7 só por sítios neutros
+  (ω = 1). Genes que falharam ficam fora.
+- **Enriquecimento de GO**: teste exato de Fisher por termo (candidatos vs. todos
+  os genes testados), só para termos presentes em pelo menos 2 candidatos, com
+  correção de Benjamini-Hochberg entre os termos. A anotação vem de um TSV do
+  usuário (colunas `gene_id_full`, `go_biological_process`,
+  `go_cellular_component`, `go_molecular_function`).
 
 ## 8. Saídas
 

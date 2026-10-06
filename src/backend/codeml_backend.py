@@ -1266,7 +1266,10 @@ class CodemlBatchAnalysis:
 
             def _newick(tree) -> str:
                 io_ = StringIO()
-                Phylo.write(tree, io_, 'newick')
+                # árvore sem comprimentos de ramo: não inventar ':0' em todos
+                # os ramos (o Bio.Phylo escreveria 0.00000 no lugar de None)
+                has_bl = any(c.branch_length for c in tree.find_clades())
+                Phylo.write(tree, io_, 'newick', plain=not has_bl)
                 txt = io_.getvalue().strip()
                 # Bio.Phylo escreve comprimento no nó raiz (":0.00000;"), que o codeml rejeita
                 return re.sub(r'\):[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?;$', ');', txt)

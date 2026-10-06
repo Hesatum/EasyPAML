@@ -238,10 +238,11 @@ TEXTS_PT: dict[str, object] = {
     "viewer_tab_interpretation": "Interpretação",
     "go_tab_title":              "Candidatos e enriquecimento de GO",
     "go_tab_criterion": (
-        "Genes com LRT significativo (M1a×M2a e/ou M7×M8, q < 0.05 corrigido por "
-        "Benjamini-Hochberg), ranqueados por significância, cruzados com anotação "
-        "funcional GO. Enriquecimento de GO: Fisher exato, candidatos vs. todos os "
-        "genes testados, também corrigido por BH."
+        "Candidatos: genes com q < 0,05 (Benjamini-Hochberg dentro de cada teste, os "
+        "mesmos q do painel) em M1a×M2a ou em M8a×M8. O M7×M8 só conta quando o "
+        "M8a×M8 não rodou, porque o M8 pode vencer o M7 só por sítios neutros. Genes "
+        "que falharam ficam fora. Enriquecimento de GO: Fisher exato, candidatos vs. "
+        "todos os genes testados, também corrigido por BH."
     ),
     "go_tab_load_button":    "Carregar anotação GO (.tsv)",
     "go_tab_none_loaded":    "Nenhuma anotação carregada",
@@ -783,10 +784,11 @@ TEXTS_EN: dict[str, object] = {
     "viewer_tab_interpretation": "Interpretation",
     "go_tab_title":              "Candidates and GO enrichment",
     "go_tab_criterion": (
-        "Genes with significant LRT (M1a×M2a and/or M7×M8, Benjamini-Hochberg "
-        "q < 0.05), ranked by significance, cross-referenced with GO functional "
-        "annotation. GO enrichment: Fisher exact test, candidates vs. all tested "
-        "genes, also BH-corrected."
+        "Candidates: genes with q < 0.05 (Benjamini-Hochberg within each test, the "
+        "same q as in the panel) in M1a×M2a or in M8a×M8. M7×M8 only counts when "
+        "M8a×M8 was not run, because M8 can beat M7 through neutral sites alone. "
+        "Failed genes are left out. GO enrichment: Fisher exact test, candidates vs. "
+        "all tested genes, also BH-corrected."
     ),
     "go_tab_load_button":    "Load GO annotation (.tsv)",
     "go_tab_none_loaded":    "No annotation loaded",

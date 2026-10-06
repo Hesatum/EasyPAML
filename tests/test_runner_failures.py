@@ -240,6 +240,20 @@ def test_regenerate_skips_genes_marked_failed(tmp_path, fake_codeml, monkeypatch
     assert CodemlBatchAnalysis._find_orphaned_analyses(out) == {}
 
 
+def test_tree_without_branch_lengths_is_not_given_zeros(tmp_path, fake_codeml, monkeypatch):
+    """Rodada 2 (revisor): árvore sem comprimentos chegava ao codeml com ':0'
+    em todos os ramos."""
+    import re
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    app = _app(tmp_path, fake_codeml, models=('M7',))
+    plain = re.sub(r':[0-9.eE+-]+', '', (DATA / 'gene_exemplo.nwk').read_text())
+    (tmp_path / 'plain.nwk').write_text(plain)
+    app.config['tree_file'] = tmp_path / 'plain.nwk'
+    assert app.run_batch_analysis()['ok'] == 1
+    tree = next((tmp_path / 'out' / 'M7').glob('*_tree.nwk')).read_text()
+    assert ':' not in tree.split('\n', 1)[1]
+
+
 def test_stop_kills_codeml_without_orphans(tmp_path, fake_codeml, monkeypatch):
     monkeypatch.setenv('FAKE_CODEML_MODE', 'slow')
     app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))

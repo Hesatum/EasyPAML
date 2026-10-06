@@ -83,26 +83,41 @@ def enrich(candidate_genes: set, background_genes: set, gene_to_go: dict,
     return table.sort_values('p_value')
 
 
-def rank_candidates(lrt_summary_tsv: Path, annotation_file: Path,
-                     lrt_columns=('lrt_M1a_vs_M2a', 'lrt_M7_vs_M8'), df: int = 2,
-                     sig_threshold: float = 0.05) -> tuple:
-    """Le o analysis_summary.tsv do EasyPAML + o TSV de anotacao GO, devolve
-    (tabela de candidatos ranqueada por efeito, tabela de enriquecimento GO).
-    Ponto de entrada unico que a aba da GUI chama -- toda a logica de
-    verdade mora nas duas funcoes acima, testaveis sem Tkinter.
+# Testes de seleção positiva usados para escolher candidatos. M7×M8 só conta
+# quando o M8a×M8 não rodou: M8 pode vencer o M7 só por sítios neutros
+# (ω = 1), e o M8a×M8 é o teste que separa os dois (ver METODOS.md).
+CANDIDATE_TESTS = (('M1a', 'M2a'), ('M8a', 'M8'), ('M7', 'M8'))
 
-    Corrige por Benjamini-Hochberg (FDR) sobre a familia completa de genes
-    do TSV antes de filtrar candidatos -- com milhares de genes testados
-    simultaneamente, o p-valor bruto sozinho infla falsos positivos."""
+
+def rank_candidates(lrt_summary_tsv: Path, annotation_file: Path,
+                    sig_threshold: float = 0.05) -> tuple:
+    """Le o analysis_summary.tsv do EasyPAML + o TSV de anotacao GO, devolve
+    (tabela de candidatos, tabela de enriquecimento GO).
+
+    Candidato = gene com q < sig_threshold em M1a×M2a ou em M8a×M8 (ou em
+    M7×M8, se o M8a×M8 nao rodou). Usa os mesmos p e q (BH dentro de cada
+    teste) do LRT_results.txt e do painel; genes que falharam ficam fora.
+    Colunas: Gene, test, p_value, q_value, go_terms."""
     summary = pd.read_csv(lrt_summary_tsv, sep='\t')
     gene_to_go = load_gene_to_go(annotation_file)
+    if 'status' in summary.columns:
+        summary = summary[summary['status'].astype(str) != 'failed']
 
-    best_stat = pd.Series(0.0, index=summary.index)
-    for col in lrt_columns:
-        if col in summary.columns:
-            best_stat = best_stat.combine(summary[col].fillna(0).clip(lower=0), max)
-    summary['p_value'] = stats.chi2.sf(best_stat, df=df)
-    summary['q_value'] = stats.false_discovery_control(summary['p_value'], method='bh')
+    tests = [t for t in CANDIDATE_TESTS if f"q_{t[0]}_vs_{t[1]}" in summary.columns]
+    if ('M8a', 'M8') in tests:
+        tests = [t for t in tests if t != ('M7', 'M8')]
+
+    best = []
+    for _, row in summary.iterrows():
+        pick = None
+        for null, alt in tests:
+            q = pd.to_numeric(row.get(f"q_{null}_vs_{alt}"), errors='coerce')
+            pv = pd.to_numeric(row.get(f"p_{null}_vs_{alt}"), errors='coerce')
+            if pd.notna(q) and (pick is None or q < pick[2]):
+                pick = (f"{alt} vs {null}", pv, q)
+        best.append(pick or (None, float('nan'), float('nan')))
+    summary = summary.assign(test=[b[0] for b in best], p_value=[b[1] for b in best],
+                             q_value=[b[2] for b in best])
     summary['go_terms'] = summary['Gene'].map(
         lambda g: '; '.join(sorted(gene_to_go.get(g, {}).values())) or 'sem anotacao'
     )
