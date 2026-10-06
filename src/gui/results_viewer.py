@@ -13,9 +13,11 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from scipy import stats
 import re
 import sys
+from html import escape as html_escape
 from src.backend.branch_extractor import BranchExtractor
 from src.backend import lrt_stats
 from src.backend.site_map import attach_original_positions
+from src.backend.version import version_string
 from .gui_texts import TEXTS, get_language, tr
 from .ui_helpers import (FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE, fit_to_screen,
                          ask_open_file, ask_save_file, hover_tint, mix, open_folder,
@@ -2318,6 +2320,19 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         'lrt_M0_vs_Branch-site':                   2,
     }
 
+    @staticmethod
+    def _significant_rows(df_out: pd.DataFrame) -> pd.Series:
+        """Rows marked significant in an export table (q < 0.05, or p < 0.05 when
+        the test has no q)."""
+        col = next((c for c in df_out.columns if c.startswith('significant (')), None)
+        if col is None:
+            return pd.Series(False, index=df_out.index)
+        return df_out[col] == 'yes'
+
+    @staticmethod
+    def _significance_label(df_out: pd.DataFrame) -> str:
+        return 'q < 0.05' if any(c == 'significant (q < 0.05)' for c in df_out.columns) else 'p < 0.05'
+
     def _build_export_df(self, lrt_col: str) -> pd.DataFrame:
         """One LRT comparison for export: genes where both models ran, with lnL and
         np of each model, ω values, 2Δℓ, df, p, q and BEB sites, unrounded."""
@@ -2554,11 +2569,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         # Style helpers — clean light-background professional theme
         HEADER_FILL   = PatternFill('solid', fgColor='1F3864')
-        SIG01_FILL    = PatternFill('solid', fgColor='D6F0E8')
         SIG05_FILL    = PatternFill('solid', fgColor='EBF5E0')
         ALT_FILL      = PatternFill('solid', fgColor='F5F7FB')
         HEADER_FONT   = Font(bold=True, color='FFFFFF', size=11)
-        SIG01_FONT    = Font(color='0E5E4A', size=10, bold=True)
         SIG05_FONT    = Font(color='2D6A1F', size=10)
         NORMAL_FONT   = Font(color='1A1A2E', size=10)
         CENTER        = Alignment(horizontal='center', vertical='center', wrap_text=True)
@@ -2585,24 +2598,14 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         cell.alignment = CENTER
 
                     # ── style data rows ───────────────────────────────
-                    sig05_col_idx = sig01_col_idx = sites_col_idx = None
+                    sites_col_idx = None
                     for i, col in enumerate(df_out.columns, 1):
-                        if col == 'Sig. p<0.05':
-                            sig05_col_idx = i
-                        elif col == 'Sig. p<0.01':
-                            sig01_col_idx = i
-                        elif col.startswith('Positive Sites (BEB'):
+                        if col.startswith('Positive Sites (BEB'):
                             sites_col_idx = i
+                    sig_rows = list(self._significant_rows(df_out))
 
                     for row_idx, row in enumerate(ws.iter_rows(min_row=2), 1):
-                        is_sig01 = (sig01_col_idx and
-                                    row[sig01_col_idx - 1].value == 'yes')
-                        is_sig05 = (sig05_col_idx and
-                                    row[sig05_col_idx - 1].value == 'yes')
-                        if is_sig01:
-                            fill = SIG01_FILL
-                            font = SIG01_FONT
-                        elif is_sig05:
+                        if sig_rows[row_idx - 1]:
                             fill = SIG05_FILL
                             font = SIG05_FONT
                         else:
@@ -2650,17 +2653,15 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     df_out = self._build_export_df(lrt_col)
                     if df_out.empty:
                         continue
-                    n_sig05 = (df_out['Sig. p<0.05'] == 'yes').sum()
-                    n_sig01 = (df_out['Sig. p<0.01'] == 'yes').sum()
+                    n_sig = int(self._significant_rows(df_out).sum())
                     sheet_name = SHEET_LABELS.get(lrt_col,
                                     lrt_col.replace('lrt_', '').replace('_vs_', ' vs ')
                                            .replace('_', ' '))
                     summary_rows.append({
-                        'Comparison':         sheet_name,
-                        'Genes analyzed':     len(df_out),
-                        'Significant (p<0.05)': int(n_sig05),
-                        'Significant (p<0.01)': int(n_sig01),
-                        '% Sig. (p<0.05)':    f"{100*n_sig05/max(len(df_out),1):.1f}%",
+                        'Test':           sheet_name,
+                        'Genes':          len(df_out),
+                        'Significant':    n_sig,
+                        'Criterion':      self._significance_label(df_out),
                     })
                 if summary_rows:
                     pd.DataFrame(summary_rows).to_excel(
@@ -2819,7 +2820,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         try:
             positive_genes = self._detect_positive_selection()
             lrt_cols = [c for c in self.df.columns if c.startswith('lrt_')]
-            now_str  = pd.Timestamp.now().strftime('%d/%m/%Y às %H:%M')
+            now_str  = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')
 
             # ── Build per-model section HTML ──────────────────────────
             sections_html = ''
@@ -2831,8 +2832,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
                 th_cells = ''.join(f'<th>{c}</th>' for c in df_out.columns)
                 tr_rows = ''
-                for _, row in df_out.iterrows():
-                    sig = row.get('Sig. p<0.05', '—') == 'sim'
+                sig_rows = list(self._significant_rows(df_out))
+                for i_row, (_, row) in enumerate(df_out.iterrows()):
+                    sig = sig_rows[i_row]
                     row_cls = ' class="sig"' if sig else ''
                     cells = ''
                     for col_name, val in row.items():
@@ -2844,17 +2846,17 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         elif isinstance(val, float):
                             display = f'{val:.5g}'
                         else:
-                            display = str(val)
+                            display = html_escape(str(val))
                         cells += f'<td{cell_cls}>{display}</td>'
                     tr_rows += f'<tr{row_cls}>{cells}</tr>\n'
 
-                n_sig = (df_out['Sig. p<0.05'] == 'sim').sum() if 'Sig. p<0.05' in df_out.columns else 0
+                n_sig = int(self._significant_rows(df_out).sum())
 
                 sections_html += f"""
         <section>
           <h2>{label}</h2>
           <p class="subtitle">{subtitle}</p>
-          <p class="meta">{len(df_out)} genes analisados &nbsp;·&nbsp; {n_sig} significantes (p &lt; 0.05)</p>
+          <p class="meta">{len(df_out)} gene(s) tested &nbsp;·&nbsp; {n_sig} significant ({self._significance_label(df_out).replace('<', '&lt;')})</p>
           <div style="overflow-x:auto">
           <table>
             <thead><tr>{th_cells}</tr></thead>
@@ -2876,11 +2878,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         for st, sd in signals.items()
                     )
                     pos_html += (f'<div class="gene-card">'
-                                 f'<div class="gene-name">{gene}</div>'
+                                 f'<div class="gene-name">{html_escape(str(gene))}</div>'
                                  f'{signals_inner}</div>\n')
             else:
-                pos_html = ('<p style="color:#f59e0b;text-align:center;padding:20px">'
-                            'No gene with a significant LRT (q &lt; 0.05)</p>')
+                pos_html = '<p class="meta">No gene with a significant LRT (q &lt; 0.05)</p>' 
 
             html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -2890,37 +2891,38 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 <title>EasyPAML report</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'Segoe UI',sans-serif;background:#0c0c0f;color:#e0e0e0;padding:36px 20px}}
-.container{{max-width:1280px;margin:0 auto;background:#16161a;border-radius:14px;padding:40px;
-            box-shadow:0 8px 32px rgba(0,0,0,.5)}}
-h1{{color:#6366f1;font-size:28px;margin-bottom:6px;text-align:center}}
-h2{{color:#22d3ee;font-size:20px;margin:40px 0 8px;border-bottom:1px solid #222}}
-.subtitle{{color:#9898a6;font-size:13px;margin-bottom:6px}}
-.meta{{color:#8e8ea4;font-size:12px;margin-bottom:12px}}
-.stats-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:24px 0}}
-.stat-card{{background:#1e1e24;padding:18px;border-radius:10px;border:1px solid #222;text-align:center}}
-.stat-label{{font-size:11px;color:#9898a6;text-transform:uppercase;margin-bottom:6px}}
-.stat-value{{font-size:28px;font-weight:700;color:#22c55e}}
-table{{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}}
-th{{background:#1e3a5f;color:#fff;padding:10px 12px;text-align:left;font-weight:600}}
-td{{padding:9px 12px;border-bottom:1px solid #222;color:#ccccd8}}
-tr:hover td{{background:#1e1e24}}
-tr.sig td{{background:#0b2016;color:#6ee7b7}}
-td.pos{{color:#22d3ee;font-weight:700}}
-.gene-card{{background:#2a2a2a;border:1px solid #10b981;border-radius:8px;padding:16px;margin:10px 0}}
-.gene-name{{font-size:15px;font-weight:700;color:#10b981;margin-bottom:8px}}
-.signal{{background:#1e1e1e;padding:6px 10px;border-radius:5px;margin:4px 0;font-size:13px;color:#a7f3d0}}
-.warn{{background:#1c1408;border:1px solid #f59e0b;border-radius:6px;padding:8px 14px;
-       margin:8px 0 12px;color:#fbbf24;font-size:12px}}
-section{{margin-bottom:48px}}
-.footer{{text-align:center;margin-top:48px;padding-top:24px;border-top:1px solid #222;
-         color:#8e8ea4;font-size:12px}}
+:root{{--bg:#f4f5f7;--card:#ffffff;--text:#1f2430;--muted:#555d6b;--line:#dde1e7;--head:#e8ebf0;
+       --accent:#4338ca;--sig-bg:#e6f4ea;--sig:#14532d;--pos:#0e7490;--warn:#92400e}}
+@media (prefers-color-scheme: dark){{:root{{--bg:#0d0d11;--card:#16161c;--text:#eeeef2;--muted:#a2a2b6;
+       --line:#2a2a33;--head:#20202a;--accent:#818cf8;--sig-bg:#0b2016;--sig:#6ee7b7;--pos:#22d3ee;--warn:#fbbf24}}}}
+body{{font-family:'Segoe UI',Roboto,'DejaVu Sans',sans-serif;background:var(--bg);color:var(--text);padding:32px 16px}}
+.container{{max-width:1280px;margin:0 auto;background:var(--card);border-radius:12px;padding:36px;
+            border:1px solid var(--line)}}
+h1{{color:var(--accent);font-size:26px;margin-bottom:4px}}
+h2{{font-size:19px;margin:36px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)}}
+.subtitle{{color:var(--muted);font-size:13px;margin-bottom:4px}}
+.meta{{color:var(--muted);font-size:13px;margin-bottom:12px}}
+.stats-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}}
+.stat-card{{padding:14px 16px;border-radius:8px;border:1px solid var(--line)}}
+.stat-label{{font-size:12px;color:var(--muted);margin-bottom:4px}}
+.stat-value{{font-size:26px;font-weight:700}}
+table{{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}}
+th{{background:var(--head);padding:8px 10px;text-align:left;font-weight:600;white-space:nowrap}}
+td{{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}}
+td:last-child{{min-width:260px}}
+tr.sig td{{background:var(--sig-bg);color:var(--sig)}}
+td.pos{{color:var(--pos);font-weight:700}}
+.gene-card{{border:1px solid var(--line);border-left:4px solid var(--sig);border-radius:8px;padding:12px 16px;margin:8px 0}}
+.gene-name{{font-size:15px;font-weight:700;margin-bottom:6px}}
+.signal{{font-size:13px;color:var(--muted);margin:2px 0}}
+section{{margin-bottom:40px}}
+.footer{{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}}
 </style>
 </head>
 <body>
 <div class="container">
   <h1>EasyPAML report</h1>
-  <p style="text-align:center;color:#8e8ea4;margin-top:6px">Generated {now_str}</p>
+  <p class="meta">Generated {now_str} · {html_escape(version_string())}</p>
 
   <h2 style="margin-top:28px">Summary</h2>
   <div class="stats-grid">
@@ -2941,7 +2943,7 @@ section{{margin-bottom:48px}}
   {sections_html}
 
   <div class="footer">
-    <p>Generated by EasyPAML (PAML/codeml)</p>
+    <p>Generated by EasyPAML with PAML/codeml. Methods and parameters: methods_text.txt and run_config.json in the results folder.</p>
   </div>
 </div>
 </body>
