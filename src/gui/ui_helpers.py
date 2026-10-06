@@ -316,7 +316,7 @@ class PreflightDialog(_Modal):
                      text_color=PALETTE['text_secondary'], justify='left',
                      wraplength=840).pack(anchor='w', pady=(SPACE['xs'], 0))
 
-        box = ctk.CTkTextbox(self, font=(FONT_MONO, FONT_SIZE['sm']), fg_color=PALETTE['bg_surface'],
+        box = ctk.CTkTextbox(self, font=(FONT_UI, FONT_SIZE['sm']), fg_color=PALETTE['bg_surface'],
                              text_color=PALETTE['text_primary'], wrap='word',
                              corner_radius=RADIUS['card'], border_width=1,
                              border_color=mix(PALETTE['bg_surface'], PALETTE['warning_text'], 0.35))

@@ -715,7 +715,8 @@ class CodemlBatchAnalysis:
                                      w=n_workers, version=codeml_ver or '?'))
         self._emit('info', self._t('run_models', models=', '.join(cfg['models']),
                                    codonfreq=codonfreq_label(ctl_defaults['CodonFreq']),
-                                   ncatg=ctl_defaults['ncatG'], cleandata=ctl_defaults['cleandata']))
+                                   ncatg=ctl_defaults['ncatG'], kappa=ctl_defaults['kappa'],
+                                   cleandata=ctl_defaults['cleandata']))
         for dup in ignored:
             msg = self._t('duplicate_ignored', ignored=dup.name, used=chosen[dup.stem].name)
             self._emit('warn', msg)

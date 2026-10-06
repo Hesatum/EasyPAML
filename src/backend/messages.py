@@ -12,8 +12,10 @@ MESSAGES = {
         'en': "{n} gene(s) × {m} model(s) · {w} parallel worker(s) · codeml {version}",
     },
     'run_models': {
-        'pt': "Modelos: {models} · CodonFreq {codonfreq} · ncatG {ncatg} · cleandata {cleandata}",
-        'en': "Models: {models} · CodonFreq {codonfreq} · ncatG {ncatg} · cleandata {cleandata}",
+        'pt': "Modelos: {models} · CodonFreq {codonfreq} · ncatG {ncatg} · κ inicial {kappa} "
+              "(estimado) · cleandata {cleandata}",
+        'en': "Models: {models} · CodonFreq {codonfreq} · ncatG {ncatg} · initial κ {kappa} "
+              "(estimated) · cleandata {cleandata}",
     },
     'no_codeml': {
         'pt': "codeml não encontrado. Linux: sudo apt install paml · Windows: bin\\codeml.exe · "

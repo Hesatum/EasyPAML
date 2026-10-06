@@ -590,8 +590,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         pc = SitesParser.extract_positive_class(rf) or {}
                         w, p1 = pc.get('omega', np.nan), pc.get('p', np.nan)
                 effect = (f"ω = {w:.3f}  p₁ = {p1:.3f}" if pd.notna(w) and pd.notna(p1) else "")
-                test_rows.append((test, sig, lrt_stats.format_p_unicode(p),
-                                  lrt_stats.format_p_unicode(q), effect, n_sites))
+                test_rows.append((test, sig, lrt_stats.format_p(p),
+                                  lrt_stats.format_p(q), effect, n_sites))
 
             card = ctk.CTkFrame(scroll, fg_color=PALETTE['bg_surface'] if i % 2 == 0 else PALETTE['row_alt'],
                                 corner_radius=RADIUS['card'])

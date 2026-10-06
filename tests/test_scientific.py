@@ -97,10 +97,9 @@ def test_lrt_pairs_and_df():
 def test_p_value_does_not_underflow_to_zero():
     p = lrt_stats.p_value(98.23, 2)
     assert 0 < p < 1e-20
-    assert math.isclose(p, math.exp(-98.23 / 2), rel_tol=1e-9)   # chi2 df=2 tem forma fechada
+    assert math.isclose(p, math.exp(-98.23 / 2), rel_tol=1e-9)   # chi2 with df = 2 has a closed form
     assert lrt_stats.p_value(-1.0, 2) == 1.0
     assert lrt_stats.format_p(p).startswith('4.') and 'e-22' in lrt_stats.format_p(p)
-    assert lrt_stats.format_p_unicode(p) == '4.7×10⁻²²'
 
 
 def test_boundary_pair_uses_chi2_1_and_reports_mixture():

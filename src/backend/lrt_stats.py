@@ -77,16 +77,3 @@ def format_p(p: Optional[float]) -> str:
     if p >= 0.001:
         return f"{p:.3g}"
     return f"{p:.2e}"
-
-
-def format_p_unicode(p: Optional[float]) -> str:
-    """4.7×10⁻²², for the summary line in the interface."""
-    if p is None or (isinstance(p, float) and not np.isfinite(p)):
-        return "NA"
-    if p == 0:
-        return "< 10⁻³⁰⁰"
-    if p >= 0.001:
-        return f"{p:.3g}"
-    mant, exp = f"{p:.1e}".split('e')
-    sup = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
-    return f"{mant}×10{str(int(exp)).translate(sup)}"

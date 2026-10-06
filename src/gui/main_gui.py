@@ -1564,6 +1564,7 @@ class App(ctk.CTk):
                 omega = omega.replace('.', ',')
             self._settings_summary.configure(text=" · ".join((
                 cf, f"ncatG {self.entry_ncatg.get().strip()}", f"ω {omega}",
+                f"κ {DEFAULT_CTL_PARAMS['kappa']}",
                 TEXTS["run_summary_cpus"].format(n=int(self.cores_var.get())))))
         except Exception:
             pass
