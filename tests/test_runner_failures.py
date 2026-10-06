@@ -18,7 +18,7 @@ from tests.conftest import real_codeml
 DATA = Path(__file__).resolve().parent / 'data'
 
 pytestmark = pytest.mark.skipif(platform.system() == 'Windows',
-                                reason="codeml falso usa shebang (Linux/macOS)")
+                                reason="the fake codeml uses a shebang (Linux/macOS)")
 
 FAKE = r'''#!{python}
 import os, re, sys, time
@@ -199,7 +199,7 @@ def test_stop_kills_child_of_wrapper_script(tmp_path, wrapped_codeml, monkeypatc
     import subprocess
     left = subprocess.run(['pgrep', '-f', str(tmp_path / 'fake_codeml')],
                           capture_output=True, text=True).stdout.split()
-    assert not left, f"codeml filho ficou rodando: {left}"
+    assert not left, f"child codeml still running: {left}"
 
 
 def test_failed_run_output_is_not_used_in_lrt(tmp_path, fake_codeml, monkeypatch):
@@ -339,7 +339,7 @@ def test_ignore_stop_codons_runs_and_warns_about_excluded_taxon(tmp_path, fake_c
     assert gene_line[1] == 'ok' and 'stop codon' in gene_line[3] and 'Macaca_mulata' in gene_line[3]
 
 
-@pytest.mark.skipif(real_codeml() is None, reason="defina EASYPAML_TEST_CODEML para rodar com o codeml real")
+@pytest.mark.skipif(real_codeml() is None, reason="set EASYPAML_TEST_CODEML to run with a real codeml")
 def test_real_codeml_problematic_data_never_hangs(tmp_path):
     app = _app(tmp_path, real_codeml(), models=('M7',))
     app.config['ignore_stop_codons'] = True
