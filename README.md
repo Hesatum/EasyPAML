@@ -12,11 +12,8 @@ with Benjamini-Hochberg correction, and lists the sites under selection (BEB).
 
 ### Download
 
-This version is on the `correcoes-usabilidade` branch. The `main` branch still has
-version 0.2.0, which has a different installer and different defaults.
-
-- With git: `git clone -b correcoes-usabilidade https://github.com/Hesatum/EasyPAML.git`
-- Without git: [download the ZIP](https://github.com/Hesatum/EasyPAML/archive/refs/heads/correcoes-usabilidade.zip)
+- With git: `git clone https://github.com/Hesatum/EasyPAML.git`
+- Without git: [download the ZIP](https://github.com/Hesatum/EasyPAML/archive/refs/heads/main.zip)
   and extract it.
 - To repeat a published analysis, use the commit it cites: after cloning, run
   `git checkout COMMIT` inside the EasyPAML folder, then install as below.
@@ -43,7 +40,7 @@ version 0.2.0, which has a different installer and different defaults.
 2. Download and install:
 
    ```bash
-   git clone -b correcoes-usabilidade https://github.com/Hesatum/EasyPAML.git
+   git clone https://github.com/Hesatum/EasyPAML.git
    cd EasyPAML
    ./install.sh
    ```

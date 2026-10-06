@@ -1,7 +1,6 @@
-# Dependências do EasyPAML (instaladas pelo install.sh / install.bat em .venv).
-# Versões MÍNIMAS: abaixo delas algo quebra (ex.: scipy.stats.false_discovery_control,
-# usado na correção Benjamini-Hochberg, só existe a partir do SciPy 1.11).
-# Versões exatas testadas: requirements-lock.txt
+# Installed into .venv by install.sh / install.bat. These are minimum versions:
+# scipy.stats.false_discovery_control (Benjamini-Hochberg) needs SciPy 1.11.
+# Exact tested versions: requirements-lock.txt
 customtkinter>=5.2.0
 biopython>=1.81
 matplotlib>=3.7

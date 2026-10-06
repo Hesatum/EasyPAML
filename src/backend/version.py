@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-__version__ = "0.3.0.dev0"
+__version__ = "0.3.0"
 
 _ROOT = Path(__file__).resolve().parents[2]
 _COMMIT_FILE = Path(__file__).with_name('_commit.txt')
@@ -37,7 +37,7 @@ def source_commit() -> Optional[str]:
 
 
 def version_string() -> str:
-    """'0.3.0.dev0 (commit e1a7f4a)', for citing."""
+    """'0.3.0 (commit e1a7f4a)', for citing."""
     c = source_commit()
     return f"{__version__} (commit {c[:7]}{'-dirty' if c and c.endswith('-dirty') else ''})" \
         if c else __version__
