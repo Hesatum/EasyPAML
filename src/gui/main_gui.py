@@ -1101,19 +1101,6 @@ class App(ctk.CTk):
         _place_ctrl(self.cb_auto_prune, sp['md'])
         _place_help(_help(ci, "label_auto_prune", "label_auto_prune_hint"), sp['md'])
 
-        # ── Results of an earlier run ───────────────────────
-        ri, _c4, _ = _step(_sb, None, TEXTS["step_results"])
-        self.btn_update_results = _obtn(ri, TEXTS["btn_update_results"],
-                                        self._update_results_files)
-        self.btn_update_results.pack(fill='x')
-        self.label_update_results = ctk.CTkLabel(ri,
-                                                  text=TEXTS["label_update_results_hint"],
-                                                  font=(_FONT_UI, fs['xs']), anchor='w',
-                                                  justify='left',
-                                                  wraplength=side_inner - sp['xs'],
-                                                  text_color=C['text_muted'])
-        self.label_update_results.pack(fill='x', padx=sp['xs'], pady=(sp['xs'], 0))
-
         ctk.CTkFrame(_sb, fg_color='transparent', height=sp['xl']).pack(fill='x')
 
         # ── Main area ──
@@ -2148,81 +2135,6 @@ class App(ctk.CTk):
         except Exception as e:
             self.append_log(tr("Erro ao abrir o painel de resultados: ", "Error opening the results panel: ") + f"{e}", "error")
             self.append_log(traceback.format_exc())
-
-    def _regenerate_summary_files(self):
-        """Regenerate the summary files of a chosen results folder."""
-        results_folder = ask_directory(self, TEXTS["dialog_select_results_folder"],
-                                       self.output_folder or Path.home())
-        
-        if not results_folder:
-            return
-        
-        results_folder = Path(results_folder)
-        
-        self.append_log(TEXTS["log_updating_results"], "header")
-        self.append_log(tr("Pasta de resultados: ", "Results folder: ") + f"{results_folder}", "info")
-        
-        def _update_thread():
-            try:
-                self.append_log(TEXTS["log_detecting_models"])
-
-                models = set()
-                for item in results_folder.iterdir():
-                    if item.is_dir() and item.name not in ['reports']:
-                        models.add(item.name)
-
-                models = sorted(models)
-                self.append_log(tr("Modelos encontrados: ", "Models found: ") + ", ".join(models), "info")
-
-                self.append_log(TEXTS["log_lrt_comparisons"])
-                comparisons = []
-
-                if 'M0' in models and 'M1a' in models:
-                    comparisons.append("M0 vs M1a")
-                    self.append_log(TEXTS["log_lrt_M0_M1a"])
-
-                if 'M1a' in models and 'M2a' in models:
-                    comparisons.append("M1a vs M2a")
-                    self.append_log(TEXTS["log_lrt_M1a_M2a"])
-
-                if 'M7' in models and 'M8' in models:
-                    comparisons.append("M7 vs M8")
-                    self.append_log(TEXTS["log_lrt_M7_M8"])
-
-                if 'M0' in models and 'Branch' in models:
-                    comparisons.append("M0 vs Branch")
-                    self.append_log(TEXTS["log_lrt_M0_Branch"])
-
-                if 'Branch-site_null' in models and 'Branch-site' in models:
-                    comparisons.append("Branch-site_null vs Branch-site")
-                    self.append_log(TEXTS["log_lrt_BranchSite"])
-
-                self.append_log(TEXTS["log_lrt_total"].format(n=len(comparisons)))
-
-                self.append_log(TEXTS["log_regenerating"])
-                generated_files = CodemlBatchAnalysis.regenerate_summary_files(results_folder)
-                
-                if generated_files:
-                    self.append_log(TEXTS["log_update_done"])
-                    for file_type, file_path in generated_files.items():
-                        filepath = Path(file_path)
-                        size = filepath.stat().st_size if filepath.exists() else 0
-                        self.append_log(f"  [OK] {file_type:25s} | {size:,} bytes", "ok")
-                    self.output_folder = results_folder
-                    self.after(0, self._update_models_state)
-                else:
-                    self.append_log(tr("Nenhum arquivo foi gerado.", "No file was generated."), "error")
-            
-            except Exception as e:
-                self.append_log(str(e), "error")
-                self.append_log(traceback.format_exc(), "debug")
-        
-        update_thread = threading.Thread(target=_update_thread, daemon=True)
-        update_thread.start()
-
-    def _update_results_files(self):
-        """Update Results button."""
-        self._regenerate_summary_files()
 
     def _all_genes_have_trees(self) -> bool:
         if not self.input_folder or not self.per_gene_trees:

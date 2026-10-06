@@ -46,8 +46,6 @@ TEXTS_PT: dict[str, object] = {
     "label_not_selected": "Não selecionado",
 
     "btn_view_results":          "Ver Resultados",
-    "btn_update_results":        "Atualizar Resultados",
-    "label_update_results_hint": "Recalcular os arquivos de síntese de uma pasta de resultados",
 
     "label_omega_initial":    "ω (dN/dS) inicial:",
     "label_timeout":          "Tempo limite por modelo (min):",
@@ -163,7 +161,8 @@ TEXTS_PT: dict[str, object] = {
     "viewer_error_run_analysis": "Execute uma análise para gerar resultados.",
 
     "viewer_header_title":    "EasyPAML  —  Resultados",
-    "viewer_header_subtitle": "Análise de Seleção Positiva  ·  CODEML / PAML",
+    "viewer_header_subtitle": "Análise de seleção  ·  codeml",
+    "viewer_btn_recompute": "Recalcular resumos",
 
     "viewer_tab_lrt":                "LRT e p-valores",
     "viewer_tab_omega":              "ω > 1 Global",
@@ -291,17 +290,6 @@ TEXTS_PT: dict[str, object] = {
     # ── App — mensagens de log ───────────────────────────────────────────
     "log_no_tree_selected":   "Selecione um arquivo de árvore (.nwk) primeiro.\n",
     "log_no_output_folder":   "Selecione uma pasta de resultados primeiro.\n",
-    "log_updating_results":   ">> ATUALIZANDO RESULTADOS\n",
-    "log_detecting_models":   "Detectando modelos presentes...\n",
-    "log_lrt_comparisons":    "Determinando comparações para LRT:\n",
-    "log_lrt_M0_M1a":         "  • M0 (null) vs M1a (alt) - Variação de ω entre sítios\n",
-    "log_lrt_M1a_M2a":        "  • M1a (null) vs M2a (alt) - Seleção positiva\n",
-    "log_lrt_M7_M8":          "  • M7 (null) vs M8 (alt) - Seleção positiva (Beta)\n",
-    "log_lrt_M0_Branch":      "  • M0 (null) vs Branch (alt) - Seleção por ramo\n",
-    "log_lrt_BranchSite":     "  • Branch-site_null (null) vs Branch-site (alt) - Seleção branch-site\n",
-    "log_lrt_total":          "Total de {n} comparações encontradas.\n\n",
-    "log_regenerating":       "Regenerando arquivos de síntese...\n",
-    "log_update_done":        "[OK] Arquivos de síntese atualizados.\n",
     
     "log_analysis_start":     "Iniciando a análise…\n",
     "log_analysis_stopped":   "Análise interrompida.\n",
@@ -556,7 +544,6 @@ TEXTS_PT: dict[str, object] = {
     "step_data":          "Dados",
     "step_models":        "Modelos",
     "step_settings":      "Configurações avançadas",
-    "step_results":       "Resultados",
     "step_models_none":   "Ligue os modelos ao lado",
     "step_models_count":  "{n} selecionado(s)",
     "slot_tree_per_gene": "{n} árvore(s) por gene (GENE.nwk), não precisa escolher outra",
@@ -624,8 +611,6 @@ TEXTS_EN: dict[str, object] = {
     "label_not_selected": "Not selected",
 
     "btn_view_results":          "View Results",
-    "btn_update_results":        "Update Results",
-    "label_update_results_hint": "Regenerate analysis files",
 
     "label_omega_initial":    "Initial ω (dN/dS):",
     "label_timeout":          "Time limit per model (min):",
@@ -742,7 +727,8 @@ TEXTS_EN: dict[str, object] = {
     "viewer_error_run_analysis": "Run an analysis to generate results.",
 
     "viewer_header_title":    "EasyPAML  —  Results",
-    "viewer_header_subtitle": "Positive Selection Analysis  ·  CODEML / PAML",
+    "viewer_header_subtitle": "Selection Analysis  ·  codeml",
+    "viewer_btn_recompute": "Recompute summaries",
 
     "viewer_tab_lrt":                "LRT and p-values",
     "viewer_tab_omega":              "ω > 1 Global",
@@ -870,17 +856,6 @@ TEXTS_EN: dict[str, object] = {
     # ── App — log messages ───────────────────────────────────────────────
     "log_no_tree_selected":   "Please choose a tree file (.nwk) first.\n",
     "log_no_output_folder":   "Please choose a results folder first.\n",
-    "log_updating_results":   ">> UPDATING RESULTS\n",
-    "log_detecting_models":   "Detecting present models...\n",
-    "log_lrt_comparisons":    "Determining LRT comparisons:\n",
-    "log_lrt_M0_M1a":         "  • M0 (null) vs M1a (alt) - ω variation across sites\n",
-    "log_lrt_M1a_M2a":        "  • M1a (null) vs M2a (alt) - Positive selection\n",
-    "log_lrt_M7_M8":          "  • M7 (null) vs M8 (alt) - Positive selection (Beta)\n",
-    "log_lrt_M0_Branch":      "  • M0 (null) vs Branch (alt) - Branch-specific selection\n",
-    "log_lrt_BranchSite":     "  • Branch-site_null (null) vs Branch-site (alt) - Branch-site selection\n",
-    "log_lrt_total":          "Total of {n} comparisons found.\n\n",
-    "log_regenerating":       "Regenerating summary files...\n",
-    "log_update_done":        "[OK] Summary files updated.\n",
     
     "log_analysis_start":     "Starting the analysis…\n",
     "log_analysis_stopped":   "Analysis stopped.\n",
@@ -1134,7 +1109,6 @@ TEXTS_EN: dict[str, object] = {
     "step_data":          "Data",
     "step_models":        "Models",
     "step_settings":      "Advanced settings",
-    "step_results":       "Results",
     "step_models_none":   "Switch models on at the right",
     "step_models_count":  "{n} selected",
     "slot_tree_per_gene": "{n} per-gene tree(s) (GENE.nwk), no need to choose one",

@@ -359,6 +359,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                       hover_color=PALETTE['bg_elevated'], corner_radius=RADIUS['field'],
                       font=self._font('sm', 'bold'),
                       command=lambda: open_folder(self.output_folder)).pack(side='right', padx=(SPACE['md'], 0))
+        ctk.CTkButton(right, text=TEXTS["viewer_btn_recompute"], height=32,
+                      fg_color='transparent', border_width=1,
+                      border_color=PALETTE['control_border'], text_color=PALETTE['text_primary'],
+                      hover_color=PALETTE['bg_elevated'], corner_radius=RADIUS['field'],
+                      font=self._font('sm', 'bold'),
+                      command=self._recompute_summaries).pack(side='right', padx=(SPACE['md'], 0))
         ctk.CTkLabel(right, text=TEXTS["viewer_genes_loaded"].format(n=len(self.df)),
                      font=self._font('sm'), text_color=PALETTE['text_secondary']).pack(side='right')
 
@@ -472,6 +478,19 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         out = {g: (l, p, q) for g, l, p, q in zip(genes, lrts, ps, qs)}
         cache[(null, alt)] = out
         return out
+
+    def _recompute_summaries(self) -> None:
+        """Rebuild the summary files of this folder from the codeml outputs and reopen
+        the panel."""
+        from src.backend.codeml_backend import CodemlBatchAnalysis
+        try:
+            CodemlBatchAnalysis.regenerate_summary_files(self.output_folder)
+        except Exception as exc:
+            show_message(self, TEXTS["msg_error"], str(exc), 'error')
+            return
+        parent, folder = self.master, self.output_folder
+        self.destroy()
+        ResultsViewerWindow(parent, folder)
 
     def _sort_by_significance(self) -> None:
         """Order genes by their smallest q (then p) over the positive-selection tests,
