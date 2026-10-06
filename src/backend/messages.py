@@ -126,6 +126,14 @@ MESSAGES = {
         'pt': "LRT {null} vs {alt}: {n} gene(s), {sig} significativo(s) (q < 0,05)",
         'en': "LRT {null} vs {alt}: {n} gene(s), {sig} significant (q < 0.05)",
     },
+    'warn_m7m8_without_m8a': {
+        'pt': "AVISO: M8 vs M7 rodou sem o M8a. O M8 pode vencer o M7 só por sítios neutros "
+              "(ω = 1); para separar seleção positiva de neutralidade, rode também o M8a "
+              "(teste M8 vs M8a, que é o padrão).",
+        'en': "WARNING: M8 vs M7 ran without M8a. M8 can beat M7 through neutral sites alone "
+              "(ω = 1); to tell positive selection from neutrality, also run M8a "
+              "(M8 vs M8a test, the default).",
+    },
     'summary_ok': {
         'pt': "ANÁLISE CONCLUÍDA: {ok} de {n} genes concluídos ({minutes:.1f} min)",
         'en': "ANALYSIS COMPLETE: {ok} of {n} genes completed ({minutes:.1f} min)",

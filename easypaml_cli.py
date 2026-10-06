@@ -282,6 +282,9 @@ def main():
     print(f"EasyPAML {version_string()} -- CLI")
     print("=" * 72)
     for k, v in cfg.items():
+        if k == 'tree' and v is None and per_gene:
+            v = (f"{len(per_gene)} arvore(s) por gene (GENE.nwk)" if lang == 'pt'
+                 else f"{len(per_gene)} per-gene tree(s) (GENE.nwk)")
         print(f"  {k:18s}: {v}")
     print(f"  {'codeml (resolved)':18s}: {codeml_path} (version {codeml_version(codeml_path)})")
     print(f"  {'CodonFreq':18s}: {codonfreq_label(cfg.get('codonfreq', DEFAULT_CODONFREQ))}")

@@ -254,6 +254,16 @@ def test_tree_without_branch_lengths_is_not_given_zeros(tmp_path, fake_codeml, m
     assert ':' not in tree.split('\n', 1)[1]
 
 
+def test_cli_side_outputs_sites_table_and_m8a_warning(tmp_path, fake_codeml, monkeypatch):
+    """Rodada 2 (pesquisador): o CLI não exportava os sítios e não avisava do
+    M7×M8 sem M8a."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))
+    app.run_batch_analysis()
+    assert (tmp_path / 'out' / 'sites_BEB.tsv').read_text().startswith('gene\tmodel\tmethod\t')
+    assert any('M8a' in t for level, t in app._test_log if level == 'warn')
+
+
 def test_stop_kills_codeml_without_orphans(tmp_path, fake_codeml, monkeypatch):
     monkeypatch.setenv('FAKE_CODEML_MODE', 'slow')
     app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))

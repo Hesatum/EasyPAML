@@ -178,6 +178,7 @@ SAIDA/
   genes_status.tsv         um gene por linha: ok / failed + motivo
   analysis_summary.tsv     lnL, np, ω por modelo; ω e p₁ da classe positiva; 2Δl, p e q por teste
   LRT_results.txt          LRT por gene, com a nota metodológica
+  sites_BEB.tsv            sítios do BEB (M2a, M8, Branch-site) de todos os genes, com as duas numerações
   M8/GENE_M8.ctl           .ctl usado (todos os parâmetros, caminhos relativos)
   M8/GENE_M8_seq.fasta     alinhamento exatamente como o codeml leu
   M8/GENE_M8_tree.nwk      árvore exatamente como o codeml leu (podada/desenraizada)

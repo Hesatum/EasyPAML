@@ -200,6 +200,7 @@ PAML 4.10.10; o EasyPAML não interfere):
 | `run_config.json` | versão e commit do EasyPAML, versões do codeml e do Python; parâmetros do `.ctl` por modelo; testes LRT; opções |
 | `analysis_summary.tsv` | por gene: status; lnL, np, ntime, ω, tempo por modelo; ω e p₁ da classe positiva (M2a/M8); 2Δℓ, p e q por teste |
 | `LRT_results.txt` | LRT por gene e por teste, com esta nota metodológica |
+| `sites_BEB.tsv` | todos os sítios que o codeml listou no BEB (Pr(ω>1) > 0,5) de M2a, M8 e Branch-site, por gene: posição no alinhamento e no codeml, aminoácido, Pr(ω>1), `*`/`**`, ω médio ± EP; NEB só se não houver BEB; genes que falharam ficam fora |
 | `genes_status.tsv` | ok / failed + motivo |
 | `batch_analysis_log.txt` | log completo, inclusive a saída do codeml |
 | `MODELO/GENE_MODELO.*` | `.ctl`, alinhamento, árvore, saída bruta (`_results.txt`), `rst`, `sitemap.json` |

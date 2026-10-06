@@ -751,6 +751,10 @@ class CodemlBatchAnalysis:
             'output_folder': str(output_folder), 'codeml_version': codeml_ver,
         }
         self._write_failures_file()
+        try:
+            self.write_sites_table(output_folder)
+        except Exception as exc:
+            self._log(f"[WARN] {self.SITES_TABLE}: {exc}")
 
         if stopped:
             final = self._t('summary_stopped', ok=n_ok, n=len(genes))
@@ -1837,6 +1841,8 @@ class CodemlBatchAnalysis:
                 self._emit('info', self._t('lrt_pair_done', null=null_model, alt=alt_model,
                                            n=total_valid, sig=sig_count_q05))
 
+        if ('M7', 'M8') in comparisons and ('M8a', 'M8') not in comparisons:
+            self._emit('warn', self._t('warn_m7m8_without_m8a'))
         self._emit('debug', f"LRT results saved: {lrt_file}")
 
     # ══════════════════════════════════════════════════════════════════
@@ -1944,6 +1950,9 @@ class CodemlBatchAnalysis:
             if log_file:
                 generated_files['batch_analysis_log'] = str(log_file)
                 print(f"  OK: {log_file.name}")
+            sites_file = CodemlBatchAnalysis.write_sites_table(results_folder)
+            if sites_file:
+                generated_files['sites_BEB'] = str(sites_file)
             
             print(f"\n[SUCCESS] All files regenerated successfully!")
             return generated_files
@@ -1953,6 +1962,55 @@ class CodemlBatchAnalysis:
             traceback.print_exc()
             return {}
     
+    SITES_TABLE = 'sites_BEB.tsv'
+
+    @staticmethod
+    def write_sites_table(results_folder: Path) -> Optional[Path]:
+        """sites_BEB.tsv: todos os sítios que o codeml listou no BEB (Pr(ω>1) >
+        0,5) de M2a, M8 e Branch-site, um gene por linha de sítio, com as duas
+        numerações. NEB só quando o arquivo não tem BEB (coluna method). Genes
+        que falharam ficam fora. Mesmo conteúdo da aba de sítios do painel."""
+        from .site_map import attach_original_positions
+        results_folder = Path(results_folder)
+        status = CodemlBatchAnalysis._read_gene_status(results_folder)
+        legacy = {v: k for k, v in CodemlBatchAnalysis._LEGACY_MODEL_NAMES.items()}
+        frames = []
+        for model in ('M2a', 'M8', 'Branch-site'):
+            folder = results_folder / model
+            if not folder.is_dir() and model in legacy:
+                folder = results_folder / legacy[model]
+            if not folder.is_dir():
+                continue
+            for rf in sorted(folder.glob('*_results.txt')):
+                gene = rf.name.split(f'_{folder.name}_results')[0]
+                if status.get(gene, ('',))[0] == 'failed':
+                    continue
+                try:
+                    method = 'BEB'
+                    df = SitesParser.parse_sites_from_file(rf, method='BEB')
+                    if df.empty:
+                        method, df = 'NEB', SitesParser.parse_sites_from_file(rf, method='NEB')
+                    if df.empty:
+                        continue
+                    df = attach_original_positions(df, rf)
+                except Exception:
+                    continue
+                df = df.assign(gene=gene, model=model, method=method)
+                frames.append(df)
+        out = results_folder / CodemlBatchAnalysis.SITES_TABLE
+        cols = ['gene', 'model', 'method', 'position_original', 'position', 'amino_acid',
+                'pr_w_gt_1', 'significance', 'post_mean', 'post_se']
+        if frames:
+            table = pd.concat(frames, ignore_index=True)
+            table = table[[c for c in cols if c in table.columns]].rename(columns={
+                'position_original': 'position_alignment', 'position': 'position_codeml'})
+        else:
+            table = pd.DataFrame(columns=['gene', 'model', 'method', 'position_alignment',
+                                          'position_codeml', 'amino_acid', 'pr_w_gt_1',
+                                          'significance', 'post_mean', 'post_se'])
+        table.to_csv(out, sep='\t', index=False)
+        return out
+
     @staticmethod
     def _regenerate_analysis_summary(results_folder: Path, qvalues: Optional[dict] = None) -> Optional[Path]:
         """Regenera analysis_summary.tsv.
