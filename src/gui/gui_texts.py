@@ -544,6 +544,7 @@ TEXTS_PT: dict[str, object] = {
     "summary_verdict_sig": "significativo",
     "summary_verdict_nonsig": "não significativo",
     "summary_verdict_failed": "FALHOU",
+    "summary_verdict_warning": "AVISO",
     "summary_sites_n": "{n} sítio(s) com Pr(ω>1) ≥ 0,95",
     # ── Janela principal (2ª passada visual): etapas, cartões, resumo ──
     "app_main_title":     "Análise de seleção positiva",
@@ -1089,6 +1090,7 @@ TEXTS_EN: dict[str, object] = {
     "summary_verdict_sig": "significant",
     "summary_verdict_nonsig": "not significant",
     "summary_verdict_failed": "FAILED",
+    "summary_verdict_warning": "WARNING",
     "summary_sites_n": "{n} site(s) with Pr(ω>1) ≥ 0.95",
     # ── Main window (2nd visual pass): steps, tiles, summary ──
     "app_main_title":     "Positive selection analysis",

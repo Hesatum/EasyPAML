@@ -56,6 +56,14 @@ MESSAGES = {
         'pt': "AVISO: {gene}: {count} stop codon(s) ({details}); o codeml trata essas colunas como dado ausente.",
         'en': "WARNING: {gene}: {count} stop codon(s) ({details}); codeml treats those columns as missing data.",
     },
+    'note_stops_masked': {
+        'pt': "{count} stop codon(s) tratado(s) como dado ausente ({details})",
+        'en': "{count} stop codon(s) treated as missing data ({details})",
+    },
+    'note_excluded': {
+        'pt': "sequência(s) fora da árvore, excluída(s): {names}",
+        'en': "sequence(s) not in the tree, excluded: {names}",
+    },
     'warn_excluded': {
         'pt': "AVISO: {gene}: {names} não está(ão) na árvore e foi(ram) EXCLUÍDA(S) da análise.",
         'en': "WARNING: {gene}: {names} not in the tree and EXCLUDED from the analysis.",

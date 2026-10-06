@@ -311,6 +311,11 @@ def test_ignore_stop_codons_runs_and_warns_about_excluded_taxon(tmp_path, fake_c
     warns = [t for level, t in app._test_log if level == 'warn']
     assert any('Macaca_mulata' in t and 'EXCLUDED' in t for t in warns)
     assert any('stop codon' in t for t in warns)
+    # rodada 2: o aviso continua registrado depois da análise
+    status = (tmp_path / 'out' / 'genes_status.tsv').read_text().splitlines()
+    assert status[0] == 'Gene\tstatus\treason\tnotes'
+    gene_line = status[1].split('\t')
+    assert gene_line[1] == 'ok' and 'stop codon' in gene_line[3] and 'Macaca_mulata' in gene_line[3]
 
 
 @pytest.mark.skipif(real_codeml() is None, reason="defina EASYPAML_TEST_CODEML para rodar com o codeml real")

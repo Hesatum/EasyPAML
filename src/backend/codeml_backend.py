@@ -668,6 +668,7 @@ class CodemlBatchAnalysis:
         self._log_lock = threading.Lock()
         self.failures: Dict[str, str] = {}
         self.gene_status: Dict[str, str] = {}
+        self.gene_notes: Dict[str, List[str]] = {}   # avisos de genes que rodaram
         self.results = {}
         self.current_stop_count = 0
         self.current_stop_details = []
@@ -772,14 +773,24 @@ class CodemlBatchAnalysis:
         self._log(f"Total time: {total_time / 60:.1f} minutes")
         return self.run_summary
 
+    def _add_gene_note(self, gene: str, note: str) -> None:
+        with self._results_lock:
+            notes = self.gene_notes.setdefault(gene, [])
+            if note not in notes:
+                notes.append(note)
+
     def _write_failures_file(self) -> None:
-        """genes_status.tsv: uma linha por gene, 'ok' ou o motivo da falha."""
+        """genes_status.tsv: uma linha por gene, 'ok' ou o motivo da falha, e
+        os avisos de genes que rodaram (stop codon mascarado, sequência
+        excluída) para não se perderem depois da análise."""
         path = Path(self.config['output_folder']) / 'genes_status.tsv'
+        clean = lambda t: t.replace('\t', ' ').replace('\n', ' ')
         with open(path, 'w', encoding='utf-8') as fh:
-            fh.write("Gene\tstatus\treason\n")
+            fh.write("Gene\tstatus\treason\tnotes\n")
             for gene in sorted(self.gene_status):
-                reason = self.failures.get(gene, '').replace('\t', ' ').replace('\n', ' ')
-                fh.write(f"{gene}\t{self.gene_status[gene]}\t{reason}\n")
+                reason = clean(self.failures.get(gene, ''))
+                notes = clean(' | '.join(self.gene_notes.get(gene, [])))
+                fh.write(f"{gene}\t{self.gene_status[gene]}\t{reason}\t{notes}\n")
 
     def _mark_gene_failed(self, gene: str, reason: str) -> None:
         with self._results_lock:
@@ -851,6 +862,7 @@ class CodemlBatchAnalysis:
             msg = self._t('warn_stops_masked', gene=gene, count=len(stops), details=details)
             self._emit('warn', msg)
             self._log(f"[WARN] {msg}")
+            self._add_gene_note(gene, self._t('note_stops_masked', count=len(stops), details=details))
 
         gene_results: Dict[str, Dict] = {}
         gene_kappa: Optional[float] = None
@@ -1252,6 +1264,8 @@ class CodemlBatchAnalysis:
                         self._excluded_warned = warned
                     if first:   # uma vez por gene, não uma por modelo
                         self._emit('warn', msg)
+                        self._add_gene_note(base_name, self._t('note_excluded',
+                                                               names=', '.join(not_in_tree)))
                     self._log(f"[WARN] {base_name} [{model_name}]: {msg}")
                 for tx in not_in_fasta:
                     for term in [t for t in tree_obj.get_terminals()

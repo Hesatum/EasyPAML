@@ -664,6 +664,14 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 why.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
                 card.bind('<Configure>', lambda e, l=why: l.configure(
                     wraplength=max(300, e.width - 2 * SPACE['md'])), add='+')
+            elif self._gene_notes(gene):
+                self._chip(head, TEXTS["summary_verdict_warning"], 'warning').pack(side='left', padx=(SPACE['sm'], 0))
+                note = ctk.CTkLabel(card, text=self._gene_notes(gene).replace(' | ', '\n'),
+                                    font=self._font('sm'), anchor='w', justify='left', wraplength=1000,
+                                    text_color=PALETTE['warning_fg'])
+                note.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['xs']))
+                card.bind('<Configure>', lambda e, l=note: l.configure(
+                    wraplength=max(300, e.width - 2 * SPACE['md'])), add='+')
 
             body = ctk.CTkFrame(card, fg_color='transparent')
             body.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
@@ -693,18 +701,27 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                              corner_radius=RADIUS['field'], padx=SPACE['sm'], wraplength=1100,
                              justify='left', anchor='w').pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
 
-    def _failure_reason(self, gene: str) -> str:
-        cache = getattr(self, '_fail_cache', None)
+    def _status_columns(self) -> dict:
+        cache = getattr(self, '_status_cache', None)
         if cache is None:
-            cache = self._fail_cache = {}
+            cache = self._status_cache = {'reason': {}, 'notes': {}}
             f = self.output_folder / 'genes_status.tsv'
             if f.exists():
                 try:
                     st = pd.read_csv(f, sep='\t', dtype=str).fillna('')
-                    cache.update(zip(st['Gene'], st['reason']))
+                    for col in ('reason', 'notes'):
+                        if col in st.columns:
+                            cache[col].update(zip(st['Gene'], st[col]))
                 except Exception:
                     pass
-        return cache.get(gene, '?')
+        return cache
+
+    def _failure_reason(self, gene: str) -> str:
+        return self._status_columns()['reason'].get(gene, '?')
+
+    def _gene_notes(self, gene: str) -> str:
+        """Avisos de um gene que rodou (stop codon mascarado, sequência excluída)."""
+        return self._status_columns()['notes'].get(gene, '')
 
     @staticmethod
     def _compact_reason(reason: str) -> str:
