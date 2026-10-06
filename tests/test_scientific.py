@@ -157,3 +157,14 @@ def test_m8a_can_be_left_out():
     assert 'M8a' in CodemlBatchAnalysis.auto_complete_null_models(['M8', 'M8a'], include_m8a=False)
     cli = (ROOT / 'easypaml_cli.py').read_text(encoding='utf-8')
     assert '--no-m8a' in cli
+
+
+def test_lrt_degrees_of_freedom():
+    """Diferença de parâmetros livres entre os modelos aninhados (rodada 2 do
+    teste de usabilidade: M0 vs M1a estava com df = 2; o certo é 1)."""
+    from src.backend import lrt_stats
+    assert lrt_stats.PAIRS[('M0', 'M1a')]['df'] == 1
+    assert lrt_stats.PAIRS[('M1a', 'M2a')]['df'] == 2
+    assert lrt_stats.PAIRS[('M7', 'M8')]['df'] == 2
+    assert lrt_stats.PAIRS[('M8a', 'M8')]['df'] == 1
+    assert lrt_stats.PAIRS[('Branch-site_null', 'Branch-site')]['df'] == 1

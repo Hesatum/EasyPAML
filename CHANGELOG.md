@@ -9,6 +9,8 @@ Correções a partir do teste de usabilidade de 05/10/2026.
 
 ### Mudanças que afetam resultados
 
+- **LRT M0 vs M1a com df = 1** (antes 2): o M1a tem um parâmetro livre a mais que o
+  M0 (p₀ e ω₀ contra ω). Só afeta quem roda M0 junto com M1a.
 - **CodonFreq padrão passou de 7 (FMutSel) para 2 (F3x4).** A interface rotulava
   o 7 como "F3×4 (recomendado)", mas o `.ctl` gerado usava FMutSel. Os lnL mudam
   e a lista de sítios BEB pode mudar.

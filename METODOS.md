@@ -116,12 +116,12 @@ reproduz a execução.
   | M1a vs M2a | 2 | χ²₂ |
   | M7 vs M8 | 2 | χ²₂ |
   | M8a vs M8 | 1 | χ²₁ (*) |
-  | M0 vs M1a | 2 | χ²₂ |
+  | M0 vs M1a | 1 | χ²₁ (*) |
   | M0 vs Branch | nº de grupos foreground | χ²_df |
   | Branch-site nulo vs Branch-site | 1 | χ²₁ (*) |
 
   (*) Nos testes em que o nulo fica na fronteira do espaço de parâmetros (ω = 1
-  fixo), a distribuição assintótica é a mistura 50:50 de χ²₀ e χ²₁ (Self & Liang
+  fixo; no M0 vs M1a, p₀ = 1), a distribuição assintótica é a mistura 50:50 de χ²₀ e χ²₁ (Self & Liang
   1987). Seguindo a recomendação do manual do PAML para o branch-site, o EasyPAML
   usa χ²₁ puro (mais conservador) para p e q; o p da mistura aparece no
   `LRT_results.txt` só como referência.

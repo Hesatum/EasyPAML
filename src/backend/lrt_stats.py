@@ -18,7 +18,9 @@ from scipy import stats
 # significância usa χ²₁ puro, como o manual do PAML recomenda para o
 # branch-site, e a mistura 50:50 χ²₀/χ²₁ é reportada só como referência.
 PAIRS = {
-    ('M0', 'M1a'): {'df': 2, 'boundary': False},
+    # M0 tem ω; M1a tem p0 e ω0 (ω1 = 1 fixo): 1 parâmetro a mais. O M1a vira
+    # o M0 com p0 = 1, na fronteira -- mesma regra dos outros testes de fronteira.
+    ('M0', 'M1a'): {'df': 1, 'boundary': True},
     ('M1a', 'M2a'): {'df': 2, 'boundary': False},
     ('M7', 'M8'): {'df': 2, 'boundary': False},
     ('M8a', 'M8'): {'df': 1, 'boundary': True},
