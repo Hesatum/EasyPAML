@@ -24,6 +24,26 @@ summary = app.run_batch_analysis()   # {'total', 'ok', 'failed', 'failures', ...
 
 When investigating a run, start with `OUT/run_config.json` and `OUT/genes_status.tsv`.
 
+## Layout of the repository
+
+```
+EasyPAML/
+├── EasyPAML.py           entry point (window)
+├── easypaml_cli.py       command-line mode
+├── install.sh / EasyPAML.sh     Linux/macOS installer and launcher
+├── install.bat / EasyPAML.bat   Windows installer and launcher
+├── requirements.txt      dependencies (minimum versions); requirements-lock.txt (exact tested versions)
+├── bin/codeml.exe        codeml for Windows (PAML 4.9j)
+├── src/                  code
+├── tests/                tests (pytest) and simulated data
+├── examples/             example data
+├── tools/                developer tools
+├── docs/                 timing benchmark
+├── METHODS.md            detailed methods
+├── CONTRIBUTING.md       notes for developers
+└── CHANGELOG.md          version history
+```
+
 ## Where things are
 
 | File | Contents |

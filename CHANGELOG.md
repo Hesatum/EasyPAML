@@ -21,55 +21,34 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- M8a and the M8a vs M8 test. With automatic null models, M8 adds M7 and M8a; the
-  M8a can be turned off (`--no-m8a`, "Include M8a").
-- Data check before running: stop codons with position, names missing from the
-  tree with the closest match, pruned taxa, duplicate files, length not a multiple
-  of 3 (`--strict` on the command line).
-- Automatic time limit per run, scaled to the model and gene size
-  ([docs/timing_benchmark.md](docs/timing_benchmark.md)); `--timeout` and a field in
-  Advanced settings override it.
-- One tree per gene: `GENE.nwk` next to `GENE.fasta`, or `--tree-folder`.
-- Site numbering in the user's alignment next to codeml's numbering.
-- `methods_text.txt` (a methods paragraph for each run), `sites_BEB.tsv` (BEB sites of
-  every gene), and warnings per gene in `genes_status.tsv`.
-- EasyPAML commit in About, `--version`, the log and `run_config.json`, also in ZIP
-  downloads.
-- Reproducibility: `.ctl` with relative paths, with the alignment and tree codeml
-  read; `run_config.json` with versions and parameters per model;
-  `requirements-lock.txt`.
-- Results panel: Summary tab, q-values, ω and p₁ of the positive class, TSV export of
-  sites, failed genes and warnings shown per gene.
-- Command line: `--codonfreq`, `--ncatg`, `--kappa`, `--omega`, `--cleandata`,
-  `--ignore-stop-codons`, `--codeml`, `--idle-timeout`, `--strict`, `--lang`,
-  `--verbose`; exit code 1 if any gene fails.
-- Light theme. The window follows the system theme by default; Theme (Auto, Light,
-  Dark) changes it and is remembered.
-- Relaxed and interleaved PHYLIP.
-- Tests (`pytest`) and simulated data with a known answer (`tests/data`).
+- M8a and the M8a vs M8 test. With automatic null models, M8 adds M7 and M8a
+  (`--no-m8a` or "Include M8a" turns M8a off).
+- Data check before running: stop codons with their position, names missing from
+  the tree with the closest match, pruned taxa, duplicate files, lengths that are
+  not a multiple of 3.
+- Automatic time limit per run ([docs/timing_benchmark.md](docs/timing_benchmark.md)).
+- One tree per gene (`GENE.nwk` next to `GENE.fasta`, or `--tree-folder`).
+- Site positions in the user's alignment next to codeml's numbering.
+- Output files `methods_text.txt`, `sites_BEB.tsv` and `genes_status.tsv`; the
+  EasyPAML commit in About, `--version` and `run_config.json`.
+- Progress by model with the time elapsed and an estimate of the time left.
+- Exports include lnL, np and df of each test, without rounding.
+- Light theme, following the system by default.
+- Command-line options for every `.ctl` setting; exit code 1 if any gene fails.
 
 ### Fixed
 
-- codeml could wait forever for "Enter" after a stop codon. It now runs with
-  standard input closed, a time limit and an idle check; Stop ends every codeml
-  process.
-- With the Debian/Ubuntu `paml` package, `/usr/bin/codeml` is a shell script that
-  runs codeml as a child process. The idle check measured only the script and
-  stopped working runs after 5 minutes; it now counts child processes.
-- The results panel counted 0 failed genes and could show a failed gene as
-  significant.
-- "Ignore stop codons" had no effect.
-- "ANALYSIS COMPLETE" appeared when every gene had failed.
-- Sequences missing from the tree were dropped without a warning in the window.
+- codeml could wait forever for input after a stop codon, and Ubuntu's `codeml`
+  wrapper made working runs look idle so they were stopped after 5 minutes.
+- Stopping a run marked the interrupted genes as failed.
+- The results panel counted failed genes as 0 and could show one as significant.
+- "Ignore stop codons" had no effect, and sequences missing from the tree were
+  dropped without a warning.
 - A `.fasta` and a `.phy` of the same gene counted as two genes.
-- The Interpretation tab ignored M8a vs M8 and recomputed p with df = 2.
-- M7/M8 reference (Yang et al. 2000); Branch and Branch-site references.
-- Linux install: `install.sh` creates `.venv` (works with Ubuntu 24.04 and PEP 668)
-  and prints the command for anything missing. Windows: `install.bat` creates `.venv`.
-- Window: folder picker on Linux, texts no longer cut off, results window fits the
-  screen and closes with Esc, contrast of at least 4.5:1, mouse wheel no longer
-  changes the CPU count, model help in both languages.
-- Example data: one alignment set and one tree with matching names.
+- The Interpretation tab ignored M8a vs M8 and used df = 2 for it.
+- The window marked a site with Pr = 0.990 as ** when codeml's value is below 0.99.
+- Installers create `.venv` on Linux (Ubuntu 24.04) and Windows.
+- References of M7/M8 (Yang et al. 2000), Branch and Branch-site in the model help.
 
 ## [0.2.0] 2026-10-05
 

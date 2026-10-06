@@ -4,7 +4,7 @@ What EasyPAML does to the data, for writing a methods section or reviewing a
 manuscript that used it. Installation, usage and the list of output files are in
 the [README](README.md). Every run records its own settings in `run_config.json`,
 in the `.ctl` of each gene and model, and in `LRT_results.txt`. This describes
-version 0.3.0.
+version 0.3.0.dev0; cite the commit recorded in `run_config.json`.
 
 ## Input
 

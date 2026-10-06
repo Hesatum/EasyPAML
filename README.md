@@ -18,6 +18,8 @@ version 0.2.0, which has a different installer and different defaults.
 - With git: `git clone -b correcoes-usabilidade https://github.com/Hesatum/EasyPAML.git`
 - Without git: [download the ZIP](https://github.com/Hesatum/EasyPAML/archive/refs/heads/correcoes-usabilidade.zip)
   and extract it.
+- To repeat a published analysis, use the commit it cites: after cloning, run
+  `git checkout COMMIT` inside the EasyPAML folder, then install as below.
 
 ### Windows
 
@@ -46,11 +48,9 @@ version 0.2.0, which has a different installer and different defaults.
    ./install.sh
    ```
 
-   `install.sh` creates an isolated `.venv/` environment inside the EasyPAML folder
-   and installs the dependencies there. It does not use `pip --user` or touch the
-   system Python, so it works on Ubuntu 23.04 and 24.04, which block `pip` outside
-   virtual environments. If something is missing, it stops and prints the exact
-   command to run. You can run it again as many times as you need.
+   `install.sh` installs the dependencies in a `.venv/` folder inside EasyPAML and
+   leaves the system Python alone. If something is missing, it prints the command
+   to run; then run `./install.sh` again.
 
 3. Open:
 
@@ -58,9 +58,7 @@ version 0.2.0, which has a different installer and different defaults.
    ./EasyPAML.sh
    ```
 
-   `EasyPAML.sh` only activates `.venv` and starts the program. If it fails, run
-   `.venv/bin/python EasyPAML.py` instead (on Ubuntu the command is always `python3`,
-   never `python`).
+   If it fails, run `.venv/bin/python EasyPAML.py` instead.
 
 ### codeml (PAML)
 
@@ -96,9 +94,12 @@ at the bottom left change them, and the choice is kept for the next session.
    tree (with the closest name), taxa that will be pruned, duplicate files for the
    same gene, and lengths that are not a multiple of 3. Choose "Fix and go back" or
    "Continue anyway".
-6. The progress bar shows "Gene X of N". At the end you see "X of N genes completed ·
-   Y failed". Genes that failed are listed with the reason, and the results panel
-   opens by itself.
+6. A run takes from minutes to hours. With 10 sequences a model takes 1 to 5
+   minutes per gene; with 30 sequences M8 takes 15 to 75 minutes, and with 60
+   several hours ([measured times](docs/timing_benchmark.md)). The progress line
+   shows the model running, the time elapsed and, after the first gene, an estimate
+   of the time left. Stop asks first and keeps the genes already completed.
+7. At the end the results panel opens. Genes that failed are listed with the reason.
 
 The results panel has these tabs:
 
@@ -123,13 +124,13 @@ The results panel has these tabs:
 | M0 | one ω for the whole gene (baseline; null of Branch) |
 | M1a / M2a | M2a vs M1a: site-wise positive selection (df = 2) |
 | M7 / M8 | M8 vs M7: beta plus an extra class (df = 2) |
-| M8a | M8 with the extra class fixed at ω = 1. M8 vs M8a (df = 1) is not fooled by neutral sites, while M8 vs M7 can be |
+| M8a | M8 with the extra class fixed at ω = 1 (M8 vs M8a, df = 1) |
 | Branch | one ω per group of labelled branches (vs M0) |
 | Branch-site | episodic selection at sites on the foreground branch (#1) |
 
-For site-wise positive selection, the usual choice is to run M8 (M7 and M8a are
-added automatically) and check both tests. If only M8 vs M7 is significant, the
-signal may come from neutral sites.
+For site-wise positive selection, the usual choice is to run M8 and check both
+tests. If only M8 vs M7 is significant, the signal may come from neutral sites
+(ω = 1) rather than positive selection.
 
 ## Command-line mode (servers, many genes)
 
@@ -192,8 +193,8 @@ To repeat a run by hand: `cd OUT/M8 && codeml GENE_M8.ctl`.
 3. Output folder: a new folder
 4. Switch M8 on and click Run
 
-The example results are not in the repository. To generate them (about 1 hour with
-12 processes):
+The 25 genes take about 1 hour with 12 CPUs. For a quick try, copy two or three
+alignments to another folder and choose that folder instead. From the command line:
 
 ```bash
 .venv/bin/python easypaml_cli.py --input examples/alignments \
@@ -204,15 +205,10 @@ The example results are not in the repository. To generate them (about 1 hour wi
 
 ## Troubleshooting
 
-`./install.sh` says venv or tkinter is missing: run the command it prints
-(`sudo apt install python3-venv python3-tk`) and run `./install.sh` again.
-
 `./EasyPAML.sh: No such file or directory`: you are outside the EasyPAML folder
-(`cd EasyPAML`) or you downloaded an old version. Fallback: `.venv/bin/python EasyPAML.py`.
+(`cd EasyPAML`) or you downloaded an old version.
 
 `ModuleNotFoundError: No module named 'tkinter'`: `sudo apt install python3-tk`.
-
-`python: command not found`: on Ubuntu the command is `python3`.
 
 "codeml not found": on Linux, `sudo apt install paml`. On Windows, check that
 `bin/codeml.exe` exists (reinstall with `install.bat`).
@@ -224,26 +220,6 @@ A gene shows as FAILED: the reason is in the window, in `genes_status.tsv` and i
 Windows, the window opens and closes at once: run `install.bat` first. If it keeps
 happening, open `cmd` in the folder and run `.venv\Scripts\python.exe EasyPAML.py` to
 see the message.
-
-## Layout of the repository
-
-```
-EasyPAML/
-├── EasyPAML.py           entry point (window)
-├── easypaml_cli.py       command-line mode
-├── install.sh / EasyPAML.sh     Linux/macOS installer and launcher
-├── install.bat / EasyPAML.bat   Windows installer and launcher
-├── requirements.txt      dependencies (minimum versions); requirements-lock.txt (exact tested versions)
-├── bin/codeml.exe        codeml for Windows (PAML 4.9j)
-├── src/                  code
-├── tests/                tests (pytest) and simulated data
-├── examples/             example data
-├── tools/                developer tools
-├── docs/                 timing benchmark
-├── METHODS.md            detailed methods
-├── CONTRIBUTING.md       notes for developers
-└── CHANGELOG.md          version history
-```
 
 ## License and citation
 
