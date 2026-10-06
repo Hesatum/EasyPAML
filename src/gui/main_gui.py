@@ -2563,11 +2563,10 @@ class App(ctk.CTk):
         running = dict(getattr(a, 'running', {}))
         now = time.time()
         elapsed = now - a.run_start_time
-        partial = 0.0
-        if running:
-            # a running model counts as half done
-            partial = 0.5 * len(running)
-        self.progress_bar.set(min(1.0, (a.runs_done + partial) / a.runs_total))
+        # a running model counts as half done; the bar and the estimate use this fraction
+        done = min(a.runs_total, a.runs_done + 0.5 * len(running))
+        frac = done / a.runs_total
+        self.progress_bar.set(frac)
         if len(running) == 1:
             gene, (model, t0) = next(iter(running.items()))
             short = gene if len(gene) <= 24 else gene[:23] + "…"
@@ -2580,13 +2579,12 @@ class App(ctk.CTk):
                 model=m, n=n) for m, n in by_model.items())
         else:
             what = "…"
+        left = ""
+        if a.runs_done and frac < 1:
+            left = TEXTS["progress_left"].format(left=self._clock(elapsed / frac * (1 - frac)))
         text = TEXTS["progress_running"].format(done=a.current_processed_genes,
-                                                total=a.current_total_genes,
-                                                what=what, elapsed=self._clock(elapsed))
-        done_genes = a.current_processed_genes
-        if 0 < done_genes < a.current_total_genes:
-            left = elapsed / done_genes * (a.current_total_genes - done_genes)
-            text += TEXTS["progress_left"].format(left=self._clock(left))
+                                                total=a.current_total_genes, pct=int(frac * 100),
+                                                what=what, elapsed=self._clock(elapsed), left=left)
         self.progress_label.configure(text=text)
 
 
