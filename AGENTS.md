@@ -52,8 +52,8 @@ summary = app.run_batch_analysis()   # {'total','ok','failed','failures',...}
 - Cada gene × modelo grava `.ctl` + alinhamento + árvore com caminhos relativos
   (`cd SAIDA/M8 && codeml GENE_M8.ctl` reproduz).
 - `--warm-start-m0` usa `fix_blength = 1` (valores iniciais). **Não** use 2: no
-  PAML 2 = comprimentos fixos (era o bug até a 0.2.0). Os números de speedup
-  medidos antes da 0.3.0 foram obtidos com o comportamento antigo.
+  PAML 2 = comprimentos fixos. Os números de speedup da ajuda de `--warm-start-m0`
+  foram medidos com `fix_blength = 2` e precisam ser medidos de novo.
 
 ## Antes de "otimizar" ou "consertar" algo aqui
 

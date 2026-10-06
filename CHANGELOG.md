@@ -10,8 +10,8 @@ Correções a partir do teste de usabilidade de 05/10/2026.
 ### Mudanças que afetam resultados
 
 - **CodonFreq padrão passou de 7 (FMutSel) para 2 (F3x4).** A interface rotulava
-  o 7 como "F3×4 (recomendado)"; quem usou o padrão em versões anteriores rodou
-  FMutSel. Os lnL mudam e a lista de sítios BEB pode mudar.
+  o 7 como "F3×4 (recomendado)", mas o `.ctl` gerado usava FMutSel. Os lnL mudam
+  e a lista de sítios BEB pode mudar.
 - **Todos os parâmetros do `.ctl` agora são escritos explicitamente**, incluindo
   `ncatG = 10`, `kappa = 2`, `fix_kappa = 0`, `fix_blength = 0`, `method = 0`.
   Antes, `ncatG` ficava no default do codeml: 4 categorias quando cada modelo

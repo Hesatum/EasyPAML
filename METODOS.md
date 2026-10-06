@@ -161,9 +161,6 @@ reproduz a execução.
   comprimentos de ramo dele como **valores iniciais** dos modelos de sítio
   (`fix_blength = 1`, "initial" no pamlDOC), com multi-start de ω (0,2 / 1,0 / 2,5)
   e escolha do maior lnL. Não é garantia de resultado idêntico à estimativa do zero.
-  **Atenção**: até a versão 0.2.0 esta opção usava `fix_blength = 2`, que no PAML
-  significa comprimentos **fixos** nos valores do M0 (não apenas ponto de partida);
-  resultados obtidos com `--warm-start-m0` nessas versões devem ser refeitos.
 
 ## 8. Saídas
 
