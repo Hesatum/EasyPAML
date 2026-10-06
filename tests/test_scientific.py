@@ -177,3 +177,33 @@ def test_model_help_in_both_languages():
         assert set(en[code]) == set(pt[code]), code
         assert pt[code]['references'] == en[code]['references'], code
     assert 'q < 0,05' in pt['M2a']['interpretation'] and 'M8a' in pt['M8']['interpretation']
+
+
+_BEB_BLOCK = """CODONML (in paml version 4.10.10)
+lnL(ntime: 17  np: 22):  -4122.628318      +0.000000
+
+Bayes Empirical Bayes (BEB) analysis (Yang, Wong & Nielsen 2005. Mol. Biol. Evol. 22:1107-1118)
+Positively selected sites (*: P>95%; **: P>99%)
+(amino acids refer to 1st sequence: Homo_sapiens)
+
+            Pr(w>1)     post mean +- SE for w
+
+    39 C      0.994**       3.498 +- 0.263
+    40 K      0.686         2.684 +- 1.224
+    85 K      0.990*        3.487 +- 0.312
+
+
+The grid (see ternary graph for p0-p1)
+"""
+
+
+def test_sites_table_keeps_significant_sites_and_codeml_stars(tmp_path):
+    """sites_BEB.tsv has only Pr >= 0.95 and keeps codeml's mark (0.990* is below 0.99)."""
+    (tmp_path / 'M8').mkdir()
+    (tmp_path / 'M8' / 'geneA_M8_results.txt').write_text(_BEB_BLOCK)
+    out = CodemlBatchAnalysis.write_sites_table(tmp_path)
+    rows = [l.split('\t') for l in out.read_text().splitlines()]
+    head, body = rows[0], rows[1:]
+    got = {r[head.index('position_codeml')]: (r[head.index('pr_w_gt_1')], r[head.index('significance')])
+           for r in body}
+    assert got == {'39': ('0.994', '**'), '85': ('0.990', '*')}

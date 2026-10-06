@@ -917,6 +917,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             state['gene'], state['model'] = gene_combo.get(), model_combo.get()
             state['df'] = self._render_sites_table(table_frame, gene_combo.get(), model_combo.get(),
                                                    method_combo.get(), thr)
+            try:
+                table_frame._parent_canvas.yview_moveto(0)
+            except Exception:
+                pass
 
         model_combo.configure(command=update_gene_list)
         gene_combo.configure(command=update_sites_table)
@@ -974,8 +978,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                          padx=SPACE['sm']).pack(anchor='w', fill='x', pady=(SPACE['xs'], 0))
 
         if df_f.empty:
-            ctk.CTkLabel(parent, text=TEXTS["sites_no_sites"].format(threshold=p_threshold),
-                         font=self._font('sm'), text_color=PALETTE['text_secondary']).pack(pady=30)
+            ctk.CTkLabel(top, text=TEXTS["sites_no_sites"].format(threshold=p_threshold),
+                         font=self._font('md', 'bold'), text_color=PALETTE['text_primary'],
+                         anchor='w').pack(fill='x', pady=(SPACE['sm'], 0))
             return df_f
 
         cols = [(140, 'e'), (110, 'e'), (50, 'center'), (90, 'e'), (60, 'center'), (170, 'e')]
@@ -989,7 +994,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         mono = self._mono('sm')
         for k, (_, row) in enumerate(df_f.iterrows()):
             pr = row['pr_w_gt_1']
-            sig = '**' if pr >= 0.99 else ('*' if pr >= 0.95 else '')
+            # codeml's own mark: it uses the unrounded value (0.990* is below 0.99)
+            sig = row.get('significance')
+            if not isinstance(sig, str):
+                sig = '**' if pr >= 0.99 else ('*' if pr >= 0.95 else '')
             mean = row.get('post_mean', np.nan)
             se = row.get('post_se', np.nan)
             omega_txt = f"{mean:.3f} ± {se:.3f}" if pd.notna(mean) and pd.notna(se) else "—"

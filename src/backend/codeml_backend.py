@@ -1890,9 +1890,9 @@ class CodemlBatchAnalysis:
 
     @staticmethod
     def write_sites_table(results_folder: Path) -> Optional[Path]:
-        """sites_BEB.tsv: every BEB site codeml listed (Pr(ω>1) > 0.5) for M2a, M8 and
-        Branch-site, with both numberings; NEB only when there is no BEB. Failed
-        genes are left out."""
+        """sites_BEB.tsv: BEB sites with Pr(ω>1) ≥ 0.95 (the ones codeml marks * or **)
+        for M2a, M8 and Branch-site, with both numberings; NEB only when there is no
+        BEB. Failed genes are left out."""
         from .site_map import attach_original_positions
         results_folder = Path(results_folder)
         status = CodemlBatchAnalysis._read_gene_status(results_folder)
@@ -1913,6 +1913,7 @@ class CodemlBatchAnalysis:
                     df = SitesParser.parse_sites_from_file(rf, method='BEB')
                     if df.empty:
                         method, df = 'NEB', SitesParser.parse_sites_from_file(rf, method='NEB')
+                    df = df[df['pr_w_gt_1'] >= 0.95]
                     if df.empty:
                         continue
                     df = attach_original_positions(df, rf)
@@ -1931,7 +1932,7 @@ class CodemlBatchAnalysis:
             table = pd.DataFrame(columns=['gene', 'model', 'method', 'position_alignment',
                                           'position_codeml', 'amino_acid', 'pr_w_gt_1',
                                           'significance', 'post_mean', 'post_se'])
-        table.to_csv(out, sep='\t', index=False)
+        table.to_csv(out, sep='\t', index=False, float_format='%.3f')
         return out
 
     @staticmethod
