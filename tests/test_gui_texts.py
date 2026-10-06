@@ -63,57 +63,82 @@ def contrast(a, b):
     return (la + 0.05) / (lb + 0.05)
 
 
-CARD_BACKGROUNDS = ('#0c0c0e', '#0d0d11', '#16161a', '#17171f', '#1e1e24', '#20202c', '#1a1a26',
-                    # camadas da janela principal (PALETTE bg_window/bg_inset/bg_panel/bg_surface/bg_elevated)
-                    '#0a0b0e', '#0e1014', '#111318', '#181a21', '#20232c')
+LAYERS = ('bg_dark', 'bg_card', 'bg_card_hover', 'bg_window', 'bg_panel', 'bg_surface',
+          'bg_elevated', 'bg_inset', 'row_alt')
 
 
-def _palette():
-    # ui_helpers importa customtkinter; para o teste basta o dicionário PALETTE
+def _palettes():
+    """DARK_PALETTE e LIGHT_PALETTE de ui_helpers, sem importar customtkinter."""
     src = (ROOT / 'src' / 'gui' / 'ui_helpers.py').read_text(encoding='utf-8')
-    block = src[src.index('PALETTE = {'):src.index('}', src.index('PALETTE = {')) + 1]
-    ns = {}
-    exec(block, ns)
-    return ns['PALETTE']
+    out = {}
+    for name in ('DARK_PALETTE', 'LIGHT_PALETTE'):
+        i = src.index(name + ' = {')
+        ns = {}
+        exec(src[i:src.index('\n}', i) + 2], ns)
+        out[name] = ns[name]
+    return out
 
 
+PALETTES = _palettes()
+
+
+def _layers(pal):
+    return [pal[k] for k in LAYERS]
+
+
+def test_both_palettes_have_the_same_keys():
+    assert set(PALETTES['DARK_PALETTE']) == set(PALETTES['LIGHT_PALETTE'])
+
+
+@pytest.mark.parametrize('name', sorted(PALETTES))
 @pytest.mark.parametrize('key', ['text_primary', 'text_secondary', 'text_tertiary', 'text_muted',
-                                 'accent_text', 'success_text', 'warning_text', 'danger_text', 'info_text'])
-def test_text_colors_contrast(key):
-    color = _palette()[key]
-    for bg in CARD_BACKGROUNDS:
-        assert contrast(color, bg) >= 4.5, (key, color, bg, round(contrast(color, bg), 2))
+                                 'accent_text', 'success_text', 'warning_text', 'danger_text', 'info_text',
+                                 'accent_cyan', 'success_light'])
+def test_text_colors_contrast(name, key):
+    pal = PALETTES[name]
+    for bg in _layers(pal):
+        assert contrast(pal[key], bg) >= 4.5, (name, key, pal[key], bg, round(contrast(pal[key], bg), 2))
 
 
-@pytest.mark.parametrize('key', ['accent_fill', 'success_fill', 'warning_fill', 'danger_fill', 'info_fill'])
-def test_white_text_on_filled_buttons(key):
-    assert contrast('#ffffff', _palette()[key]) >= 4.5
+@pytest.mark.parametrize('name', sorted(PALETTES))
+@pytest.mark.parametrize('key', ['accent_fill', 'success_fill', 'warning_fill', 'danger_fill', 'info_fill',
+                                 'neutral_fill'])
+def test_white_text_on_filled_buttons(name, key):
+    assert contrast('#ffffff', PALETTES[name][key]) >= 4.5
 
 
+@pytest.mark.parametrize('name', sorted(PALETTES))
 @pytest.mark.parametrize('kind', ['success', 'warning', 'danger'])
-def test_semantic_subtle_pairs(kind):
+def test_semantic_subtle_pairs(name, kind):
     """Painel de resultados: texto *_fg sobre o fundo *_subtle e sobre as camadas."""
-    pal = _palette()
+    pal = PALETTES[name]
     fg = pal[f'{kind}_fg']
-    for bg in (pal[f'{kind}_subtle'], pal['row_alt']) + CARD_BACKGROUNDS:
-        assert contrast(fg, bg) >= 4.5, (kind, fg, bg, round(contrast(fg, bg), 2))
+    for bg in [pal[f'{kind}_subtle']] + _layers(pal):
+        assert contrast(fg, bg) >= 4.5, (name, kind, fg, bg, round(contrast(fg, bg), 2))
 
 
-def test_text_on_table_zebra():
-    pal = _palette()
+@pytest.mark.parametrize('name', sorted(PALETTES))
+def test_text_on_subtle_backgrounds(name):
+    pal = PALETTES[name]
     for key in ('text_primary', 'text_secondary', 'text_tertiary', 'accent_text'):
-        assert contrast(pal[key], pal['row_alt']) >= 4.5, key
-        assert contrast(pal[key], pal['success_subtle']) >= 4.5, key
+        for bg in ('success_subtle', 'warning_subtle', 'danger_subtle'):
+            assert contrast(pal[key], pal[bg]) >= 4.5, (name, key, bg)
 
 
-def test_window_colors_in_gui_modules_are_legible():
-    """text_tertiary/text_muted das janelas principal e de resultados."""
+@pytest.mark.parametrize('name', sorted(PALETTES))
+def test_plot_and_canvas_text(name):
+    pal = PALETTES[name]
+    assert contrast(pal['plot_fg'], pal['plot_bg']) >= 4.5
+    assert contrast(pal['plot_muted'], pal['plot_bg']) >= 4.5
+    assert contrast(pal['canvas_text'], pal['canvas_bg']) >= 4.5
+
+
+def test_gui_modules_take_text_colors_from_the_palette():
+    """Texto secundário/terciário das janelas vem de PALETTE (vale nos dois temas)."""
     for path in ('src/gui/main_gui.py', 'src/gui/results_viewer.py'):
         src = (ROOT / path).read_text(encoding='utf-8')
         for key in ('text_tertiary', 'text_muted'):
-            m = re.search(rf"'{key}':\s*'(#[0-9a-fA-F]{{6}})'", src)
-            assert m, (path, key)
-            assert contrast(m.group(1), '#17171f') >= 4.5, (path, key, m.group(1))
+            assert re.search(rf"'{key}':\s*PALETTE\['{key}'\]", src), (path, key)
 
 
 def test_results_window_fits_small_screens():

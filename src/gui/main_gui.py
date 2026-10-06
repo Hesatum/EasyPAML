@@ -29,7 +29,8 @@ from backend.lrt_stats import pairs_for as lrt_pairs_for
 from backend.preflight import discover_per_gene_trees, group_by_gene, list_alignment_files, run_preflight
 from .results_viewer import ResultsViewerWindow
 from .gui_texts import TEXTS, set_language, get_language, tr
-from .ui_helpers import (FONT_SIZE, PALETTE, RADIUS, SPACE, PreflightDialog, ask_directory, ask_yes_no,
+from .ui_helpers import (CURRENT_THEME, FONT_SIZE, PALETTE, RADIUS, SPACE, THEME_CHOICES, PreflightDialog,
+                         ask_directory, ask_yes_no, save_theme_pref, system_theme,
                          disable_mouse_wheel, fit_to_screen, hover_tint, mix, open_folder,
                          show_about, show_message)
 
@@ -44,7 +45,6 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 
-ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
 class StdoutRedirect:
@@ -463,7 +463,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
                 vertical_width = 2.8
                 vertical_alpha = 1.0
             else:
-                vertical_color = '#555555'
+                vertical_color = PALETTE['canvas_line']
                 vertical_width = 1.2
                 vertical_alpha = 0.7
             
@@ -481,7 +481,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
                     branch_width = 2.8
                     branch_alpha = 1.0
                 else:
-                    branch_color = '#555555'
+                    branch_color = PALETTE['canvas_line']
                     branch_width = 1.2
                     branch_alpha = 0.7
 
@@ -497,7 +497,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
             x, y = self.clade_positions[clade]
             
             is_marked, tag = is_descendant_of_marked(clade)
-            color = self._get_tag_color(tag) if is_marked else '#777777'
+            color = self._get_tag_color(tag) if is_marked else PALETTE['canvas_line']
             
             if clade.is_terminal():
                 size = 90 if is_marked else 45
@@ -506,7 +506,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
                 size = 55 if is_marked else 28
                 edge_width = 1.8 if is_marked else 0.8
             
-            edge_color = '#ffffff' if is_marked else '#999999'
+            edge_color = PALETTE['canvas_text'] if is_marked else PALETTE['canvas_line']
             
             scatter = self.ax.scatter(
                 [x], [y],
@@ -536,7 +536,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
                 weight = 'bold'
                 fontsize = 11
             else:
-                text_color = '#e5e5e5'
+                text_color = PALETTE['canvas_text']
                 weight = 'normal'
                 fontsize = 10
             
@@ -710,11 +710,8 @@ class TreeLabelWindow(ctk.CTkToplevel):
                 row_frame.pack(fill='x', padx=SPACE['sm'], pady=SPACE['xs'])
 
                 color_box = Canvas(row_frame, width=22, height=16, highlightthickness=0)
-                try:
-                    color_box.configure(bg=self.legend_frame.cget('fg_color')[1])
-                except Exception:
-                    color_box.configure(bg=self.BG_CARD)
-                color_box.create_rectangle(2, 2, 20, 14, fill=color, outline='white', width=1)
+                color_box.configure(bg=self.BG_CARD)
+                color_box.create_rectangle(2, 2, 20, 14, fill=color, outline=PALETTE['canvas_line'], width=1)
                 color_box.pack(side='left', padx=SPACE['xs'])
 
                 tag_label = ctk.CTkLabel(row_frame, text=tag,
@@ -808,19 +805,19 @@ class App(ctk.CTk):
         # Texto (contraste >= 4,5:1 em todas as camadas acima)
         'text_primary':   PALETTE['text_primary'],
         'text_secondary': PALETTE['text_secondary'],
-        'text_tertiary':  '#8e8ea4',   # contraste >= 4,5:1 nos cartões
-        'text_muted':     '#8a8aa0',
+        'text_tertiary':  PALETTE['text_tertiary'],
+        'text_muted':     PALETTE['text_muted'],
 
         # Acento principal — índigo (foco / ação primária)
-        'accent_blue':        '#6366f1',
+        'accent_blue':        PALETTE['accent_blue'],
         'accent_blue_hover':  mix(PALETTE['accent_fill'], '#000000', 0.2),
         'accent_blue_light':  PALETTE['accent_text'],
         'accent_fill':        PALETTE['accent_fill'],
 
         # Acentos secundários (só cores de modelo / ícones de estado)
-        'accent_cyan':        '#22d3ee',
-        'accent_cyan_hover':  '#06b6d4',
-        'accent_purple':      '#a78bfa',
+        'accent_cyan':        PALETTE['accent_cyan'],
+        'accent_cyan_hover':  PALETTE['info_fill'],
+        'accent_purple':      PALETTE['accent_purple'],
         'accent_purple_hover':'#7c3aed',
         'accent_pink':        '#f472b6',
         'accent_pink_hover':  '#db2777',
@@ -828,7 +825,7 @@ class App(ctk.CTk):
         # Estado
         'success':        PALETTE['success_text'],
         'success_hover':  '#16a34a',
-        'success_light':  '#86efac',
+        'success_light':  PALETTE['success_light'],
         'warning':        PALETTE['warning_text'],
         'warning_hover':  '#d97706',
         'danger':         PALETTE['danger_text'],
@@ -850,9 +847,6 @@ class App(ctk.CTk):
         self.title(f"EasyPAML {__version__}")
         fit_to_screen(self, 1400, 850)
         
-        # Aplicar tema escuro profissional
-        ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
         
         # Configure janela principal
         self.configure(fg_color=self.COLORS['bg_dark'])
@@ -986,7 +980,7 @@ class App(ctk.CTk):
                 parent, text="", variable=variable, onvalue=True, offvalue=False,
                 switch_width=36, switch_height=20, width=36,
                 progress_color=color, button_color=PALETTE['switch_knob'],
-                button_hover_color='#ffffff', fg_color=C['border'], **kw)
+                button_hover_color=PALETTE['switch_knob'], fg_color=PALETTE['switch_track'], **kw)
 
         def _slot(parent, title_key, command):
             """Cartão de arquivo: ícone + título + estado; o cartão inteiro e o
@@ -1504,7 +1498,7 @@ class App(ctk.CTk):
                     auto_lbl.pack(fill='x', padx=(SPACE['md'] + 4, SPACE['md']),
                                   pady=(SPACE['xs'], SPACE['sm']))
             else:
-                cb.configure(progress_color=accent, fg_color=C['border'],
+                cb.configure(progress_color=accent, fg_color=PALETTE['switch_track'],
                              button_color=PALETTE['switch_knob'])
                 if not on:
                     cb.deselect(from_variable_callback=True)
@@ -1816,8 +1810,8 @@ class App(ctk.CTk):
                 switch_width=32, switch_height=18,
                 progress_color=accent,
                 button_color=PALETTE['switch_knob'],
-                button_hover_color='#ffffff',
-                fg_color=C['border'],
+                button_hover_color=PALETTE['switch_knob'],
+                fg_color=PALETTE['switch_track'],
                 text_color=C['text_primary'],
                 text_color_disabled=C['text_tertiary'],
                 font=(_FONT_UI, FONT_SIZE['md'], "bold")
@@ -2156,6 +2150,43 @@ class App(ctk.CTk):
                       font=(_FONT_UI, FONT_SIZE['sm']), corner_radius=RADIUS['field'],
                       fg_color='transparent', hover_color=C['bg_card_hover'],
                       text_color=C['text_secondary'], command=lambda: show_about(self)).pack(side='right')
+
+        # Tema: Auto (segue o sistema), Claro ou Escuro; a escolha fica salva
+        row = ctk.CTkFrame(footer, fg_color='transparent')
+        row.pack(fill='x', padx=SPACE['lg'], pady=(0, SPACE['md']))
+        ctk.CTkLabel(row, text=TEXTS["theme_label"], font=(_FONT_UI, FONT_SIZE['sm']),
+                     text_color=C['text_secondary']).pack(side='left', padx=(0, SPACE['sm']))
+        names = {'system': TEXTS["theme_system"], 'light': TEXTS["theme_light"],
+                 'dark': TEXTS["theme_dark"]}
+        self._theme_names = names
+        seg = ctk.CTkSegmentedButton(
+            row, values=[names[k] for k in THEME_CHOICES], height=28,
+            font=(_FONT_UI, FONT_SIZE['sm']), corner_radius=RADIUS['field'],
+            fg_color=C['bg_card_hover'], selected_color=C['accent_fill'],
+            selected_hover_color=C['accent_blue_hover'], unselected_color=C['bg_card_hover'],
+            unselected_hover_color=C['bg_hover'], text_color=C['text_primary'],
+            command=lambda label: self._switch_theme(
+                next(k for k, v in names.items() if v == label)))
+        seg.set(names[CURRENT_THEME['choice']])
+        seg.pack(side='left', fill='x', expand=True)
+        self._theme_seg = seg
+
+    def _switch_theme(self, choice: str) -> None:
+        """Salva o tema escolhido e reabre o programa para aplicá-lo."""
+        import subprocess
+        if choice == CURRENT_THEME['choice']:
+            return
+        save_theme_pref(choice)
+        new_mode = system_theme() if choice == 'system' else choice
+        if new_mode == CURRENT_THEME['mode']:
+            CURRENT_THEME['choice'] = choice
+            return
+        if ask_yes_no(self, TEXTS['theme_label'], TEXTS['theme_restart']):
+            try:
+                subprocess.Popen([sys.executable] + sys.argv)
+                self.destroy()
+            except Exception as exc:
+                show_message(self, "EasyPAML", TEXTS["lang_switch_err"].format(error=exc), 'error')
 
     def _switch_language(self, lang: str) -> None:
         """Salva preferência e reinicia o app para aplicar o idioma."""

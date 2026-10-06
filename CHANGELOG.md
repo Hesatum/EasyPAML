@@ -43,6 +43,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Command line: `--codonfreq`, `--ncatg`, `--kappa`, `--omega`, `--cleandata`,
   `--ignore-stop-codons`, `--codeml`, `--idle-timeout`, `--strict`, `--lang`,
   `--verbose`; exit code 1 if any gene fails.
+- Light theme. The window follows the system theme by default; Theme (Auto, Light,
+  Dark) changes it and is remembered.
 - Relaxed and interleaved PHYLIP.
 - Tests (`pytest`) and simulated data with a known answer (`tests/data`).
 

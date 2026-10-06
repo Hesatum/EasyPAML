@@ -19,9 +19,9 @@ _ON_WIN = platform.system() == "Windows"
 FONT_UI = "DejaVu Sans" if _ON_LINUX else "Roboto"
 FONT_MONO = "Cascadia Code" if _ON_WIN else "DejaVu Sans Mono"
 
-# Paleta com contraste >= 4,5:1 (WCAG AA) para texto sobre os fundos escuros
-# usados nos cartões (#0c0c0e .. #20202c). Ver tests/test_gui_contrast.py.
-PALETTE = {
+# Paletas com contraste >= 4,5:1 (WCAG AA) para todo texto sobre os fundos
+# de cada uma. Ver tests/test_gui_texts.py.
+DARK_PALETTE = {
     'bg_dark': '#0d0d11',
     'bg_card': '#17171f',
     'bg_card_hover': '#20202c',
@@ -54,6 +54,7 @@ PALETTE = {
     'control_border_hover': '#3b4050',
     'neutral_fill': '#343846',       # botão neutro preenchido (texto branco 11,7:1)
     'switch_knob': '#e6e7ee',
+    'switch_track': '#3b4050',
     # Cores semânticas "subtle" (estilo Primer) do painel de resultados: fundo
     # quase neutro + texto claro só no valor/rótulo do veredito. Cada *_fg tem
     # >= 4,5:1 sobre o seu *_subtle e sobre todas as camadas acima.
@@ -64,7 +65,118 @@ PALETTE = {
     'danger_subtle': '#341719',      # só falha de execução
     'danger_fg': '#fca5a5',          # texto sobre danger_subtle (8,6:1)
     'row_alt': '#15171d',            # zebra suave das tabelas (entre bg_panel e bg_surface)
+    # usados por janelas e gráficos que não são widgets CTk
+    'accent_blue': '#6366f1',
+    'accent_cyan': '#22d3ee',
+    'accent_purple': '#a78bfa',
+    'success_light': '#86efac',
+    'plot_bg': '#111115',
+    'plot_fg': '#c8c8d4',
+    'plot_muted': '#9898a6',
+    'plot_line': '#5a5a6a',
+    'plot_node': '#2a2a36',
+    'canvas_bg': '#14141a',
+    'canvas_line': '#666677',
+    'canvas_text': '#e5e5e5',
 }
+
+LIGHT_PALETTE = {
+    'bg_dark': '#eef0f3',
+    'bg_card': '#ffffff',
+    'bg_card_hover': '#f3f4f7',
+    'text_primary': '#111827',
+    'text_secondary': '#454c59',
+    'text_tertiary': '#555d6b',
+    'text_muted': '#555d6b',
+    'accent_text': '#4338ca',
+    'accent_fill': '#4f46e5',
+    'success_text': '#167038',
+    'success_fill': '#15803d',
+    'warning_text': '#9a4d07',
+    'warning_fill': '#b45309',
+    'danger_text': '#b42318',
+    'danger_fill': '#b91c1c',
+    'info_text': '#0b6378',
+    'info_fill': '#0e7490',
+    'border': '#d5d9e0',
+    'border_hover': '#b9bfca',
+    'bg_window': '#eef0f3',
+    'bg_panel': '#f6f7f9',
+    'bg_surface': '#ffffff',
+    'bg_elevated': '#f3f4f7',
+    'bg_elevated_hover': '#e7e9ee',
+    'bg_inset': '#ffffff',
+    'divider': '#e1e4e9',
+    'control_border': '#b4bbc6',
+    'control_border_hover': '#aab1bd',
+    'neutral_fill': '#4b5563',
+    'switch_knob': '#4b5563',
+    'switch_track': '#d5d9e0',
+    'success_subtle': '#dcf5e4',
+    'success_fg': '#14532d',
+    'warning_subtle': '#fdf0c8',
+    'warning_fg': '#7a3e06',
+    'danger_subtle': '#fde4e2',
+    'danger_fg': '#8f1d16',
+    'row_alt': '#f7f8fa',
+    'accent_blue': '#4f46e5',
+    'accent_cyan': '#0e7490',
+    'accent_purple': '#6d28d9',
+    'success_light': '#167038',
+    'plot_bg': '#ffffff',
+    'plot_fg': '#1f2937',
+    'plot_muted': '#4b5563',
+    'plot_line': '#9ca3af',
+    'plot_node': '#e5e7eb',
+    'canvas_bg': '#ffffff',
+    'canvas_line': '#6b7280',
+    'canvas_text': '#111827',
+}
+
+# Paleta em uso: escura ou clara. Preenchida por apply_theme() antes de
+# qualquer janela ser criada; os módulos leem PALETTE[...] ao montar widgets.
+PALETTE: dict = {}
+THEME_CHOICES = ('system', 'light', 'dark')
+_THEME_PREF = Path.home() / '.easypaml_theme'
+CURRENT_THEME = {'choice': 'system', 'mode': 'dark'}
+
+
+def load_theme_pref() -> str:
+    try:
+        choice = _THEME_PREF.read_text(encoding='utf-8').strip()
+    except OSError:
+        return 'system'
+    return choice if choice in THEME_CHOICES else 'system'
+
+
+def save_theme_pref(choice: str) -> None:
+    try:
+        _THEME_PREF.write_text(choice, encoding='utf-8')
+    except OSError:
+        pass
+
+
+def system_theme() -> str:
+    """'light' ou 'dark' conforme o sistema (darkdetect); 'light' se não souber."""
+    try:
+        import darkdetect
+        return 'dark' if (darkdetect.theme() or '').lower() == 'dark' else 'light'
+    except Exception:
+        return 'light'
+
+
+def apply_theme(choice: str = None) -> str:
+    """Define PALETTE e o modo do customtkinter. Retorna 'light' ou 'dark'."""
+    choice = choice if choice in THEME_CHOICES else load_theme_pref()
+    mode = system_theme() if choice == 'system' else choice
+    PALETTE.clear()
+    PALETTE.update(LIGHT_PALETTE if mode == 'light' else DARK_PALETTE)
+    CURRENT_THEME.update(choice=choice, mode=mode)
+    ctk.set_appearance_mode(mode)
+    return mode
+
+
+apply_theme()
 
 # Escala de espaçamento (grade de 4 px) e raios de canto
 SPACE = {'xs': 4, 'sm': 8, 'md': 12, 'lg': 16, 'xl': 24, 'xxl': 32}

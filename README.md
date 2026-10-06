@@ -76,8 +76,9 @@ version 0.2.0, which has a different installer and different defaults.
 
 ## Using the window
 
-The window follows the system language (English or Portuguese). The PT and EN
-buttons at the bottom left switch it.
+The window follows the system language (English or Portuguese) and the system
+light or dark theme. The PT/EN buttons and the Theme setting (Auto, Light, Dark)
+at the bottom left change them, and the choice is kept for the next session.
 
 1. Alignments folder: a folder with one file per gene (`.fasta`, `.fas`, `.phy`,
    `.phylip`) containing aligned codon sequences. The program shows how many

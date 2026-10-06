@@ -33,42 +33,31 @@ class ResultsViewerWindow(ctk.CTkToplevel):
     """Janela de visualização profissional de resultados"""
     
     COLORS = {
-        # Fundos: mesmas camadas da janela principal (PALETTE), separadas por tom
         'bg_dark':        PALETTE['bg_window'],
         'bg_card':        PALETTE['bg_surface'],
         'bg_card_hover':  PALETTE['bg_elevated'],
         'bg_feed':        PALETTE['bg_panel'],
         'bg_sidebar':     PALETTE['bg_panel'],
         'bg_input':       PALETTE['bg_inset'],
-
-        # Text hierarchy
         'text_primary':   PALETTE['text_primary'],
         'text_secondary': PALETTE['text_secondary'],
-        'text_tertiary':  '#8e8ea4',   # contraste >= 4,5:1 (antes #5e5e6e)
-        'text_muted':     '#8a8aa0',   # (antes #3a3a48, ilegível)
-
-        # Accent — indigo (Linear-inspired)
-        'accent_blue':        '#6366f1',
-        'accent_blue_hover':  '#4f46e5',
-        'accent_blue_light':  '#818cf8',
-
-        # Secondary accents
-        'accent_cyan':    '#22d3ee',
-        'accent_cyan_hover': '#06b6d4',
-        'accent_purple':  '#a78bfa',
+        'text_tertiary':  PALETTE['text_tertiary'],
+        'text_muted':     PALETTE['text_muted'],
+        'accent_blue':        PALETTE['accent_blue'],
+        'accent_blue_hover':  PALETTE['accent_fill'],
+        'accent_blue_light':  PALETTE['accent_text'],
+        'accent_cyan':    PALETTE['accent_cyan'],
+        'accent_cyan_hover': PALETTE['info_fill'],
+        'accent_purple':  PALETTE['accent_purple'],
         'accent_purple_hover': '#7c3aed',
-
-        # Status
-        'success':        '#22c55e',
-        'success_hover':  '#16a34a',
-        'success_light':  '#86efac',
-        'warning':        '#f59e0b',
-        'warning_hover':  '#d97706',
-        'danger':         '#f87171',
-        'danger_hover':   '#ef4444',
-        'info':           '#22d3ee',
-
-        # Borders
+        'success':        PALETTE['success_text'],
+        'success_hover':  PALETTE['success_fill'],
+        'success_light':  PALETTE['success_light'],
+        'warning':        PALETTE['warning_text'],
+        'warning_hover':  PALETTE['warning_fill'],
+        'danger':         PALETTE['danger_text'],
+        'danger_hover':   PALETTE['danger_fill'],
+        'info':           PALETTE['info_text'],
         'border':         PALETTE['divider'],
         'border_hover':   PALETTE['control_border_hover'],
     }
@@ -802,7 +791,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         src.backend.go_enrichment, testavel sem Tkinter; esta aba so chama
         e desenha o resultado.
         """
-        info = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=8)
+        info = ctk.CTkFrame(parent, fg_color=PALETTE['bg_elevated'], corner_radius=8)
         info.pack(fill='x', padx=10, pady=(10, 2))
         ctk.CTkLabel(info, text=TEXTS["go_tab_title"], font=(FONT_UI, 11, "bold"),
                      text_color=self.COLORS['accent_blue_light']).pack(side="left", padx=14, pady=(10, 2))
@@ -834,7 +823,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 candidates, go_table = rank_candidates(self.output_folder / 'analysis_summary.tsv', annotation_path)
             except Exception as e:
                 ctk.CTkLabel(body, text=f"{TEXTS['go_tab_load_error']}: {e}", font=(FONT_UI, 11),
-                             text_color='#f87171', wraplength=900).pack(pady=30)
+                             text_color=PALETTE['danger_text'], wraplength=900).pack(pady=30)
                 return
 
             if candidates.empty:
@@ -859,19 +848,19 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                          text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(16, 6))
 
             for _, row in candidates.iterrows():
-                card = ctk.CTkFrame(scroll, fg_color='#0b2016', corner_radius=12,
-                                     border_width=1, border_color='#10b981')
+                card = ctk.CTkFrame(scroll, fg_color=PALETTE['success_subtle'], corner_radius=12,
+                                     border_width=1, border_color=PALETTE['success_fill'])
                 card.pack(fill='x', pady=4, padx=4)
-                ctk.CTkFrame(card, fg_color='#10b981', width=5, corner_radius=2).pack(
+                ctk.CTkFrame(card, fg_color=PALETTE['success_fill'], width=5, corner_radius=2).pack(
                     side="left", fill="y", padx=(6, 0), pady=8)
                 content = ctk.CTkFrame(card, fg_color='transparent')
                 content.pack(side="left", fill="both", expand=True, padx=14, pady=10)
                 ctk.CTkLabel(content, text=f"{row['Gene']}   ·   {row.get('test') or ''}   ·   "
                                             f"q = {self._fmt_pval(row['q_value'])} "
                                             f"(p = {self._fmt_pval(row['p_value'])})",
-                             font=(FONT_UI, 12, "bold"), text_color='#6ee7b7').pack(anchor='w')
+                             font=(FONT_UI, 12, "bold"), text_color=PALETTE['success_fg']).pack(anchor='w')
                 ctk.CTkLabel(content, text=row['go_terms'], font=(FONT_UI, 11),
-                             text_color='#a7f3d0', wraplength=850, justify='left').pack(anchor='w', pady=(3, 0))
+                             text_color=PALETTE['success_fg'], wraplength=850, justify='left').pack(anchor='w', pady=(3, 0))
 
         def pick_file():
             path = filedialog.askopenfilename(title=TEXTS["go_tab_load_button"],
@@ -1268,7 +1257,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             self.tag_columns.get('Branch', {}).get('omega'))
 
         # ── Info banner ────────────────────────────────────────────────
-        info = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=8)
+        info = ctk.CTkFrame(parent, fg_color=PALETTE['bg_elevated'], corner_radius=8)
         info.pack(fill='x', padx=10, pady=(10, 4))
         ctk.CTkLabel(info,
                      text=TEXTS["branch_tab_title"],
@@ -1339,7 +1328,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             if fp:
                 try:
                     current_fig[0].savefig(fp, dpi=200, bbox_inches='tight',
-                                           facecolor='#111115')
+                                           facecolor=PALETTE['plot_bg'])
                     messagebox.showinfo(TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=fp))
                 except Exception as e:
                     messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_export_err"].format(error=e))
@@ -1651,8 +1640,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             # Figure size: height by #leaves, width fixed
             fig_h = max(4.5, n_leaves * 0.28)
             fig_w = max(8.0, max_depth * 1.2 + 5.5)
-            fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor='#111115')
-            ax.set_facecolor('#111115')
+            fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor=PALETTE['plot_bg'])
+            ax.set_facecolor(PALETTE['plot_bg'])
             LW      = 2.0
             done_vc = set()
 
@@ -1683,7 +1672,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         conn_omega = branch_omega_map.get((gp, p_node), 0.5)
                         conn_color = cmap(norm(conn_omega))
                     else:
-                        conn_color = '#5a5a6a'  # root has no incoming branch
+                        conn_color = PALETTE['plot_line']  # root has no incoming branch
                     ax.plot([px, px],
                             [min(child_ys), max(child_ys)],   # vertical connector
                             color=conn_color, linewidth=LW,
@@ -1694,8 +1683,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             for nid in state['internals']:
                 nx, ny = node_x.get(nid, 0), node_y.get(nid, 0)
                 mk = 's' if nid in rotated_nodes else 'o'
-                ax.scatter([nx], [ny], color='#2a2a36', s=48, zorder=5,
-                           edgecolors='#5a5a6a', linewidths=0.8, marker=mk)
+                ax.scatter([nx], [ny], color=PALETTE['plot_node'], s=48, zorder=5,
+                           edgecolors=PALETTE['plot_line'], linewidths=0.8, marker=mk)
 
             # Tip dots + labels on the right (ω value + species name)
             for leaf in tip_order:
@@ -1708,7 +1697,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 if omega is not None:
                     dot_color = cmap(norm(omega))
                     ax.scatter([lx], [ly], color=dot_color, s=55, zorder=6,
-                               edgecolors='#222228', linewidths=0.6)
+                               edgecolors=PALETTE['plot_line'], linewidths=0.6)
                     omega_str = f'{omega:.3f}  '
                 else:
                     omega_str = ''
@@ -1719,7 +1708,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 label = omega_str + name
                 ax.text(max_depth + 0.15, ly, label,
                         ha='left', va='center',
-                        color='#c8c8d4', fontsize=7.5, fontfamily='monospace')
+                        color=PALETTE['plot_fg'], fontsize=7.5, fontfamily='monospace')
 
             # Colorbar (horizontal, bottom-left)
             sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -1727,8 +1716,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             cbar = plt.colorbar(sm, ax=ax, orientation='horizontal',
                                 fraction=0.04, pad=0.06, shrink=0.30,
                                 anchor=(0.0, 1.0))
-            cbar.set_label('w (dN/dS)', color='#9898a6', fontsize=8)
-            cbar.ax.tick_params(colors='#9898a6', labelsize=7)
+            cbar.set_label('w (dN/dS)', color=PALETTE['plot_muted'], fontsize=8)
+            cbar.ax.tick_params(colors=PALETTE['plot_muted'], labelsize=7)
             # Smart tick generator: always include 0.0, 1.0, and vmax;
             # spread intermediate ticks proportionally to the actual range.
             if vmax <= 3.0:
@@ -1766,7 +1755,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             ax.set_yticks([])
             ax.set_xticks([])
             ax.set_title(f'Cladograma  —  {gene_name}',
-                         color='#ededef', fontsize=11, fontweight='bold', pad=8)
+                         color=PALETTE['plot_fg'], fontsize=11, fontweight='bold', pad=8)
             for spine in ax.spines.values():
                 spine.set_visible(False)
 
