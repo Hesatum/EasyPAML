@@ -2276,7 +2276,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
     # ── df_chi2 per comparison ────────────────────────────────
     _DF_CHI2 = {
-        'lrt_M0_vs_M1a':                           2,
+        'lrt_M0_vs_M1a':                           1,
+        'lrt_M8a_vs_M8':                           1,
         'lrt_M1a_vs_M2a':                          2,
         'lrt_M7_vs_M8':                            2,
         'lrt_M0_vs_Branch':                        1,
@@ -2285,12 +2286,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
     }
 
     def _build_export_df(self, lrt_col: str) -> pd.DataFrame:
-        """Build a clean, filtered DataFrame for one LRT comparison.
-
-        • Only genes where the LRT value is not NaN (model was run).
-        • Shows Gene, relevant ω columns, 2Δℓ, p, Sig.
-        • No internal columns (_np, _time, _stops, _lnL).
-        """
+        """One LRT comparison for export: genes where both models ran, with lnL and
+        np of each model, ω values, 2Δℓ, df, p, q and BEB sites, unrounded."""
         lrt_series = pd.to_numeric(self.df[lrt_col], errors='coerce')
         mask = lrt_series.notna()
         if not mask.any():
@@ -2338,16 +2335,20 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         _is_branch_lrt = (lrt_col == 'lrt_M0_vs_Branch')
 
         for mn in model_names:
+            for col, label in ((f'{mn}_lnL', f'lnL ({mn})'), (f'{mn}_np', f'np ({mn})')):
+                if col in df_f.columns:
+                    out[label] = pd.to_numeric(df_f[col].values, errors='coerce')
+        for mn in model_names:
             if _is_branch_lrt and mn == 'Branch':
                 continue  # per-tag columns added below
             omega_col = f'{mn}_omega'
             if omega_col in df_f.columns:
                 out[tr(f'ω médio ({mn})', f'mean ω ({mn})')] = pd.to_numeric(
-                    df_f[omega_col].values, errors='coerce').round(4)
+                    df_f[omega_col].values, errors='coerce')
             for col, label in ((f'{mn}_w_pos', tr(f'ω classe positiva ({mn})', f'positive-class ω ({mn})')),
                                (f'{mn}_p_pos', tr(f'p₁ classe positiva ({mn})', f'positive-class p₁ ({mn})'))):
                 if col in df_f.columns:
-                    out[label] = pd.to_numeric(df_f[col].values, errors='coerce').round(4)
+                    out[label] = pd.to_numeric(df_f[col].values, errors='coerce')
 
         # ── Per-tag ω columns for Branch model ───────────────────────────
         # PAML's "w (dN/dS) for branches:" lists groups as [bg, #1, #2, ...]
@@ -2367,7 +2368,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 for col in _tag_cols_in_tsv:
                     tag = col.replace('Branch_', '').replace('_omega', '')
                     label = 'ω (bg)' if tag == 'background' else f'ω ({tag})'
-                    out[label] = pd.to_numeric(df_f[col].values, errors='coerce').round(4)
+                    out[label] = pd.to_numeric(df_f[col].values, errors='coerce')
             else:
                 # 2) Fallback: parse on-the-fly from result files
                 _tag_data: dict = {}   # tag -> {gene -> omega}
@@ -2391,7 +2392,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 for tag in sorted_tags:
                     label = 'ω (bg)' if tag == 'background' else f'ω ({tag})'
                     out[label] = [
-                        round(float(_tag_data[tag][g]), 4) if g in _tag_data[tag] else float('nan')
+                        float(_tag_data[tag][g]) if g in _tag_data[tag] else float('nan')
                         for g in df_f['Gene'].values
                     ]
 
@@ -2405,9 +2406,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 if model_part == 'Branch' and re.match(r'^(background|#\d+)$', tag):
                     continue
                 if any(mn.lower() == model_part.lower() for mn in model_names):
-                    out[f'ω ({model_part}/{tag})'] = (
-                        pd.to_numeric(df_f[col].values, errors='coerce').round(4)
-                    )
+                    out[f'ω ({model_part}/{tag})'] = pd.to_numeric(df_f[col].values, errors='coerce')
 
         # same p and q as LRT_results.txt
         _pair = tuple(lrt_col.replace('lrt_', '').split('_vs_'))
@@ -2420,17 +2419,19 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             q_vals = pd.Series([_pv.get(g, (None, None, np.nan))[2] for g in df_f['Gene'].values],
                                index=lrt_vals.index)
 
-        out['2Δℓ']         = lrt_vals.values.round(4)
-        # For Branch model: show the per-gene df so the user can verify the correction.
-        # df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
-        # e.g. 7 tags → raw_df=7, ntime_diff=1 → df=6
+        out['2Δℓ'] = lrt_vals.values
+        # Branch: df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0), per gene
         if branch_df_series is not None:
             out['df'] = branch_df_series.astype(int).values
-        out['p-value']     = [float(f"{p:.4g}") for p in p_vals.values]
+        elif len(_pair) == 2 and _pair in lrt_stats.PAIRS and lrt_stats.PAIRS[_pair]['df']:
+            out['df'] = lrt_stats.PAIRS[_pair]['df']
+        out['p-value'] = p_vals.values
         if q_vals is not None:
-            out['q-value (BH)'] = [float(f"{q:.4g}") if pd.notna(q) else np.nan for q in q_vals.values]
-        out['Sig. p<0.05'] = p_vals.apply(lambda p: 'yes' if p < 0.05 else 'no').values
-        out['Sig. p<0.01'] = p_vals.apply(lambda p: 'yes' if p < 0.01 else 'no').values
+            out['q-value (BH)'] = q_vals.values
+            out['significant (q < 0.05)'] = ['yes' if pd.notna(q) and q < 0.05 else 'no'
+                                             for q in q_vals.values]
+        else:
+            out['significant (p < 0.05)'] = ['yes' if p < 0.05 else 'no' for p in p_vals.values]
 
         # ── BEB positive sites (M2a and M8 only) ─────────────────────────
         # Format: "32 R* (8.200 ± 2.238); 91 G** (8.444 ± 1.804)"
