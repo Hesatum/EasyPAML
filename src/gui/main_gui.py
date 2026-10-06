@@ -29,7 +29,7 @@ from backend.lrt_stats import pairs_for as lrt_pairs_for
 from backend.preflight import discover_per_gene_trees, group_by_gene, list_alignment_files, run_preflight
 from .results_viewer import ResultsViewerWindow
 from .gui_texts import TEXTS, set_language, get_language, tr
-from .ui_helpers import (FONT_SIZE, PALETTE, RADIUS, SPACE, PreflightDialog, ask_yes_no,
+from .ui_helpers import (FONT_SIZE, PALETTE, RADIUS, SPACE, PreflightDialog, ask_directory, ask_yes_no,
                          disable_mouse_wheel, fit_to_screen, hover_tint, mix, open_folder,
                          show_about, show_message)
 
@@ -1011,8 +1011,12 @@ class App(ctk.CTk):
             # o cartão mostra uma versão curta dele (_apply_visual_state)
             detail = ctk.CTkLabel(card, text=TEXTS["label_not_selected"])
             shown = ctk.CTkLabel(row, text=TEXTS["label_not_selected"], font=(_FONT_UI, fs['xs']),
-                                 anchor='w', justify='left', text_color=C['text_tertiary'])
+                                 anchor='w', justify='left', text_color=C['text_tertiary'],
+                                 wraplength=150)
             shown.pack(side='left', fill='x', expand=True)
+            # quebra de linha na largura real (antes o texto era cortado com "…")
+            row.bind('<Configure>', lambda e, l=shown: l.configure(
+                wraplength=max(100, e.width - 64 - sp['sm'])), add='+')
             self._make_clickable(card, (card, col, title, row, shown), command,
                                  lambda: self._slots and self._apply_visual_state(force=True))
             return card, title, btn, detail, shown
@@ -1194,7 +1198,6 @@ class App(ctk.CTk):
         ri, _c4, _ = _step(_sb, None, TEXTS["step_results"])
         self.btn_results = _obtn(ri, TEXTS["btn_view_results"], self._open_results_viewer)
         self.btn_results.pack(fill='x', pady=(0, sp['sm']))
-        self.btn_results.configure(state="disabled")
 
         self.btn_update_results = _obtn(ri, TEXTS["btn_update_results"],
                                         self._update_results_files)
@@ -1566,8 +1569,9 @@ class App(ctk.CTk):
             # versão curta do texto escrito por select_* (sem a lista de arquivos)
             lines = []
             for line in str(detail.cget('text')).splitlines():
-                line = line.split(': ')[0] if ': ' in line else line
-                lines.append(line if len(line) <= 24 else line[:23] + "…")
+                lines.append(line.split(': ')[0] if ': ' in line else line)
+            if key == 'tree' and not self.tree_file and self.per_gene_trees:
+                lines = [TEXTS["slot_tree_per_gene"].format(n=len(self.per_gene_trees))]
             col = detail.cget('text_color')
             shown.configure(text="\n".join(lines[:3]),
                             text_color=col if done[key] or col == C['warning'] else C['text_tertiary'])
@@ -1939,7 +1943,7 @@ class App(ctk.CTk):
 
     def select_input_folder(self):
         start = str(self.input_folder) if self.input_folder else str(Path.home())
-        path = filedialog.askdirectory(initialdir=start, title=TEXTS["btn_input_folder"])
+        path = ask_directory(self, TEXTS["btn_input_folder"], start)
         if path:
             self.input_folder = Path(path)
             files = list_alignment_files(self.input_folder)
@@ -1974,8 +1978,8 @@ class App(ctk.CTk):
         """Aceita uma pasta que ainda não existe (digitada no diálogo) e a cria."""
         start = str(self.output_folder.parent if self.output_folder else
                     (self.input_folder.parent if self.input_folder else Path.home()))
-        path = filedialog.askdirectory(initialdir=start, mustexist=False,
-                                       title=TEXTS["dialog_choose_output"])
+        path = ask_directory(self, TEXTS["dialog_choose_output"], start,
+                             allow_new=True, must_exist=False)
         if not path:
             return
         folder = Path(path)
@@ -2042,7 +2046,9 @@ class App(ctk.CTk):
     def _show_model_info(self, model_code: str):
         """Mostra informações detalhadas sobre um modelo específico"""
         # Obter informações do modelo
-        model_info = self.codeml_backend.MODEL_INFO.get(model_code)
+        info_src = (self.codeml_backend.MODEL_INFO_PT if get_language() == 'pt'
+                    else self.codeml_backend.MODEL_INFO)
+        model_info = info_src.get(model_code) or self.codeml_backend.MODEL_INFO.get(model_code)
         if not model_info:
             return
         
@@ -2170,21 +2176,30 @@ class App(ctk.CTk):
                 show_message(self, "EasyPAML", TEXTS["lang_switch_err"].format(error=exc), 'error')
 
     def _open_results_viewer(self):
-        if not self.output_folder:
-            self.append_log(TEXTS["log_no_output_folder"])
-            return
+        """Abre o painel da pasta de resultados atual; se ela ainda não tem
+        resultados (ou não foi escolhida), pede a pasta de uma análise anterior
+        -- antes o botão ficava cinza sem dizer por quê."""
+        folder = self.output_folder
+        if not (folder and (Path(folder) / 'analysis_summary.tsv').exists()):
+            chosen = ask_directory(self, TEXTS["dialog_select_results_folder"],
+                                   folder or self.input_folder or Path.home())
+            if not chosen:
+                return
+            folder = Path(chosen)
+            if not (folder / 'analysis_summary.tsv').exists():
+                show_message(self, TEXTS["btn_view_results"],
+                             TEXTS["msg_not_results_folder"].format(path=folder), 'warning')
+                return
         try:
-            ResultsViewerWindow(self, self.output_folder)
+            ResultsViewerWindow(self, folder)
         except Exception as e:
             self.append_log(tr("Erro ao abrir o painel de resultados: ", "Error opening the results panel: ") + f"{e}", "error")
             self.append_log(traceback.format_exc())
 
     def _regenerate_summary_files(self):
         """Abre diálogo para selecionar pasta e regenera os 3 arquivos de síntese"""
-        results_folder = filedialog.askdirectory(
-            title=TEXTS["dialog_select_results_folder"],
-            initialdir=str(Path.home() / "Desktop")
-        )
+        results_folder = ask_directory(self, TEXTS["dialog_select_results_folder"],
+                                       self.output_folder or Path.home())
         
         if not results_folder:
             return
@@ -2298,16 +2313,6 @@ class App(ctk.CTk):
         except Exception:
             pass
 
-        try:
-            if self.output_folder and (self.output_folder / 'analysis_summary.tsv').exists():
-                self.btn_results.configure(state='normal')
-            else:
-                self.btn_results.configure(state='disabled')
-        except Exception:
-            try:
-                self.btn_results.configure(state='disabled')
-            except Exception:
-                pass
 
     _LEVEL_TAGS = {'ok': 'success', 'error': 'error', 'warn': 'warning', 'info': None,
                    'header': 'header', 'debug': 'debug'}

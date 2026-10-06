@@ -254,3 +254,156 @@ def show_about(parent) -> None:
         codeml_version=ver or '?', python=platform.python_version(),
         platform=platform.platform())
     show_message(parent, TEXTS['about_title'], text)
+
+
+class FolderPicker(_Modal):
+    """Seletor de pasta no tema do programa, usado no Linux no lugar do
+    diálogo do Tk (que mostrava só pastas, escolhia a pasta de cima com um
+    clique e exigia dois cliques ou Enter no OK). Mostra os arquivos em cinza
+    para conferência; o botão diz exatamente qual pasta será escolhida."""
+
+    def __init__(self, parent, title: str, initialdir=None, allow_new: bool = False,
+                 must_exist: bool = True):
+        super().__init__(parent, title, 720, 520)
+        self.allow_new, self.must_exist = allow_new, must_exist
+        start = Path(initialdir).expanduser() if initialdir else Path.home()
+        while not start.is_dir() and start != start.parent:
+            start = start.parent
+        self.cwd = start.resolve()
+        self._entries = []
+        pad = SPACE['lg']
+
+        ctk.CTkLabel(self, text=title, font=(FONT_UI, FONT_SIZE['md'], 'bold'), anchor='w',
+                     justify='left', wraplength=660, text_color=PALETTE['text_primary']
+                     ).pack(fill='x', padx=pad, pady=(pad, SPACE['sm']))
+        bar = ctk.CTkFrame(self, fg_color='transparent')
+        bar.pack(fill='x', padx=pad)
+        ctk.CTkButton(bar, text=TEXTS['picker_up'], width=72, height=30, command=self._up,
+                      fg_color=PALETTE['neutral_fill'], hover_color=mix(PALETTE['neutral_fill'], '#000000', 0.2),
+                      text_color='#ffffff', corner_radius=RADIUS['field'],
+                      font=(FONT_UI, FONT_SIZE['sm'], 'bold')).pack(side='left')
+        self.path_var = ctk.StringVar(value=str(self.cwd))
+        self.path_entry = ctk.CTkEntry(bar, textvariable=self.path_var, height=30,
+                                       fg_color=PALETTE['bg_inset'], border_color=PALETTE['control_border'],
+                                       text_color=PALETTE['text_primary'], corner_radius=RADIUS['field'],
+                                       font=(FONT_UI, FONT_SIZE['sm']))
+        self.path_entry.pack(side='left', fill='x', expand=True, padx=(SPACE['sm'], 0))
+        self.path_entry.bind('<Return>', lambda e: self._typed_path())
+
+        import tkinter as tk
+        frame = ctk.CTkFrame(self, fg_color=PALETTE['bg_inset'], corner_radius=RADIUS['card'])
+        frame.pack(fill='both', expand=True, padx=pad, pady=SPACE['sm'])
+        self.listbox = tk.Listbox(frame, activestyle='none', borderwidth=0, highlightthickness=0,
+                                  bg=PALETTE['bg_inset'], fg=PALETTE['text_primary'],
+                                  selectbackground=PALETTE['accent_fill'], selectforeground='#ffffff',
+                                  font=(FONT_UI, FONT_SIZE['sm']), exportselection=False)
+        sb = ctk.CTkScrollbar(frame, command=self.listbox.yview)
+        self.listbox.configure(yscrollcommand=sb.set)
+        sb.pack(side='right', fill='y', pady=SPACE['xs'])
+        self.listbox.pack(side='left', fill='both', expand=True, padx=SPACE['sm'], pady=SPACE['sm'])
+        self.listbox.bind('<Double-Button-1>', lambda e: self._open_selected())
+        self.listbox.bind('<Return>', lambda e: self._open_selected())
+        self.listbox.bind('<<ListboxSelect>>', lambda e: self._refresh_choose())
+
+        ctk.CTkLabel(self, text=TEXTS['picker_hint'], font=(FONT_UI, FONT_SIZE['xs']), anchor='w',
+                     justify='left', wraplength=660, text_color=PALETTE['text_secondary']
+                     ).pack(fill='x', padx=pad)
+        row = ctk.CTkFrame(self, fg_color='transparent')
+        row.pack(fill='x', padx=pad, pady=(SPACE['sm'], pad))
+        if allow_new:
+            _button(row, TEXTS['picker_new_folder'], self._new_folder, PALETTE['neutral_fill']).pack(side='left')
+        self.choose_btn = _button(row, TEXTS['picker_choose'], self._choose, PALETTE['accent_fill'])
+        self.choose_btn.pack(side='right')
+        _button(row, TEXTS['picker_cancel'], lambda: self._close(None), PALETTE['neutral_fill']).pack(
+            side='right', padx=(0, SPACE['sm']))
+        self._load()
+
+    def _load(self):
+        self.path_var.set(str(self.cwd))
+        self.listbox.delete(0, 'end')
+        self._entries = []
+        try:
+            items = sorted(self.cwd.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
+        except OSError:
+            items = []
+        for p in items:
+            if p.name.startswith('.'):
+                continue
+            is_dir = p.is_dir()
+            self.listbox.insert('end', (p.name + '/') if is_dir else '    ' + p.name)
+            if not is_dir:
+                self.listbox.itemconfig('end', fg=PALETTE['text_tertiary'],
+                                        selectbackground=PALETTE['bg_inset'],
+                                        selectforeground=PALETTE['text_tertiary'])
+            self._entries.append((p, is_dir))
+            if len(self._entries) >= 2000:
+                break
+        self._refresh_choose()
+
+    def _selected_dir(self):
+        sel = self.listbox.curselection()
+        if sel and self._entries[sel[0]][1]:
+            return self._entries[sel[0]][0]
+        return None
+
+    def _target(self) -> Path:
+        return self._selected_dir() or self.cwd
+
+    def _refresh_choose(self):
+        name = self._target().name or str(self._target())
+        self.choose_btn.configure(text=TEXTS['picker_choose_named'].format(name=name))
+
+    def _open_selected(self):
+        d = self._selected_dir()
+        if d is not None:
+            self.cwd = d.resolve()
+            self._load()
+
+    def _up(self):
+        if self.cwd.parent != self.cwd:
+            self.cwd = self.cwd.parent
+            self._load()
+
+    def _typed_path(self):
+        p = Path(self.path_var.get().strip()).expanduser()
+        if p.is_dir():
+            self.cwd = p.resolve()
+            self._load()
+        elif not self.must_exist and p.is_absolute() and p.parent.is_dir():
+            self._close(str(p))
+        else:
+            self.path_entry.configure(border_color=PALETTE['danger_fg'])
+
+    def _new_folder(self):
+        dlg = ctk.CTkInputDialog(text=TEXTS['picker_new_folder_prompt'], title=TEXTS['picker_new_folder'])
+        name = (dlg.get_input() or '').strip()
+        if not name or '/' in name or name in ('.', '..'):
+            return
+        new = self.cwd / name
+        try:
+            new.mkdir(exist_ok=True)
+        except OSError as exc:
+            show_message(self, TEXTS['picker_new_folder'], str(exc), 'error')
+            return
+        self.cwd = new.resolve()
+        self._load()
+
+    def _choose(self):
+        typed = Path(self.path_var.get().strip()).expanduser()
+        if typed != self.cwd and typed.is_absolute() and not self._selected_dir():
+            if typed.is_dir() or (not self.must_exist and typed.parent.is_dir()):
+                self._close(str(typed))
+                return
+        self._close(str(self._target().resolve()))
+
+
+def ask_directory(parent, title: str, initialdir=None, allow_new: bool = False,
+                  must_exist: bool = True):
+    """Pasta escolhida (caminho absoluto) ou None. No Linux usa FolderPicker;
+    no Windows e no macOS o diálogo nativo do sistema."""
+    if platform.system() == 'Linux':
+        return FolderPicker(parent, title, initialdir, allow_new, must_exist).show()
+    from tkinter import filedialog
+    path = filedialog.askdirectory(parent=parent, initialdir=str(initialdir or Path.home()),
+                                   title=title, mustexist=must_exist)
+    return str(Path(path).resolve()) if path else None

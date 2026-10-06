@@ -168,3 +168,13 @@ def test_lrt_degrees_of_freedom():
     assert lrt_stats.PAIRS[('M7', 'M8')]['df'] == 2
     assert lrt_stats.PAIRS[('M8a', 'M8')]['df'] == 1
     assert lrt_stats.PAIRS[('Branch-site_null', 'Branch-site')]['df'] == 1
+
+
+def test_model_help_in_both_languages():
+    """Rodada 2: a ajuda dos modelos ficava em inglês com a janela em PT."""
+    en, pt = CodemlBatchAnalysis.MODEL_INFO, CodemlBatchAnalysis.MODEL_INFO_PT
+    assert set(en) == set(pt)
+    for code in en:
+        assert set(en[code]) == set(pt[code]), code
+        assert pt[code]['references'] == en[code]['references'], code
+    assert 'q < 0,05' in pt['M2a']['interpretation'] and 'M8a' in pt['M8']['interpretation']

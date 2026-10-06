@@ -174,10 +174,11 @@ class CodemlBatchAnalysis:
             'full_name': 'One-Ratio Model',
             'test_type': 'Site Model',
             'parameters': 'ω = dN/dS (constant across all sites)',
-            'purpose': 'Null hypothesis: estimates a single dN/dS ratio for all sites. Used as baseline for M1a.',
-            'interpretation': 'If M1a rejects M0, suggests variation in selection pressure among codon sites.',
-            'use_case': 'Always recommended as baseline comparison.',
-            'references': 'Goldman & Yang (1994)'
+            'purpose': 'A single dN/dS ratio for all sites and branches. Null of the Branch model.',
+            'interpretation': 'Gives the average ω of the gene. A gene can have ω < 1 here and still '
+                              'have a few sites under positive selection.',
+            'use_case': 'Baseline; needed as null for the Branch model.',
+            'references': 'Goldman & Yang (1994) Mol Biol Evol 11:725-736'
         },
         'M1a': {
             'full_name': 'Nearly Neutral Model',
@@ -186,16 +187,18 @@ class CodemlBatchAnalysis:
             'purpose': 'Null hypothesis: allows sites under purifying and neutral selection only.',
             'interpretation': 'If M2a rejects M1a, indicates presence of positive selection (ω > 1).',
             'use_case': 'Compare against M2a to test for positive selection.',
-            'references': 'Wong et al. (2004), Swanson et al. (2003)'
+            'references': 'Nielsen & Yang (1998) Genetics 148:929-936; Wong et al. (2004) Genetics 168:1041-1051'
         },
         'M2a': {
             'full_name': 'Positive Selection Model',
             'test_type': 'Site Model',
             'parameters': 'Three classes: ω₀ < 1, ω₁ = 1, ω₂ > 1 (positive selection)',
             'purpose': 'Alternative hypothesis: allows positive selection at specific sites.',
-            'interpretation': 'Reject M1a at p < 0.05 = evidence for positive selection. Sites with ω₂ > 1 are under positive selection.',
+            'interpretation': 'M2a significantly better than M1a (q < 0.05) = evidence for positive selection. '
+                              'Which sites: BEB posterior probability Pr(ω > 1) ≥ 0.95.',
             'use_case': 'Compare against M1a to identify sites under positive selection.',
-            'references': 'Nielsen & Yang (1998)'
+            'references': 'Nielsen & Yang (1998) Genetics 148:929-936; Wong et al. (2004) Genetics 168:1041-1051; '
+                          'BEB: Yang, Wong & Nielsen (2005) Mol Biol Evol 22:1107-1118'
         },
         'M7': {
             'full_name': 'Beta Distribution Model',
@@ -211,7 +214,8 @@ class CodemlBatchAnalysis:
             'test_type': 'Site Model',
             'parameters': 'Beta(p,q) for ω < 1, PLUS additional class with ω > 1',
             'purpose': 'Alternative hypothesis: continuous distribution + discrete class for positive selection.',
-            'interpretation': 'Reject M7 at p < 0.05 = evidence for positive selection. More flexible than M2a.',
+            'interpretation': 'M8 significantly better than M7 (q < 0.05) suggests positive selection, but M8 '
+                              'can also beat M7 because of neutral sites (ω = 1): confirm with M8a vs M8.',
             'use_case': 'Alternative test for positive selection; compare against M7 and M8a.',
             'references': 'Yang, Nielsen, Goldman & Pedersen (2000) Genetics 155:431-449; '
                           'BEB: Yang, Wong & Nielsen (2005) Mol Biol Evol 22:1107-1118'
@@ -234,21 +238,111 @@ class CodemlBatchAnalysis:
             'test_type': 'Branch Model',
             'parameters': 'Different ω for designated foreground branch vs. background branches',
             'purpose': 'Tests if one or more branches evolve under different selection pressure.',
-            'interpretation': 'Reject M0 at p < 0.05 = foreground branch has different ω than background.',
-            'use_case': 'Use with "Marcar Branch" to mark specific branches for comparison.',
-            'references': 'Reis et al. (2009)'
+            'interpretation': 'Branch significantly better than M0 = the marked branches have a different ω '
+                              'from the rest of the tree (not necessarily ω > 1).',
+            'use_case': 'Mark the branches with "Label branches" first.',
+            'references': 'Yang (1998) Mol Biol Evol 15:568-573'
         },
         'Branch-site': {
             'full_name': 'Branch-site Model',
             'test_type': 'Branch-site Model',
             'parameters': 'ω varies both by site AND by branch (foreground has different classes)',
             'purpose': 'Tests for positive selection affecting specific sites in specific branches.',
-            'interpretation': 'Reject Branch-site_null at p < 0.05 = evidence for positive selection on foreground branch.',
-            'use_case': 'Most powerful test when ω varies both spatially (codon sites) and temporally (lineages).',
-            'references': 'Zhang et al. (2005), Bielawski & Yang (2004)'
+            'interpretation': 'Branch-site significantly better than its null = evidence for positive selection '
+                              'at some sites on the foreground branch.',
+            'use_case': 'Mark the foreground branch first; the null (ω₂ = 1 fixed) is added automatically.',
+            'references': 'Yang & Nielsen (2002) Mol Biol Evol 19:908-917; '
+                          'Zhang, Nielsen & Yang (2005) Mol Biol Evol 22:2472-2479'
         }
     }
     
+    # Mesmo conteúdo, em português (a janela escolhe pelo idioma)
+    MODEL_INFO_PT = {
+        'M0': {
+            'full_name': 'Modelo de uma razão',
+            'test_type': 'Modelo de sítio',
+            'parameters': 'ω = dN/dS (igual em todos os sítios)',
+            'purpose': 'Uma única razão dN/dS para todos os sítios e ramos. Nulo do modelo Branch.',
+            'interpretation': 'Dá o ω médio do gene. Um gene pode ter ω < 1 aqui e ainda assim ter '
+                              'poucos sítios sob seleção positiva.',
+            'use_case': 'Referência; necessário como nulo do modelo Branch.',
+            'references': 'Goldman & Yang (1994) Mol Biol Evol 11:725-736',
+        },
+        'M1a': {
+            'full_name': 'Quase neutro',
+            'test_type': 'Modelo de sítio',
+            'parameters': 'Duas classes: ω₀ < 1 (purificadora) e ω₁ = 1 (neutra)',
+            'purpose': 'Hipótese nula: só sítios sob seleção purificadora ou neutros.',
+            'interpretation': 'Se o M2a for significativamente melhor que o M1a, há indício de seleção positiva (ω > 1).',
+            'use_case': 'Comparar com o M2a.',
+            'references': 'Nielsen & Yang (1998) Genetics 148:929-936; Wong et al. (2004) Genetics 168:1041-1051',
+        },
+        'M2a': {
+            'full_name': 'Seleção positiva',
+            'test_type': 'Modelo de sítio',
+            'parameters': 'Três classes: ω₀ < 1, ω₁ = 1 e ω₂ > 1 (seleção positiva)',
+            'purpose': 'Hipótese alternativa: permite seleção positiva em alguns sítios.',
+            'interpretation': 'M2a significativamente melhor que o M1a (q < 0,05) = indício de seleção positiva. '
+                              'Quais sítios: probabilidade posterior do BEB, Pr(ω > 1) ≥ 0,95.',
+            'use_case': 'Comparar com o M1a para achar sítios sob seleção positiva.',
+            'references': 'Nielsen & Yang (1998) Genetics 148:929-936; Wong et al. (2004) Genetics 168:1041-1051; '
+                          'BEB: Yang, Wong & Nielsen (2005) Mol Biol Evol 22:1107-1118',
+        },
+        'M7': {
+            'full_name': 'Distribuição beta',
+            'test_type': 'Modelo de sítio',
+            'parameters': 'ω segue uma beta(p, q), sempre entre 0 e 1',
+            'purpose': 'Hipótese nula: distribuição contínua de ω, sem ω > 1.',
+            'interpretation': 'Alternativa contínua ao M1a como nulo para testar seleção positiva.',
+            'use_case': 'Comparar com o M8.',
+            'references': 'Yang, Nielsen, Goldman & Pedersen (2000) Genetics 155:431-449',
+        },
+        'M8': {
+            'full_name': 'Beta e seleção positiva',
+            'test_type': 'Modelo de sítio',
+            'parameters': 'Beta(p, q) para ω < 1 MAIS uma classe extra com ω livre (pode ser > 1)',
+            'purpose': 'Hipótese alternativa: distribuição contínua + uma classe para seleção positiva.',
+            'interpretation': 'M8 significativamente melhor que o M7 (q < 0,05) sugere seleção positiva, mas o M8 '
+                              'também pode vencer o M7 por causa de sítios neutros (ω = 1): confirme com M8a vs M8.',
+            'use_case': 'Comparar com o M7 e com o M8a.',
+            'references': 'Yang, Nielsen, Goldman & Pedersen (2000) Genetics 155:431-449; '
+                          'BEB: Yang, Wong & Nielsen (2005) Mol Biol Evol 22:1107-1118',
+        },
+        'M8a': {
+            'full_name': 'Beta e ω = 1 (nulo do M8)',
+            'test_type': 'Modelo de sítio',
+            'parameters': 'Beta(p, q) para ω < 1 MAIS uma classe extra com ω fixo em 1',
+            'purpose': 'Hipótese nula do M8 que admite sítios neutros (ω = 1). O M7 vs M8 pode rejeitar o '
+                       'M7 só porque alguns sítios são neutros; o M8a vs M8 só rejeita se houver sítios com ω > 1.',
+            'interpretation': 'M8 significativamente melhor que o M8a = indício de seleção positiva que não se '
+                              'explica por sítios neutros.',
+            'use_case': 'Rodar junto com o M8 (entra automaticamente como nulo).',
+            'references': 'Swanson, Nielsen & Yang (2003) Mol Biol Evol 20:18-20; '
+                          'Wong et al. (2004) Genetics 168:1041-1051',
+        },
+        'Branch': {
+            'full_name': 'Modelo de ramos',
+            'test_type': 'Modelo de ramos',
+            'parameters': 'ω diferente nos ramos marcados (foreground) e no resto da árvore',
+            'purpose': 'Testa se um ou mais ramos evoluem sob pressão seletiva diferente.',
+            'interpretation': 'Branch significativamente melhor que o M0 = os ramos marcados têm ω diferente '
+                              'do resto da árvore (não necessariamente ω > 1).',
+            'use_case': 'Marque antes os ramos com "Marcar ramos".',
+            'references': 'Yang (1998) Mol Biol Evol 15:568-573',
+        },
+        'Branch-site': {
+            'full_name': 'Modelo de ramos e sítios',
+            'test_type': 'Modelo de ramos e sítios',
+            'parameters': 'ω varia entre sítios E entre ramos (o ramo foreground tem classes próprias)',
+            'purpose': 'Testa seleção positiva em alguns sítios de um ramo específico.',
+            'interpretation': 'Branch-site significativamente melhor que o nulo = indício de seleção positiva '
+                              'em alguns sítios do ramo foreground.',
+            'use_case': 'Marque antes o ramo foreground; o nulo (ω₂ = 1 fixo) entra automaticamente.',
+            'references': 'Yang & Nielsen (2002) Mol Biol Evol 19:908-917; '
+                          'Zhang, Nielsen & Yang (2005) Mol Biol Evol 22:2472-2479',
+        },
+    }
+
     # Comparações LRT comuns
     LRT_COMPARISONS = {
         'Site Models': [

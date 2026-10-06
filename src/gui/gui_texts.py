@@ -158,7 +158,8 @@ TEXTS_PT: dict[str, object] = {
     "status_running": "● Executando",
     "status_paused":  "● Pausada",
     "status_stopped": "● Parada",
-    "status_stops_template": "■ Stops: {n}",
+    "status_stops_template": "■ Stop codons: {n}",
+    "msg_not_results_folder": "{path} não tem resultados do EasyPAML (analysis_summary.tsv). Escolha a pasta indicada em \u201cPasta de Resultados\u201d quando a análise rodou.",
     "label_neutral_models":  "Modelos nulos automáticos",
 
     "btn_run":           "Iniciar",
@@ -387,6 +388,13 @@ TEXTS_PT: dict[str, object] = {
     "chart_freq":               "Frequência",
 
     # ── Novas chaves (0.3.0) ─────────────────────────────────────────────
+    "picker_up": "Acima",
+    "picker_choose": "Escolher esta pasta",
+    "picker_choose_named": "Escolher \u201c{name}\u201d",
+    "picker_cancel": "Cancelar",
+    "picker_new_folder": "Nova pasta",
+    "picker_new_folder_prompt": "Nome da nova pasta:",
+    "picker_hint": "Clique duas vezes numa pasta para abrir; um clique a marca para escolher. Os arquivos aparecem em cinza só para você conferir o conteúdo. Também dá para digitar o caminho acima e apertar Enter.",
     "btn_yes": "Sim",
     "btn_no": "Não",
     "btn_about": "Sobre",
@@ -447,7 +455,7 @@ TEXTS_PT: dict[str, object] = {
     "failures_title": "Genes que falharam",
     "failures_text": "{failed} de {total} gene(s) falharam:\n\n{items}\n\nDetalhes em {path}",
     "msg_output_folder_error": "Não foi possível criar a pasta de resultados:\n{error}",
-    "dialog_choose_output": "Escolha ou digite o nome de uma pasta nova para os resultados",
+    "dialog_choose_output": "Escolha a pasta para os resultados (ou crie uma com \"Nova pasta\")",
     "neutral_window_title": "Modelos nulos e comparações LRT",
     "neutral_header": "Modelos nulos e comparações LRT",
     "neutral_intro": (
@@ -555,6 +563,7 @@ TEXTS_PT: dict[str, object] = {
     "step_results":       "Resultados",
     "step_models_none":   "Ligue os modelos ao lado",
     "step_models_count":  "{n} selecionado(s)",
+    "slot_tree_per_gene": "{n} árvore(s) por gene (GENE.nwk), não precisa escolher outra",
     "slot_choose":        "Escolher",
     "slot_change":        "Trocar",
     "run_summary_no_data":   "Escolha os dados na etapa 1",
@@ -705,7 +714,8 @@ TEXTS_EN: dict[str, object] = {
     "status_running": "● Running",
     "status_paused":  "● Paused",
     "status_stopped": "● Stopped",
-    "status_stops_template": "■ Stops: {n}",
+    "status_stops_template": "■ Stop codons: {n}",
+    "msg_not_results_folder": "{path} has no EasyPAML results (analysis_summary.tsv). Choose the folder given as \u201cOutput folder\u201d when the analysis was run.",
     "label_neutral_models":  "Automatic null models",
 
     "btn_run":           "Run",
@@ -934,6 +944,13 @@ TEXTS_EN: dict[str, object] = {
     "chart_freq":               "Frequency",
 
     # ── New keys (0.3.0) ─────────────────────────────────────────────────
+    "picker_up": "Up",
+    "picker_choose": "Choose this folder",
+    "picker_choose_named": "Choose \u201c{name}\u201d",
+    "picker_cancel": "Cancel",
+    "picker_new_folder": "New folder",
+    "picker_new_folder_prompt": "Name of the new folder:",
+    "picker_hint": "Double-click a folder to open it; one click marks it to choose. Files are shown in grey only so you can check the contents. You can also type a path above and press Enter.",
     "btn_yes": "Yes",
     "btn_no": "No",
     "btn_about": "About",
@@ -993,7 +1010,7 @@ TEXTS_EN: dict[str, object] = {
     "failures_title": "Genes that failed",
     "failures_text": "{failed} of {total} gene(s) failed:\n\n{items}\n\nDetails in {path}",
     "msg_output_folder_error": "Could not create the results folder:\n{error}",
-    "dialog_choose_output": "Choose or type the name of a new folder for the results",
+    "dialog_choose_output": "Choose the folder for the results (or create one with \"New folder\")",
     "neutral_window_title": "Null models and LRT comparisons",
     "neutral_header": "Null models and LRT comparisons",
     "neutral_intro": (
@@ -1101,6 +1118,7 @@ TEXTS_EN: dict[str, object] = {
     "step_results":       "Results",
     "step_models_none":   "Switch models on at the right",
     "step_models_count":  "{n} selected",
+    "slot_tree_per_gene": "{n} per-gene tree(s) (GENE.nwk), no need to choose one",
     "slot_choose":        "Choose",
     "slot_change":        "Change",
     "run_summary_no_data":   "Choose the data in step 1",
