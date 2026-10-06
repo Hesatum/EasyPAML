@@ -172,7 +172,8 @@ e problemas nos dados.
 
 ```
 SAIDA/
-  run_config.json          versões (EasyPAML, codeml, Python), parâmetros do .ctl por modelo, opções
+  methods_text.txt         parágrafo de Métodos (inglês) já preenchido com o que esta execução fez
+  run_config.json          versão e commit do EasyPAML, versões do codeml e do Python, parâmetros do .ctl, opções
   batch_analysis_log.txt   log completo (inclui a saída do codeml)
   genes_status.tsv         um gene por linha: ok / failed + motivo
   analysis_summary.tsv     lnL, np, ω por modelo; ω e p₁ da classe positiva; 2Δl, p e q por teste
@@ -180,6 +181,7 @@ SAIDA/
   M8/GENE_M8.ctl           .ctl usado (todos os parâmetros, caminhos relativos)
   M8/GENE_M8_seq.fasta     alinhamento exatamente como o codeml leu
   M8/GENE_M8_tree.nwk      árvore exatamente como o codeml leu (podada/desenraizada)
+  M8/GENE_M8_results_FAILED.txt  saída parcial de uma execução que falhou (fica fora do LRT)
   M8/GENE_M8_results.txt   saída bruta do codeml
   M8/GENE_M8_sitemap.json  numeração dos sítios: codeml → alinhamento original
 ```
@@ -271,5 +273,6 @@ correction and BEB site tables reported in the user's alignment numbering.
 ## Licença e citação
 
 MIT. Cite o PAML: Yang Z (2007) *PAML 4: Phylogenetic Analysis by Maximum Likelihood.*
-Mol Biol Evol 24:1586–1591. Ao publicar, informe a versão do EasyPAML e do codeml e os
-parâmetros (todos estão em `run_config.json`; ver METODOS.md).
+Mol Biol Evol 24:1586–1591. Ao publicar, informe a versão **e o commit** do EasyPAML
+(em **Sobre** ou `--version`), a versão do codeml e os parâmetros. O `methods_text.txt` de
+cada execução traz tudo isso num parágrafo pronto para revisar (ver METODOS.md).

@@ -246,11 +246,11 @@ class PreflightDialog(_Modal):
 
 def show_about(parent) -> None:
     from backend.codeml_backend import codeml_version, find_codeml
-    from backend.version import __version__
+    from backend.version import version_string
     path = find_codeml()
     ver = codeml_version(path) if path else None
     text = TEXTS['about_text'].format(
-        version=__version__, codeml=path or TEXTS['about_codeml_missing'],
+        version=version_string(), codeml=path or TEXTS['about_codeml_missing'],
         codeml_version=ver or '?', python=platform.python_version(),
         platform=platform.platform())
     show_message(parent, TEXTS['about_title'], text)

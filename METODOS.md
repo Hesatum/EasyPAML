@@ -169,7 +169,8 @@ reproduz a execução.
 
 | Arquivo | Conteúdo |
 |---|---|
-| `run_config.json` | versões do EasyPAML, do codeml e do Python; parâmetros do `.ctl` por modelo; testes LRT; opções |
+| `methods_text.txt` | parágrafo de Métodos (inglês) gerado a partir desta execução |
+| `run_config.json` | versão e commit do EasyPAML, versões do codeml e do Python; parâmetros do `.ctl` por modelo; testes LRT; opções |
 | `analysis_summary.tsv` | por gene: status; lnL, np, ntime, ω, tempo por modelo; ω e p₁ da classe positiva (M2a/M8); 2Δℓ, p e q por teste |
 | `LRT_results.txt` | LRT por gene e por teste, com esta nota metodológica |
 | `genes_status.tsv` | ok / failed + motivo |
@@ -178,7 +179,14 @@ reproduz a execução.
 
 ## 9. Texto sugerido para Métodos (adapte)
 
-> Positive selection was tested with EasyPAML v0.3.0 (https://github.com/Hesatum/EasyPAML)
+Cada execução grava `methods_text.txt` na pasta de resultados: este parágrafo já
+preenchido com o que ela fez (versão e commit do EasyPAML, versão do codeml,
+modelos, parâmetros, testes com df e quantos genes entraram na correção BH de
+cada um). Para citar a versão exata, use o commit: ele aparece em **Sobre**, em
+`easypaml_cli.py --version`, no `run_config.json` (`easypaml_commit`) e no log.
+Modelo genérico:
+
+> Positive selection was tested with EasyPAML v0.3.0 (commit XXXXXXX; https://github.com/Hesatum/EasyPAML)
 > running codeml from PAML vX.Y (Yang 2007). Codon site models M7, M8 and M8a were fitted
 > with codon frequencies F3x4 (CodonFreq = 2), the beta distribution discretised into 10
 > categories (ncatG = 10), κ and ω estimated (initial values 2 and 0.5), and alignment

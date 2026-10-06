@@ -48,7 +48,7 @@ from src.backend import messages
 from src.backend.codeml_backend import CodemlBatchAnalysis, codeml_version, find_codeml
 from src.backend.ctl_params import CODONFREQ_OPTIONS, DEFAULT_CODONFREQ, codonfreq_label
 from src.backend.preflight import run_preflight
-from src.backend.version import __version__
+from src.backend.version import __version__, version_string
 
 VALID_MODELS = {'M0', 'M1a', 'M2a', 'M7', 'M8', 'M8a', 'Branch', 'Branch-site', 'Branch-site_null'}
 _CODONFREQ_HELP = ", ".join(f"{v}={n}" for v, n, _ in CODONFREQ_OPTIONS)
@@ -60,7 +60,7 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    ap.add_argument('--version', action='version', version=f"EasyPAML {__version__}")
+    ap.add_argument('--version', action='version', version=f"EasyPAML {version_string()}")
     ap.add_argument('--config', type=Path, help="arquivo JSON com todos os parametros abaixo (sobrescreve as flags)")
     ap.add_argument('--input', type=Path, help="pasta com .fas/.fasta/.phy/.phylip (um arquivo por gene)")
     ap.add_argument('--tree', type=Path, help="arquivo de arvore Newick (com ou sem cabecalho 'N  1'); "
@@ -279,7 +279,7 @@ def main():
 
     codeml_path = find_codeml(cfg.get('codeml'))
     print("=" * 72)
-    print(f"EasyPAML {__version__} -- CLI")
+    print(f"EasyPAML {version_string()} -- CLI")
     print("=" * 72)
     for k, v in cfg.items():
         print(f"  {k:18s}: {v}")
