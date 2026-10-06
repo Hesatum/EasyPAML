@@ -16,6 +16,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   fixes branch lengths at the M0 values.
 - p-values use `chi2.sf` (`1 − chi2.cdf` rounded large statistics to p = 0), with
   the same rule in the files, the panel and the exports.
+- When M0 runs with other models, each model is fitted from three initial ω
+  values and the best lnL is kept; the saved `.ctl` and output were those of the
+  last start, so the panel, BEB sites and regenerated files could come from a
+  worse fit. The files of the best start are kept now.
 - Runs that fail (time limit, idle, error) no longer enter the LRT. Their partial
   output is kept as `*_results_FAILED.txt`.
 

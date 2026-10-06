@@ -1013,8 +1013,18 @@ class CodemlBatchAnalysis:
                                warm_start_kappa: float, fitted_tree: str,
                                aln=None) -> Dict:
         """Run a model from the warm-start branch lengths and kappa once per initial ω
-        in _WARM_START_OMEGA_TRIALS and keep the best lnL."""
+        in _WARM_START_OMEGA_TRIALS and keep the best lnL. Every start writes the
+        same files in MODEL/, so the files of the best start are put back after a
+        worse one."""
+        out_dir = Path(self.config['output_folder']) / model_name
+        safe = re.sub(r'[^\w.\-]+', '_', fas_file.stem)
+
+        def _files():
+            names = set(out_dir.glob(f"{safe}_{model_name}*")) | set(out_dir.glob(f"{fas_file.stem}_{model_name}_*"))
+            return {p: p.read_bytes() for p in names if p.is_file()}
+
         best = None
+        best_files = {}
         last = None
         for omega0 in self._WARM_START_OMEGA_TRIALS:
             r = self._run_single_analysis(
@@ -1027,6 +1037,13 @@ class CodemlBatchAnalysis:
                 return r
             if r.get('lnL') is not None and (best is None or r['lnL'] > best['lnL']):
                 best = r
+                best_files = _files()
+        if best is not None and best is not last and best_files:
+            for path in set(_files()) - set(best_files):
+                path.unlink(missing_ok=True)
+            for path, data in best_files.items():
+                path.write_bytes(data)
+            self._log(f"[{model_name}] {fas_file.stem}: kept the start with the best lnL ({best['lnL']})")
         return best if best is not None else last
 
 

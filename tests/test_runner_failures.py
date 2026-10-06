@@ -3,6 +3,7 @@
 Uses a fake codeml (a Python script) whose behaviour is set by FAKE_CODEML_MODE."""
 import os
 import platform
+import re
 import stat
 import sys
 import threading
@@ -42,6 +43,11 @@ if mode == 'stdin':
     print("Press Enter to continue", flush=True)
     sys.stdin.read(1)          # returns at once: stdin is closed
     write_ok()
+elif mode == 'omega':
+    w0 = float(re.search(r'^\s*omega\s*=\s*([\d.]+)', ctl, re.M).group(1))
+    with open(out, 'w') as f:      # best lnL when the initial omega is 1
+        f.write("CODONML (in paml version 9.9fake)\nns =  10  ls = 300\n")
+        f.write("lnL(ntime: 17  np: 22):  %.6f      +0.000000\n" % (-4100 - 10 * abs(w0 - 1)))
 elif mode == 'idle':
     time.sleep(60)             # idle, no CPU
 elif mode == 'rc1':
@@ -448,3 +454,18 @@ def test_rerun_reuses_saved_runs_and_only_runs_new_models(tmp_path, fake_codeml,
     app3.config['reuse_results'] = False
     app3.run_batch_analysis()
     assert not app3.results['gene']['M7'].get('reused')
+
+
+def test_multistart_keeps_the_files_of_the_best_start(tmp_path, fake_codeml, monkeypatch):
+    """With several initial omega values the saved .ctl and output are those of the
+    best lnL, not of the last start."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'omega')
+    app = _app(tmp_path, fake_codeml, models=('M8',))
+    app.run_batch_analysis()        # sets up the log and output folder
+    fas = tmp_path / 'in' / 'gene.fasta'
+    tree = (DATA / 'gene_example.nwk').read_text().strip()
+    r = app._run_model_multistart(fas, 'M8', app._log_path, 2.0, tree)
+    assert r['lnL'] == -4100.0
+    out = tmp_path / 'out' / 'M8'
+    assert '-4100.000000' in (out / 'gene_M8_results.txt').read_text()
+    assert re.search(r'^\s*omega\s*=\s*1(\.0*)?\b', (out / 'gene_M8.ctl').read_text(), re.M)
