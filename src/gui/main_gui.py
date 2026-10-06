@@ -1107,9 +1107,6 @@ class App(ctk.CTk):
 
         # ── Results of an earlier run ───────────────────────
         ri, _c4, _ = _step(_sb, None, TEXTS["step_results"])
-        self.btn_results = _obtn(ri, TEXTS["btn_view_results"], self._open_results_viewer)
-        self.btn_results.pack(fill='x', pady=(0, sp['sm']))
-
         self.btn_update_results = _obtn(ri, TEXTS["btn_update_results"],
                                         self._update_results_files)
         self.btn_update_results.pack(fill='x')
