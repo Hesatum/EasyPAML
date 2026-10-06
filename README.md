@@ -188,7 +188,8 @@ Para refazer uma execução à mão: `cd SAIDA/M8 && codeml GENE_M8.ctl`.
 
 ## Dados de exemplo
 
-`exemplos_teste/` tem 25 genes de *Cereus* (cactos) e a árvore correspondente:
+`exemplos_teste/` tem 25 genes de *Cereus* (cactos), com 8 a 21 sequências cada, e
+uma árvore de 21 táxons com exatamente os mesmos nomes dos alinhamentos:
 
 1. **Pasta de alinhamentos**: `exemplos_teste/amostras/`
 2. **Arquivo de árvore**: `exemplos_teste/arvore_amostras.nwk`

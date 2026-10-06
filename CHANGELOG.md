@@ -65,8 +65,11 @@ Correções a partir do teste de usabilidade de 05/10/2026.
 - `.fasta` + `.phy` do mesmo gene contavam como dois genes.
 - Nota metodológica do LRT dizia que os modelos NSsites têm ntime = 0 (falso).
 - Referência do M7/M8 corrigida para Yang et al. (2000).
-- Dados de exemplo: `exemplos_teste/arvore_amostras.nwk` corresponde a `amostras/`
-  (a árvore indicada antes, `final-tree.txt`, não tinha nenhum nome em comum).
+- Dados de exemplo: um único conjunto coerente, `amostras/` (25 genes) +
+  `arvore_amostras.nwk` (21 táxons, os mesmos nomes dos alinhamentos). Saíram
+  `final-tree.txt` e `branchsite-tree.txt` (nenhum nome em comum com `amostras/`),
+  `caster_site_annotated_rooted.txt` (a árvore de origem, agora podada) e as três
+  amostras com nome diferente entre árvore e alinhamento (GS194A2, GS195A3, S149V15).
 - Instalação Linux: `install.sh` cria `.venv` (sem `--user`; funciona no Ubuntu
   24.04/PEP 668), checa venv/tkinter com o comando a rodar, cria o lançador mesmo se
   o codeml falhar; `EasyPAML.sh` versionado; README com URL correta e pré-requisitos.

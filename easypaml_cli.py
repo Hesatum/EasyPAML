@@ -11,7 +11,7 @@ Exemplos:
 
   # Direto por flags
   python3 easypaml_cli.py \\
-      --input exemplos_teste/amostras --tree exemplos_teste/final-tree.txt \\
+      --input exemplos_teste/amostras --tree exemplos_teste/arvore_amostras.nwk \\
       --output resultados/ --models M1a,M2a,M7,M8 --workers 24 --skip-beb
 
   # Via arquivo de config (equivalente, mais facil de arquivar/citar)
