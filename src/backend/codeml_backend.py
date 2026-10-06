@@ -651,8 +651,8 @@ class CodemlBatchAnalysis:
         {'total', 'ok', 'failed', 'stopped', 'failures': {gene: reason}, ...}."""
         if not self.config:
             raise ValueError(
-                "self.config vazio -- defina input_folder/tree_file/output_folder/models "
-                "antes de chamar run_batch_analysis() (ver easypaml_cli.py ou a GUI)."
+                "self.config is empty: set input_folder, tree_file, output_folder and models "
+                "before calling run_batch_analysis() (see easypaml_cli.py or the GUI)."
             )
 
         cfg = self.config
@@ -1747,7 +1747,7 @@ class CodemlBatchAnalysis:
                     lrt_stat = max(0.0, raw_stat)
                     p_value = lrt_stats.p_value(lrt_stat, df, boundary=boundary)
                     p_mix = lrt_stats.p_value_mixture(lrt_stat) if boundary else None
-                    df_display = (f"{df} (chi2(1) puro / pure; mistura so referencia)"
+                    df_display = (f"{df} (chi2(1); mixture shown for reference)"
                                   if boundary else str(df))
                     collected.append({
                         'gene': gene_name, 'lnL_null': lnL_null, 'lnL_alt': lnL_alt,
@@ -1882,7 +1882,7 @@ class CodemlBatchAnalysis:
             return generated_files
         
         except Exception as e:
-            print(f"[ERRO] Falha ao regenerar arquivos: {str(e)}")
+            print(f"[ERROR] Could not regenerate the summary files: {e}")
             traceback.print_exc()
             return {}
     
@@ -2308,7 +2308,7 @@ class CodemlBatchAnalysis:
                         collected.append({
                             'gene': gene, 'lnL_null': lnL_null, 'lnL_alt': lnL_alt,
                             'lrt_stat': lrt_stat, 'df_display':
-                                f"{gene_df} (chi2(1) puro; mistura so referencia)" if is_boundary else str(gene_df),
+                                f"{gene_df} (chi2(1); mixture shown for reference)" if is_boundary else str(gene_df),
                             'p_value': p_value, 'p_value_mixture': p_value_mixture,
                         })
 

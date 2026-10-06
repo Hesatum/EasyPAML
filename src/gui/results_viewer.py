@@ -200,7 +200,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             print(f"[OK] Colunas: {list(self.df.columns)}")
             return True
         except Exception as e:
-            print(f"[ERR] Erro ao carregar dados: {e}")
+            print(f"[ERR] Could not load the data: {e}")
             return False
     
     def _recover_missing_omegas(self):
@@ -232,11 +232,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                             self.df.loc[idx, omega_col] = omega
                             print(f"  [OK] {gene_name} ({model_name}): w = {omega:.4f}")
                         else:
-                            print(f"  [SKIP] {gene_name} ({model_name}): nao foi possivel extrair")
+                            print(f"  [SKIP] {gene_name} ({model_name}): no value found")
                     except Exception as e:
-                        print(f"  [ERR] {gene_name} ({model_name}): erro - {e}")
+                        print(f"  [ERR] {gene_name} ({model_name}): {e}")
                 else:
-                    print(f"  [INFO] {gene_name} ({model_name}): arquivo nao encontrado")
+                    print(f"  [INFO] {gene_name} ({model_name}): file not found")
     
     def _find_results_file(self, gene_name: str, model_name: str):
         """Result file of a gene and model, also under the legacy BranchSite_A name."""
@@ -1061,7 +1061,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             
             df_sites = pd.DataFrame(sites_data)
         except Exception as e:
-            print(f"[ERR] Erro no parser manual: {e}")
+            print(f"[ERR] Fallback parser: {e}")
         
         return df_sites, omega_global
     

@@ -28,10 +28,9 @@ except ImportError:
 try:
     from src.gui.main_gui import App
 except ImportError as exc:
-    print(f"Dependência não encontrada: {exc}\n"
-          "Rode o instalador (Linux/macOS: ./install.sh · Windows: install.bat)\n"
-          "e abra pelo EasyPAML.sh / EasyPAML.bat (ou .venv/bin/python EasyPAML.py).\n"
-          f"--- Missing dependency: {exc}. Run the installer first.")
+    print(f"Missing dependency: {exc}\n"
+          "Run the installer (Linux/macOS: ./install.sh · Windows: install.bat)\n"
+          "and open the program with EasyPAML.sh / EasyPAML.bat (or .venv/bin/python EasyPAML.py).")
     sys.exit(1)
 
 

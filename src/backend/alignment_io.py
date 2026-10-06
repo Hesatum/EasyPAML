@@ -141,9 +141,9 @@ def parse_phylip(text: str) -> Tuple[List[str], Dict[str, str], str]:
             names, seqs = parsed
             return names, seqs, variant
     raise AlignmentError(
-        f"PHYLIP não reconhecido: o cabeçalho declara {ntax} sequências de "
-        f"{nchar} caracteres, mas nenhuma leitura (sequencial/intercalado, "
-        f"nomes de 10 colunas ou separados por espaço) bate com isso"
+        f"PHYLIP not recognised: the header declares {ntax} sequences of "
+        f"{nchar} characters, but no reading (sequential or interleaved, "
+        f"10-column or space-separated names) matches it"
     )
 
 
@@ -152,7 +152,7 @@ def read_alignment(path) -> Alignment:
     try:
         text = path.read_text(encoding='utf-8', errors='replace')
     except OSError as exc:
-        raise AlignmentError(f"não foi possível ler o arquivo: {exc}") from exc
+        raise AlignmentError(f"could not read the file: {exc}") from exc
     stripped = text.lstrip()
     if not stripped:
         raise AlignmentError("empty file")
