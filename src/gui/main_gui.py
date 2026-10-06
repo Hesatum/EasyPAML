@@ -864,6 +864,7 @@ class App(ctk.CTk):
                                      scrollbar_button_color=C['border'],
                                      scrollbar_button_hover_color=C['border_hover'])
         _sb.pack(fill='both', expand=True, padx=0, pady=(sp['md'], 0))
+        self._sidebar_scroll = _sb
 
         # ── Footer (outside the scroll area) ──────────────────────
         self._build_lang_footer()
@@ -1366,6 +1367,19 @@ class App(ctk.CTk):
         else:
             body.pack(fill='x', pady=(SPACE['md'], 0))
             self._settings_btn.configure(text=TEXTS["settings_hide"])
+            self.after(50, self._scroll_sidebar_to, self._settings_btn)
+
+    def _scroll_sidebar_to(self, widget):
+        """Scroll the sidebar so that widget is near the top."""
+        try:
+            canvas = self._sidebar_scroll._parent_canvas
+            self.update_idletasks()
+            inner = self._sidebar_scroll
+            total = max(1, inner.winfo_height())
+            y = widget.winfo_rooty() - inner.winfo_rooty() - 3 * SPACE['xl']
+            canvas.yview_moveto(max(0.0, min(1.0, y / total)))
+        except Exception:
+            pass
 
     def _on_model_switch(self, code):
         alt = self._auto_nulls.get(code)
