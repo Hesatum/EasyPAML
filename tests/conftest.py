@@ -10,6 +10,6 @@ DATA = ROOT / 'tests' / 'data'
 
 
 def real_codeml():
-    """codeml real para os testes de integração (EASYPAML_TEST_CODEML)."""
+    """Real codeml for the integration tests (EASYPAML_TEST_CODEML)."""
     p = os.environ.get('EASYPAML_TEST_CODEML')
     return p if p and Path(p).exists() else None

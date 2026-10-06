@@ -1,21 +1,19 @@
 """
-Parâmetros do arquivo de controle (.ctl) do CODEML.
+codeml control file (.ctl) parameters.
 
-Tudo que vai para o .ctl é escrito EXPLICITAMENTE (nada fica no default
-interno do codeml), para o resultado não depender de detalhes de invocação nem
-da versão do PAML. Exemplo real: sem ncatG, o codeml (4.9j e 4.10.10)
-discretiza a beta do M7/M8 em 4 categorias quando o modelo roda sozinho e em
-10 quando 'NSsites = 7 8' roda num mesmo .ctl -- os lnL mudam.
+Every parameter is written explicitly so results do not depend on codeml's
+internal defaults. Without ncatG, for example, codeml (4.9j and 4.10.10) uses 4
+beta categories when M7 or M8 runs alone and 10 when 'NSsites = 7 8' runs in
+one .ctl, and lnL changes.
 
-Os valores padrão abaixo seguem o codeml.ctl de referência distribuído com o
-PAML (pamlDOC), exceto CodonFreq (F3x4 em vez de F61) e ncatG = 10, que é a
-prática comum para M7/M8.
+Defaults follow the reference codeml.ctl shipped with PAML, except CodonFreq
+(F3x4 instead of F61) and ncatG = 10, the usual choice for M7/M8.
 """
 
 from collections import OrderedDict
 from typing import Dict, List, Tuple
 
-# (valor, nome curto, descrição) -- codificação do pamlDOC, seção codeml.
+# (value, short name, description), as coded in the codeml section of pamlDOC
 CODONFREQ_OPTIONS: List[Tuple[int, str, str]] = [
     (0, "Fequal", "1/61 each"),
     (1, "F1x4", "F1x4"),
@@ -33,7 +31,7 @@ CODONFREQ_NAMES: Dict[int, str] = {v: name for v, name, _ in CODONFREQ_OPTIONS}
 
 
 def codonfreq_label(value) -> str:
-    """'2 = F3x4' -- rótulo usado na interface (lista suspensa) e no log."""
+    """'2 = F3x4', the label used in the interface and the log."""
     try:
         v = int(value)
     except (TypeError, ValueError):
@@ -43,14 +41,14 @@ def codonfreq_label(value) -> str:
 
 
 def parse_codonfreq_label(label) -> int:
-    """Inverso de codonfreq_label: '2 = F3x4' -> 2 (aceita também '2')."""
+    """Inverse of codonfreq_label: '2 = F3x4' or '2' -> 2."""
     text = str(label).strip()
     head = text.split('=', 1)[0].strip()
     return int(head)
 
 
-# Parâmetros do .ctl que NÃO dependem do modelo, com os valores padrão.
-# A ordem é a do codeml.ctl de referência.
+# .ctl parameters that do not depend on the model, in the order of the
+# reference codeml.ctl
 DEFAULT_CTL_PARAMS: "OrderedDict[str, object]" = OrderedDict([
     ('noisy', 1),
     ('verbose', 1),
@@ -131,8 +129,7 @@ def _fmt_value(key: str, value) -> str:
 
 
 def build_ctl_text(params: Dict[str, object]) -> str:
-    """Gera o texto do .ctl com todos os parâmetros, um por linha,
-    alinhados no '=' como no codeml.ctl de referência."""
+    """The .ctl text, one parameter per line, aligned on '=' like the reference codeml.ctl."""
     lines = []
     keys = [k for k in _CTL_ORDER if k in params] + \
            [k for k in params if k not in _CTL_ORDER]
@@ -141,15 +138,15 @@ def build_ctl_text(params: Dict[str, object]) -> str:
         comment = _COMMENTS.get(key)
         line = f"{key:>13} = {val}"
         if comment:
-            # sempre pelo menos 3 espaços antes do '*': colado no valor
-            # ("arquivo.fasta*") o codeml lê o '*' como parte do nome
+            # at least 3 spaces before '*': glued to a value ("file.fasta*")
+            # codeml reads the '*' as part of the file name
             line = line.ljust(max(44, len(line) + 3)) + f"* {comment}"
         lines.append(line)
     return "\n".join(lines) + "\n"
 
 
 def parse_ctl_text(text: str) -> Dict[str, str]:
-    """Lê 'chave = valor' de um .ctl (ignorando comentários após '*')."""
+    """Read 'key = value' pairs from a .ctl, ignoring comments after '*'."""
     out: Dict[str, str] = {}
     for raw in text.splitlines():
         line = raw.split('*', 1)[0].strip()

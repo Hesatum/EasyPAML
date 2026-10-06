@@ -1,8 +1,6 @@
-"""Item 2 -- falhar de forma visível, nunca travar, Parar sem órfãos.
+"""Failures are visible, codeml never hangs, and Stop leaves no orphan process.
 
-Usa um codeml FALSO (script Python) que imita os modos de falha vistos no
-teste de usabilidade; o comportamento é escolhido por FAKE_CODEML_MODE.
-"""
+Uses a fake codeml (a Python script) whose behaviour is set by FAKE_CODEML_MODE."""
 import os
 import platform
 import stat
@@ -28,7 +26,7 @@ ctl = open(sys.argv[1]).read()
 out = re.search(r'outfile\s*=\s*(\S+)', ctl).group(1)
 mode = os.environ.get('FAKE_CODEML_MODE', 'ok')
 print("CODONML (in paml version 9.9fake)", flush=True)
-if sys.argv[1] == 'p.ctl':     # sonda de versão do EasyPAML
+if sys.argv[1] == 'p.ctl':     # EasyPAML's version probe
     sys.exit(0)
 def write_ok():
     with open(out, 'w') as f:
@@ -36,16 +34,16 @@ def write_ok():
         f.write("lnL(ntime: 17  np: 22):  -4100.000000      +0.000000\n")
 fail_model = os.environ.get('FAKE_FAIL_MODEL')
 if fail_model and sys.argv[1].endswith('_' + fail_model + '.ctl'):
-    write_ok()                 # escreve o lnL e depois para (como um codeml morto no BEB)
+    write_ok()                 # writes lnL, then stalls (like a codeml stopped during BEB)
     time.sleep(60)
     sys.exit(0)
 if mode == 'stdin':
     print("stop codon TGA in seq. #   3 (Gorilla_gorilla), nucleotide site 448")
     print("Press Enter to continue", flush=True)
-    sys.stdin.read(1)          # com stdin fechado retorna na hora
+    sys.stdin.read(1)          # returns at once: stdin is closed
     write_ok()
 elif mode == 'idle':
-    time.sleep(60)             # parado, sem CPU
+    time.sleep(60)             # idle, no CPU
 elif mode == 'rc1':
     print("Error: Number of sequences different in tree and seq files.", flush=True)
     sys.exit(1)
@@ -54,12 +52,12 @@ elif mode == 'nolnl':
 elif mode == 'busy':
     t0 = time.time()
     while time.time() - t0 < float(os.environ.get('FAKE_BUSY_S', '5')):
-        pass                   # trabalha (usa CPU) e termina bem
+        pass                   # uses CPU, then finishes
     write_ok()
 elif mode == 'slow':
     t0 = time.time()
     while time.time() - t0 < 60:
-        pass                   # usa CPU (não é inativo)
+        pass                   # busy, never finishes
 else:
     write_ok()
 '''
@@ -75,8 +73,7 @@ def fake_codeml(tmp_path):
 
 @pytest.fixture
 def wrapped_codeml(tmp_path, fake_codeml):
-    """Como o /usr/bin/codeml do Debian/Ubuntu: um script sh que roda o codeml
-    de verdade como FILHO (sem exec)."""
+    """Like /usr/bin/codeml on Debian/Ubuntu: a sh script that runs codeml as a child."""
     path = tmp_path / 'codeml_wrapper'
     path.write_text(f'#!/bin/sh -e\n{fake_codeml} "$@"\n')
     path.chmod(path.stat().st_mode | stat.S_IEXEC)
@@ -105,7 +102,7 @@ def test_success_path(tmp_path, fake_codeml, monkeypatch):
     summary = app.run_batch_analysis()
     assert summary['ok'] == 1 and summary['failed'] == 0
     assert any('ANALYSIS COMPLETE' in t for _, t in app._test_log)
-    # reprodutibilidade: .ctl com caminhos relativos + cópias ao lado
+    # .ctl with relative paths, with the inputs next to it
     m8 = tmp_path / 'out' / 'M8'
     ctl = (m8 / 'gene_M8.ctl').read_text()
     assert 'seqfile = gene_M8_seq.fasta' in ctl and 'treefile = gene_M8_tree.nwk' in ctl
@@ -173,8 +170,7 @@ def test_timeout_unset_uses_automatic_limit(tmp_path, fake_codeml, monkeypatch):
 
 
 def test_wrapper_script_busy_child_is_not_idle(tmp_path, wrapped_codeml, monkeypatch):
-    """Rodada 2 do teste de usabilidade: o detector de inatividade media só o
-    script sh e matava o codeml filho que estava trabalhando."""
+    """A busy codeml under a wrapper script is not taken as idle."""
     monkeypatch.setenv('FAKE_CODEML_MODE', 'busy')
     monkeypatch.setenv('FAKE_BUSY_S', '6')
     app = _app(tmp_path, wrapped_codeml, models=('M7',))
@@ -207,8 +203,7 @@ def test_stop_kills_child_of_wrapper_script(tmp_path, wrapped_codeml, monkeypatc
 
 
 def test_failed_run_output_is_not_used_in_lrt(tmp_path, fake_codeml, monkeypatch):
-    """Rodada 2: um M8 morto depois de escrever o lnL entrava no LRT e o painel
-    mostrava o gene que falhou como 'significativo'."""
+    """Output of a run stopped after writing lnL stays out of the LRT."""
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     monkeypatch.setenv('FAKE_FAIL_MODEL', 'M8')
     app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))
@@ -226,7 +221,7 @@ def test_failed_run_output_is_not_used_in_lrt(tmp_path, fake_codeml, monkeypatch
 
 
 def test_regenerate_skips_genes_marked_failed(tmp_path, fake_codeml, monkeypatch):
-    """Pasta de versão anterior: *_results.txt de um gene que falhou continua lá."""
+    """Older output folders: a failed gene's *_results.txt is ignored."""
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))
     app.run_batch_analysis()
@@ -241,8 +236,7 @@ def test_regenerate_skips_genes_marked_failed(tmp_path, fake_codeml, monkeypatch
 
 
 def test_tree_without_branch_lengths_is_not_given_zeros(tmp_path, fake_codeml, monkeypatch):
-    """Rodada 2 (revisor): árvore sem comprimentos chegava ao codeml com ':0'
-    em todos os ramos."""
+    """A tree without branch lengths does not get ':0' on every branch."""
     import re
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     app = _app(tmp_path, fake_codeml, models=('M7',))
@@ -255,8 +249,7 @@ def test_tree_without_branch_lengths_is_not_given_zeros(tmp_path, fake_codeml, m
 
 
 def test_cli_side_outputs_sites_table_and_m8a_warning(tmp_path, fake_codeml, monkeypatch):
-    """Rodada 2 (pesquisador): o CLI não exportava os sítios e não avisava do
-    M7×M8 sem M8a."""
+    """The command line writes sites_BEB.tsv and warns about M7 vs M8 without M8a."""
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))
     app.run_batch_analysis()
@@ -287,7 +280,7 @@ def test_stop_kills_codeml_without_orphans(tmp_path, fake_codeml, monkeypatch):
     summary = app.run_batch_analysis()
     th.join()
     assert time.time() - t0 < 20
-    assert seen and all(p.poll() is not None for p in seen)   # recolhidos, sem zumbi
+    assert seen and all(p.poll() is not None for p in seen)   # reaped, no zombies
     assert summary['stopped'] is True
     assert not any('ANALYSIS COMPLETE' in t for _, t in app._test_log)
 
@@ -311,7 +304,7 @@ def test_ignore_stop_codons_runs_and_warns_about_excluded_taxon(tmp_path, fake_c
     warns = [t for level, t in app._test_log if level == 'warn']
     assert any('Macaca_mulata' in t and 'EXCLUDED' in t for t in warns)
     assert any('stop codon' in t for t in warns)
-    # rodada 2: o aviso continua registrado depois da análise
+    # the warning is kept after the run
     status = (tmp_path / 'out' / 'genes_status.tsv').read_text().splitlines()
     assert status[0] == 'Gene\tstatus\treason\tnotes'
     gene_line = status[1].split('\t')
@@ -334,17 +327,17 @@ def test_real_codeml_problematic_data_never_hangs(tmp_path):
 
 
 def test_per_gene_tree_is_paired_by_file_name(tmp_path, fake_codeml, monkeypatch):
-    """Item 8: GENE.nwk ao lado do alinhamento substitui a árvore geral para aquele gene."""
+    """GENE.nwk next to the alignment replaces the general tree for that gene."""
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     app = _app(tmp_path, fake_codeml, models=('M7',))
     inp = app.config['input_folder']
     (inp / 'g2.fasta').write_text((DATA / 'gene_exemplo.fasta').read_text())
-    # árvore própria do gene 'gene' só com 6 táxons -> 4 sequências excluídas
+    # the gene's own tree has 6 taxa -> 4 sequences excluded
     (inp / 'gene.nwk').write_text(
         "((Homo_sapiens,Pan_troglodytes),Gorilla_gorilla,(Macaca_mulatta,(Papio_anubis,Aotus_nancymaae)));\n")
     app.config['tree_file'] = None
     summary = app.run_batch_analysis()
-    # g2 não tem árvore própria nem árvore geral -> falha clara (sem travar)
+    # g2 has no tree at all -> clear failure
     assert summary['failures'].get('g2')
     tree_used = (tmp_path / 'out' / 'M7' / 'gene_M7_tree.nwk').read_text()
     assert tree_used.startswith('6  1')
@@ -354,14 +347,14 @@ def test_per_gene_tree_is_paired_by_file_name(tmp_path, fake_codeml, monkeypatch
     (app2.config['input_folder'] / 'gene.nwk').write_text(
         "((Homo_sapiens,Pan_troglodytes),Gorilla_gorilla,(Macaca_mulatta,(Papio_anubis,Aotus_nancymaae)));\n")
     (app2.config['input_folder'] / 'g2.fasta').write_text((DATA / 'gene_exemplo.fasta').read_text())
-    summary2 = app2.run_batch_analysis()          # com árvore geral: g2 usa a geral
+    summary2 = app2.run_batch_analysis()          # with a general tree, g2 uses it
     assert summary2['ok'] == 2
     assert (tmp_path / 'second' / 'out' / 'M7' / 'g2_M7_tree.nwk').read_text().startswith('10  1')
     assert (tmp_path / 'second' / 'out' / 'M7' / 'gene_M7_tree.nwk').read_text().startswith('6  1')
 
 
 def test_codeml_symlink_is_not_resolved(tmp_path):
-    """Debian: /usr/bin/codeml -> script único que escolhe o programa pelo nome."""
+    """Debian: /usr/bin/codeml is a link to one script that dispatches by name."""
     from src.backend.codeml_backend import find_codeml
     target = tmp_path / 'baseml'
     target.write_text('#!/bin/sh\n')
@@ -371,8 +364,8 @@ def test_codeml_symlink_is_not_resolved(tmp_path):
 
 
 def test_branch_site_uses_labeled_tree(tmp_path, fake_codeml, monkeypatch):
-    """Árvore marcada (#1) vai para o .ctl do Branch-site, podada ao gene, sem
-    comprimentos de ramo; o nulo usa fix_omega = 1."""
+    """The #1-labelled tree reaches the branch-site .ctl pruned and without branch
+    lengths; the null uses fix_omega = 1."""
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     app = _app(tmp_path, fake_codeml, models=('Branch-site_null', 'Branch-site'))
     (app.config['input_folder'] / 'gene.fasta').write_text((DATA / 'gene_problematico.fasta').read_text())
@@ -385,7 +378,7 @@ def test_branch_site_uses_labeled_tree(tmp_path, fake_codeml, monkeypatch):
     out = tmp_path / 'out'
     tree = (out / 'Branch-site' / 'gene_Branch-site_tree.nwk').read_text()
     assert '#1' in tree and ':0.1' not in tree
-    assert tree.startswith('9  1')                 # Macaca_mulata ausente da árvore -> 9 táxons
+    assert tree.startswith('9  1')                 # Macaca_mulata missing from the tree -> 9 taxa
     from src.backend.ctl_params import parse_ctl_text
     null = parse_ctl_text((out / 'Branch-site_null' / 'gene_Branch-site_null.ctl').read_text())
     assert null['model'] == '2' and null['NSsites'] == '2' and null['fix_omega'] == '1'
@@ -395,7 +388,7 @@ def test_branch_site_uses_labeled_tree(tmp_path, fake_codeml, monkeypatch):
 
 
 def test_pruning_keeps_branch_labels():
-    """(Macaca,Papio)#2 sem Macaca: a marca #2 passa para Papio (antes sumia)."""
+    """(Macaca,Papio)#2 without Macaca: the #2 label moves to Papio."""
     from io import StringIO
     from Bio import Phylo
     tree = Phylo.read(StringIO("(((Homo,Pan)#1,Gorilla),((Macaca,Papio)#2,(Aotus,Saimiri)));"), 'newick')

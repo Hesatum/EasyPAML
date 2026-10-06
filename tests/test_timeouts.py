@@ -1,11 +1,11 @@
-"""Tempo limite automático por modelo × tamanho do gene (docs/benchmark_tempos.md)."""
+"""Automatic time limit by model and gene size (docs/timing_benchmark.md)."""
 
 import pytest
 
 from backend.timeouts import (MIN_SECONDS, SLACK, auto_timeout, estimate_seconds,
                               resolve_timeout, user_timeout)
 
-# (modelo, táxons, códons, segundos medidos) -- amostra de docs/benchmark_tempos.md
+# (model, taxa, codons, measured seconds) from docs/timing_benchmark.md
 MEASURED = [
     ('M0', 60, 1500, 2563),
     ('M1a', 30, 500, 392),

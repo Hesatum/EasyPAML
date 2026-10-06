@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-EasyPAML - Interface intuitiva para análise de seleção positiva com PAML/CODEML
-"""
+"""EasyPAML: positive selection analysis with PAML/codeml (window entry point)."""
 import sys
 import os
 from pathlib import Path
@@ -21,12 +19,11 @@ sys.path.insert(0, str(_HERE))
 try:
     import tkinter  # noqa: F401
 except ImportError:
-    print("O EasyPAML precisa do tkinter (janela gráfica do Python), que não está instalado.\n"
+    print("EasyPAML needs tkinter (Python's window toolkit), which is not installed.\n"
           "  Ubuntu/Debian: sudo apt install python3-tk\n"
           "  Fedora:        sudo dnf install python3-tkinter\n"
           "  macOS (brew):  brew install python-tk\n"
-          "O modo linha de comando funciona sem ele: python3 easypaml_cli.py --help\n"
-          "--- EasyPAML needs tkinter (sudo apt install python3-tk).")
+          "The command line works without it: python3 easypaml_cli.py --help")
     sys.exit(1)
 try:
     from src.gui.main_gui import App
@@ -39,7 +36,7 @@ except ImportError as exc:
 
 
 def main():
-    App.load_language_pref()   # carrega idioma salvo ANTES de construir a janela
+    App.load_language_pref()   # load the saved language before building the window
     app = App()
     app.mainloop()
 

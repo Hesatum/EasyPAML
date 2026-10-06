@@ -1,4 +1,4 @@
-"""Item 1 -- riscos científicos: CodonFreq, .ctl explícito, M8a, LRT."""
+"""CodonFreq, explicit .ctl, M8a and LRT."""
 import math
 import re
 from pathlib import Path
@@ -29,7 +29,7 @@ def test_default_codonfreq_is_f3x4_everywhere():
 
 
 def test_no_wrong_codonfreq_label_left_in_sources():
-    """O rótulo '7=F3×4' (errado) não pode voltar em nenhum lugar."""
+    """The wrong label '7=F3×4' must not come back."""
     bad = re.compile(r'7\s*=\s*F3\s*[x×]\s*4', re.IGNORECASE)
     for path in list((ROOT / 'src').rglob('*.py')) + [ROOT / 'README.md', ROOT / 'METHODS.md']:
         assert not bad.search(path.read_text(encoding='utf-8')), path
@@ -122,8 +122,8 @@ def test_m7_m8_references():
 
 
 def test_ctl_comment_never_glued_to_long_values():
-    """Bug real: com nome longo o '*' do comentário colava no valor
-    ('..._seq.fasta*') e o codeml não achava o arquivo."""
+    """With a long name the comment '*' was glued to the value ('..._seq.fasta*')
+    and codeml could not find the file."""
     app = CodemlBatchAnalysis()
     app.config = {}
     long = '25_PHOT2__phototropin2_chloroplast_avoidance_high_light_M8a_seq.fasta'
@@ -135,7 +135,7 @@ def test_ctl_comment_never_glued_to_long_values():
 
 
 def test_regenerated_summary_keeps_tiny_p_values(tmp_path):
-    """Regenerar o TSV não pode transformar p = 4e-23 em 0.000000."""
+    """Regenerating the TSV must not turn p = 4e-23 into 0.000000."""
     import pandas as pd
     for model, lnl, np_ in (('M7', -4174.199719, 20), ('M8', -4122.628318, 22)):
         d = tmp_path / model
@@ -150,18 +150,17 @@ def test_regenerated_summary_keeps_tiny_p_values(tmp_path):
 
 
 def test_m8a_can_be_left_out():
-    """Item 2 (2ª rodada): opção para não adicionar o M8a; o padrão continua com ele."""
+    """M8a can be left out; by default it is added."""
     assert set(CodemlBatchAnalysis.auto_complete_null_models(['M8'], include_m8a=False)) == {'M8', 'M7'}
     assert set(CodemlBatchAnalysis.auto_complete_null_models(['M8'])) == {'M8', 'M7', 'M8a'}
-    # M8a escolhido à mão continua mesmo com a opção desligada
+    # an M8a chosen by hand stays
     assert 'M8a' in CodemlBatchAnalysis.auto_complete_null_models(['M8', 'M8a'], include_m8a=False)
     cli = (ROOT / 'easypaml_cli.py').read_text(encoding='utf-8')
     assert '--no-m8a' in cli
 
 
 def test_lrt_degrees_of_freedom():
-    """Diferença de parâmetros livres entre os modelos aninhados (rodada 2 do
-    teste de usabilidade: M0 vs M1a estava com df = 2; o certo é 1)."""
+    """df is the difference in free parameters between the nested models."""
     from src.backend import lrt_stats
     assert lrt_stats.PAIRS[('M0', 'M1a')]['df'] == 1
     assert lrt_stats.PAIRS[('M1a', 'M2a')]['df'] == 2
@@ -171,7 +170,7 @@ def test_lrt_degrees_of_freedom():
 
 
 def test_model_help_in_both_languages():
-    """Rodada 2: a ajuda dos modelos ficava em inglês com a janela em PT."""
+    """Model help exists in both languages."""
     en, pt = CodemlBatchAnalysis.MODEL_INFO, CodemlBatchAnalysis.MODEL_INFO_PT
     assert set(en) == set(pt)
     for code in en:

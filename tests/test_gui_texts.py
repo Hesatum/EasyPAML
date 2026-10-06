@@ -1,4 +1,4 @@
-"""Item 6 -- textos PT/EN completos e cores com contraste >= 4,5:1 (sem abrir Tk)."""
+"""Interface texts in both languages and colour contrast (without opening Tk)."""
 import re
 import sys
 import types
@@ -36,7 +36,7 @@ def test_default_language_is_english(texts):
 
 
 def test_pt_texts_have_accents(texts):
-    """Palavras que apareciam sem acento na interface em PT."""
+    """Portuguese words that must keep their accents."""
     unaccented = re.compile(r'\b(Nao|CONFIGURACOES|EXECUCAO|Analise|ANALISE|Parametros|Proposito|'
                             r'Interpretacao|Referencias|arvore|sitios?|Instrucoes)\b')
     for key, value in texts.TEXTS_PT.items():
@@ -45,7 +45,7 @@ def test_pt_texts_have_accents(texts):
 
 
 def test_pt_texts_are_translated(texts):
-    """Termos que ficavam em inglês na interface em PT."""
+    """Terms that must be translated in the Portuguese interface."""
     for key in ('btn_tree_file', 'tab_site_models', 'model_status_default', 'viewer_tab_lrt',
                 'viewer_tab_branch'):
         assert texts.TEXTS_PT[key] != texts.TEXTS_EN[key], key
@@ -68,7 +68,7 @@ LAYERS = ('bg_dark', 'bg_card', 'bg_card_hover', 'bg_window', 'bg_panel', 'bg_su
 
 
 def _palettes():
-    """DARK_PALETTE e LIGHT_PALETTE de ui_helpers, sem importar customtkinter."""
+    """DARK_PALETTE and LIGHT_PALETTE from ui_helpers, without importing customtkinter."""
     src = (ROOT / 'src' / 'gui' / 'ui_helpers.py').read_text(encoding='utf-8')
     out = {}
     for name in ('DARK_PALETTE', 'LIGHT_PALETTE'):
@@ -134,7 +134,7 @@ def test_plot_and_canvas_text(name):
 
 
 def test_gui_modules_take_text_colors_from_the_palette():
-    """Texto secundário/terciário das janelas vem de PALETTE (vale nos dois temas)."""
+    """Window text colours come from PALETTE, so they work in both themes."""
     for path in ('src/gui/main_gui.py', 'src/gui/results_viewer.py'):
         src = (ROOT / path).read_text(encoding='utf-8')
         for key in ('text_tertiary', 'text_muted'):

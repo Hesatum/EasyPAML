@@ -1,9 +1,5 @@
-"""
-CODEML Interactive Batch Analysis System
-Sistema interativo para executar análises CODEML em batch
-Gera automaticamente os arquivos .ctl necessários
-Requer apenas arquivos .fas e .tree
-"""
+"""Batch runner for codeml: builds each .ctl, runs codeml per gene and model,
+computes the LRTs and writes the summary files."""
 
 import os
 import platform
@@ -33,11 +29,10 @@ from .preflight import discover_per_gene_trees, group_by_gene, list_alignment_fi
 from .site_map import codeml_site_count, write_sitemap
 from .timeouts import resolve_timeout, user_timeout
 
-# saída parcial de uma execução que falhou (não casa com *_results.txt)
+# partial output of a failed run (does not match *_results.txt)
 FAILED_RESULTS_SUFFIX = '_results_FAILED.txt'
 from .version import __version__, source_commit, version_string
 
-# Absolute path to the bundled codeml binary — works regardless of CWD.
 _APP_ROOT   = Path(__file__).resolve().parent.parent.parent
 _CODEML_BIN = (_APP_ROOT / 'bin' / 'codeml.exe'
                if platform.system() == 'Windows'
@@ -45,13 +40,11 @@ _CODEML_BIN = (_APP_ROOT / 'bin' / 'codeml.exe'
 
 
 def find_codeml(explicit: Optional[str] = None) -> Optional[str]:
-    """Caminho do codeml a usar, em ordem: argumento/config, variável de
-    ambiente EASYPAML_CODEML, bin/codeml(.exe) do projeto, codeml no PATH."""
+    """codeml to use: the argument, EASYPAML_CODEML, bin/codeml(.exe), then PATH."""
     for cand in (explicit, os.environ.get('EASYPAML_CODEML')):
         if cand and Path(cand).exists():
-            # absolute(), NÃO resolve(): no Debian/Ubuntu /usr/bin/codeml é um link
-            # para um script único que decide o programa pelo nome com que foi
-            # chamado -- resolvendo o link, rodaria o baseml.
+            # absolute(), not resolve(): on Debian/Ubuntu /usr/bin/codeml links to a
+            # script that picks the program by the name it was called with
             return str(Path(cand).absolute())
     if _CODEML_BIN.exists():
         return str(_CODEML_BIN)
@@ -62,9 +55,8 @@ _CODEML_VERSION_CACHE: Dict[str, Optional[str]] = {}
 
 
 def codeml_version(codeml_path: Optional[str]) -> Optional[str]:
-    """'4.9j' / '4.10.10' -- o codeml só imprime a versão quando roda uma
-    análise, então roda uma minúscula (3 sequências, 3 códons, M0) numa
-    pasta temporária. Leva milissegundos."""
+    """codeml version ('4.9j', '4.10.10'). codeml prints it only while running, so
+    this runs a tiny M0 analysis in a temporary folder."""
     if not codeml_path:
         return None
     if codeml_path in _CODEML_VERSION_CACHE:
@@ -89,9 +81,8 @@ def codeml_version(codeml_path: Optional[str]) -> Optional[str]:
 
 
 class CodemlBatchAnalysis:
-    """Sistema completo para análises CODEML em batch"""
+    """Runs codeml over a folder of genes."""
     
-    # Templates de configuração para diferentes modelos
     MODEL_CONFIGS = {
         'M0': {
             'description': 'Homogeneous model - one ω for all sites',
@@ -168,7 +159,6 @@ class CodemlBatchAnalysis:
         }
     }
     
-    # Informações detalhadas dos modelos (para exibição no botão "?")
     MODEL_INFO = {
         'M0': {
             'full_name': 'One-Ratio Model',
@@ -256,7 +246,6 @@ class CodemlBatchAnalysis:
         }
     }
     
-    # Mesmo conteúdo, em português (a janela escolhe pelo idioma)
     MODEL_INFO_PT = {
         'M0': {
             'full_name': 'Modelo de uma razão',
@@ -343,7 +332,6 @@ class CodemlBatchAnalysis:
         },
     }
 
-    # Comparações LRT comuns
     LRT_COMPARISONS = {
         'Site Models': [
             ('M0', 'M1a', 'Tests if ω varies among sites'),
@@ -359,43 +347,31 @@ class CodemlBatchAnalysis:
         ]
     }
     
-    # Mapeamento de modelos alternativos -> modelos nulos (auto-seleção)
     NULL_MODEL_PAIRS = {
-        'M2a': 'M1a',              # M2a (alternativo) -> M1a (nulo)
-        'M8': ['M7', 'M8a'],       # M8 (alternativo) -> M7 e M8a (nulos)
-        'Branch': 'M0',            # Branch -> M0 (nulo)
-        'Branch-site': 'Branch-site_null'  # Branch-site -> Branch-site_null
+        'M2a': 'M1a',
+        'M8': ['M7', 'M8a'],
+        'Branch': 'M0',
+        'Branch-site': 'Branch-site_null'
     }
     
-    # Modelos neutros: apenas Branch-site_null requer fix_omega=1 no .ctl
-    # (ω₂=1 fixado conforme Yang et al. 2005, Zhang et al. 2005)
-    # M0 e M1a NÃO precisam de fix_omega=1:
-    #   - M0 estima ω livremente (null para Branch model)
-    #   - M1a (NSsites=1): ω₁=1 é restringido INTERNAMENTE pelo CODEML via NSsites=1;
-    #     fix_omega=1 no .ctl fixaria TODOS os ω=1, corrompendo o modelo
+    # Nulls that need fix_omega = 1. M1a must not get it: codeml already fixes
+    # ω₁ = 1 there, and fix_omega would fix every ω.
     NEUTRAL_MODELS = {
         'M8a': {
             'fix_omega': 1,
             'omega': 1.0,
             'corresponding_alternative': 'M8',
-            'reason': 'M8a: classe extra com ω = 1 fixado (Swanson et al. 2003)'
+            'reason': 'M8a: extra class with ω = 1 fixed (Swanson et al. 2003)'
         },
         'Branch-site_null': {
             'fix_omega': 1,
             'omega': 1.0,
             'corresponding_alternative': 'Branch-site',
-            'reason': 'Branch-site_null: ω₂=1 fixado (Yang et al. 2005, Zhang et al. 2005)'
+            'reason': 'Branch-site null: ω₂ = 1 fixed (Zhang et al. 2005)'
         }
     }
 
-    # LRT do Branch-site usa distribuição 50:50 de χ²₀ + χ²₁ (não χ² padrão)
-    # Valor crítico a α=0.05: 2.706 (qchisq(0.90, df=1))
-    # Valor crítico a α=0.01: 5.412 (qchisq(0.98, df=1))
-    BRANCHSITE_MIXTURE_CRITICAL = {0.05: 2.706, 0.01: 5.412}
-
-    # Mapeamento de nomes legados (pastas antigas) → nomes de exibição atuais.
-    # Centralizado aqui para evitar repetição em _regenerate_analysis_summary,
-    # _regenerate_batch_log e _regenerate_lrt_results.
+    # legacy folder names -> current model names
     _LEGACY_MODEL_NAMES: Dict[str, str] = {
         'BranchSite_A':      'Branch-site',
         'BranchSite_A_null': 'Branch-site_null',
@@ -403,69 +379,43 @@ class CodemlBatchAnalysis:
     
     @staticmethod
     def available_cores() -> int:
-        """Retorna o número de cores lógicos disponíveis no sistema."""
+        """Number of logical CPUs."""
         return os.cpu_count() or 1
 
     @staticmethod
     def _get_fast_tempdir() -> str:
-        """
-        Retorna o diretório temporário mais rápido disponível na plataforma.
-
-        Linux: verifica /dev/shm (tmpfs — filesystem em RAM).  Se existir e for
-        gravável, usa-o para que os arquivos intermediários do CODEML (rub, rst,
-        2base.t, etc.) nunca toquem o disco, eliminando latência de I/O.
-
-        Windows / Mac / outros: fallback para tempfile.gettempdir(), que em
-        instalações modernas geralmente aponta para um SSD NVMe do sistema.
-
-        Nota de segurança: /dev/shm costuma ser limitado a 50 % da RAM, mas os
-        arquivos temporários de cada run são pequenos (< 5 MB por gene×modelo) e
-        são removidos imediatamente após a execução, então o uso simultâneo máximo
-        é de aproximadamente (n_workers × 5 MB) — muitíssimo abaixo do limite.
-        """
+        """Temporary folder for codeml runs: /dev/shm (RAM) on Linux when writable,
+        otherwise the system temporary folder."""
         shm = Path('/dev/shm')
         if shm.exists() and shm.is_dir():
             try:
-                # Verificação de escrita real antes de comprometer
                 probe = shm / f'.easypam_probe_{os.getpid()}'
                 probe.write_bytes(b'\x00')
                 probe.unlink()
                 return str(shm)
             except OSError:
-                pass          # /dev/shm cheio ou sem permissão → fallback
+                pass
         return tempfile.gettempdir()
 
     def __init__(self):
         self.results = {}
         self.config = {}
-        # current stop codon count updated during runs (for GUI polling)
         self.current_stop_count = 0
         self.current_stop_details = []
         self.current_total_genes = 0
         self.current_processed_genes = 0
         self._results_lock = threading.Lock()
-        # Conjunto thread-safe de processos CODEML ativos; permite stop imediato
+        # running codeml processes, for Stop
         self._active_processes: set = set()
         self._processes_lock = threading.Lock()
-        self.current_process = None   # compat. GUI (último processo ativo)
+        self.current_process = None
     
     @staticmethod
     def auto_complete_null_models(selected_models: List[str], include_neutral: bool = True,
                                   include_m8a: bool = True) -> List[str]:
-        """
-        Auto-completa modelos nulos baseado em modelos alternativos selecionados.
-        
-        Quando um modelo alternativo é selecionado, seu correspondente modelo nulo
-        é automaticamente adicionado para permitir comparação LRT. Se include_neutral
-        é True, modelos neutros especiais também são incluídos automaticamente.
-        
-        Args:
-            selected_models: Lista de modelos selecionados pelo usuário
-            include_neutral: Se True, incluir modelos neutros (M1a, Branch-site_null)
-            
-        Returns:
-            Lista de modelos com os nulos auto-adicionados
-        """
+        """Add the null model of each selected alternative (M2a -> M1a, M8 -> M7 and
+        M8a, Branch -> M0, Branch-site -> its null). include_m8a=False leaves M8a
+        out unless it was selected."""
         completed_models = set(selected_models)
         
         for model in selected_models:
@@ -473,17 +423,13 @@ class CodemlBatchAnalysis:
                 nulls = CodemlBatchAnalysis.NULL_MODEL_PAIRS[model]
                 if isinstance(nulls, str):
                     nulls = [nulls]
-                if not include_m8a:   # opção "não incluir M8a" (o M8a escolhido à mão fica)
+                if not include_m8a:   # include_m8a=False keeps an M8a chosen by hand
                     nulls = [m for m in nulls if m != 'M8a']
                 completed_models.update(nulls)
         
-        # Se include_neutral está habilitado, adicionar modelos neutros se seus
-        # correspondentes alternativos foram selecionados
         if include_neutral:
-            # M1a é o neutro para M2a
             if 'M2a' in selected_models and 'M1a' not in completed_models:
                 completed_models.add('M1a')
-            # Branch-site_null é o neutro para Branch-site
             if 'Branch-site' in selected_models and 'Branch-site_null' not in completed_models:
                 completed_models.add('Branch-site_null')
         
@@ -497,31 +443,19 @@ class CodemlBatchAnalysis:
                              model_name: str = None,
                              kappa: float = None,
                              fix_blength: int = 0) -> str:
-        """Gera o .ctl com TODOS os parâmetros relevantes escritos explicitamente.
-
-        Nada fica no default interno do codeml: o mesmo .ctl dá o mesmo
-        resultado no PAML 4.9j e no 4.10.x (o ncatG padrão, por exemplo,
-        mudou entre versões). Valores base em ctl_params.DEFAULT_CTL_PARAMS;
-        model_config (modelo + edições do usuário na janela "cfg") e
-        self.config (opções globais: CodonFreq, ncatG, kappa) sobrescrevem.
-
-        - kappa       : κ inicial; se vier do warm-start M0 substitui o padrão
-        - fix_blength : 0 = estimar do zero; 1 = usar a árvore como ponto de partida
-        Modelos neutros (M8a, Branch-site_null): fix_omega = 1, omega = 1.0 sempre.
-        """
+        """.ctl text with every parameter written explicitly. Values come from
+        ctl_params defaults, then the model, then the global options, then the
+        user's edits for this model."""
         params = dict(DEFAULT_CTL_PARAMS)
         cfg = self.config or {}
         skip = ('description', 'display_name')
-        # 1) padrão do modelo (MODEL_CONFIGS)
         for key, val in (model_config or {}).items():
             if key not in skip and val not in (None, ''):
                 params[key] = val
-        # 2) opções globais (GUI: Configurações; CLI: --codonfreq/--ncatg/--kappa)
         for key in ('CodonFreq', 'ncatG', 'kappa', 'fix_kappa', 'icode', 'method',
                     'Small_Diff', 'getSE', 'estFreq'):
             if cfg.get(key) is not None:
                 params[key] = cfg[key]
-        # 3) edições do usuário na janela "cfg" deste modelo
         custom = cfg.get('custom_model_params') or cfg.get('custom_model_configs') or {}
         for key, val in (custom.get(model_name) or {}).items():
             if key not in skip and val not in (None, ''):
@@ -557,13 +491,11 @@ class CodemlBatchAnalysis:
         """
         try:
             text = output_path.read_text(encoding='utf-8', errors='ignore')
-            # Primary format in M0 output: "  kappa (ts/tv) =  2.54321"
             m = re.search(r'kappa\s*\(ts/tv\)\s*=\s*([\d.]+)', text, re.IGNORECASE)
             if m:
                 v = float(m.group(1))
                 if 0.1 <= v <= 20:
                     return v
-            # Secondary format (parameter table): "  kappa   2.54321"
             m = re.search(r'^\s*kappa\s+([\d.]+)', text, re.MULTILINE)
             if m:
                 v = float(m.group(1))
@@ -575,28 +507,8 @@ class CodemlBatchAnalysis:
     
     @staticmethod
     def _extract_fitted_tree(output_path: Path) -> Optional[str]:
-        """
-        Extrai a árvore com branch lengths otimizados do arquivo de saída do CODEML.
-
-        O CODEML escreve, perto do final do output, a topologia com os comprimentos
-        de ramo estimados por ML em formato Newick.  Essa árvore é usada nos modelos
-        de sítio (opção warm_start_m0) como ponto de partida via fix_blength = 1
-        ("initial" no pamlDOC: os valores da árvore são só o início da otimização
-        e continuam sendo estimados).
-
-        Atenção: fix_blength = 2 é "fixed" -- prende os comprimentos nos valores da
-        árvore e muda os resultados. Versões até 0.2.0 usavam 2 aqui por engano.
-
-        Estratégia de extração:
-        Varredura reversa das linhas do arquivo (a árvore ajustada aparece após os
-        parâmetros ML, próxima ao final).  Critérios:
-          – começa com '(' e termina com ';'   (formato Newick)
-          – contém ':'                          (branch lengths presentes)
-          – contém pelo menos um dígito após ':'(exclui topologias sem comprimentos)
-
-        Returns:
-            String Newick com branch lengths, ou None se a extração falhar.
-        """
+        """Newick tree with the ML branch lengths from a codeml output file, used as
+        starting values by --warm-start-m0 (fix_blength = 1)."""
         try:
             text = output_path.read_text(encoding='utf-8', errors='ignore')
             for line in reversed(text.splitlines()):
@@ -610,13 +522,9 @@ class CodemlBatchAnalysis:
             pass
         return None
 
-    # ══════════════════════════════════════════════════════════════════
-    # Log / mensagens
-    # ══════════════════════════════════════════════════════════════════
 
-    # Modelos de sítio: árvore desenraizada (o PAML exige sem relógio/marcas)
+    # site models: PAML needs an unrooted tree
     _SITE_MODELS_UNROOT = {'M0', 'M1a', 'M2a', 'M7', 'M8', 'M8a'}
-    # Modelos que aceitam warm-start do M0
     _SITE_WARMUP = {'M1a', 'M2a', 'M7', 'M8', 'M8a'}
 
     @staticmethod
@@ -625,12 +533,9 @@ class CodemlBatchAnalysis:
         return t(key, **kw)
 
     def _emit(self, level: str, text: str) -> None:
-        """Uma mensagem por linha para o usuário.
-
-        level: 'info' | 'ok' | 'warn' | 'error' | 'debug' | 'header'.
-        Com config['log_callback'] (GUI) a mensagem vai para lá, já
-        classificada; sem callback (CLI) vai para o stdout -- 'debug' só com
-        config['verbose']."""
+        """One message for the user. level: info, ok, warn, error, debug or header.
+        Goes to config['log_callback'] when set (window), else to stdout ('debug'
+        only with config['verbose'])."""
         cb = (self.config or {}).get('log_callback')
         if cb is not None:
             try:
@@ -643,7 +548,7 @@ class CodemlBatchAnalysis:
         print(text, flush=True)
 
     def _log(self, text: str) -> None:
-        """Linha no batch_analysis_log.txt (thread-safe)."""
+        """Append a line to batch_analysis_log.txt (thread-safe)."""
         path = getattr(self, '_log_path', None)
         if path is None:
             return
@@ -659,12 +564,9 @@ class CodemlBatchAnalysis:
             except Exception:
                 pass
 
-    # ══════════════════════════════════════════════════════════════════
-    # Execução em lote
-    # ══════════════════════════════════════════════════════════════════
 
     def effective_ctl_defaults(self) -> Dict[str, object]:
-        """Parâmetros globais do .ctl efetivamente usados nesta execução."""
+        """Global .ctl parameters used in this run."""
         params = dict(DEFAULT_CTL_PARAMS)
         for key in ('CodonFreq', 'ncatG', 'kappa', 'fix_kappa', 'icode', 'method',
                     'Small_Diff', 'getSE', 'estFreq'):
@@ -675,9 +577,8 @@ class CodemlBatchAnalysis:
 
     def _write_run_config(self, codeml_path: Optional[str], codeml_ver: Optional[str],
                           genes: List[str]) -> None:
-        """run_config.json -- tudo o que é preciso para descrever/reproduzir a
-        execução: versões, parâmetros do .ctl por modelo e opções do wrapper.
-        Gravado pela GUI e pelo CLI."""
+        """run_config.json: versions, .ctl parameters per model, LRT settings and
+        options, enough to describe and repeat the run."""
         import json
         cfg = self.config
         skip = {'pause_event', 'stop_event', 'manual_continue_event',
@@ -727,7 +628,7 @@ class CodemlBatchAnalysis:
         out.write_text(json.dumps(data, indent=2, ensure_ascii=False, default=str), encoding='utf-8')
 
     def _write_methods_text(self, codeml_ver: Optional[str], n_genes: int) -> None:
-        """methods_text.txt: parágrafo de Métodos com o que esta execução fez."""
+        """methods_text.txt: a methods paragraph describing this run."""
         from .methods_text import build_methods_text
         cfg = self.config
         try:
@@ -744,8 +645,8 @@ class CodemlBatchAnalysis:
             self._log(f"[WARN] methods_text.txt: {exc}")
 
     def run_batch_analysis(self):
-        """Executa a análise em lote. Retorna self.run_summary:
-        {'total', 'ok', 'failed', 'stopped', 'failures': {gene: motivo}, ...}."""
+        """Run the batch. Returns self.run_summary:
+        {'total', 'ok', 'failed', 'stopped', 'failures': {gene: reason}, ...}."""
         if not self.config:
             raise ValueError(
                 "self.config vazio -- defina input_folder/tree_file/output_folder/models "
@@ -756,13 +657,13 @@ class CodemlBatchAnalysis:
         cfg['input_folder'] = Path(cfg['input_folder'])
         cfg['output_folder'] = Path(cfg['output_folder'])
         output_folder = cfg['output_folder']
-        output_folder.mkdir(parents=True, exist_ok=True)   # cria se não existir
+        output_folder.mkdir(parents=True, exist_ok=True)
         log_file = output_folder / "batch_analysis_log.txt"
         self._log_path = log_file
         self._log_lock = threading.Lock()
         self.failures: Dict[str, str] = {}
         self.gene_status: Dict[str, str] = {}
-        self.gene_notes: Dict[str, List[str]] = {}   # avisos de genes que rodaram
+        self.gene_notes: Dict[str, List[str]] = {}
         self.results = {}
         self.current_stop_count = 0
         self.current_stop_details = []
@@ -775,7 +676,7 @@ class CodemlBatchAnalysis:
         files = list_alignment_files(cfg['input_folder'])
         chosen, ignored = group_by_gene(files)
         genes = list(chosen.items())
-        # Árvore por gene (GENE.nwk ao lado do alinhamento): substitui tree_file
+        # GENE.nwk next to an alignment replaces tree_file for that gene
         if cfg.get('per_gene_trees') is None and cfg.get('auto_per_gene_trees', True):
             cfg['per_gene_trees'] = discover_per_gene_trees(
                 cfg['input_folder'], cfg.get('tree_folder'), genes=set(chosen))
@@ -831,7 +732,7 @@ class CodemlBatchAnalysis:
         total_time = time.time() - start_time
         stopped = bool(cfg.get('stop_event') is not None and cfg['stop_event'].is_set())
 
-        # LRT primeiro -- popula q/p, que _save_summary() anexa ao TSV.
+        # the LRT first: _save_summary() adds its p and q to the TSV
         if cfg.get('run_lrt', True) and len(cfg['models']) > 1:
             self._emit('info', self._t('lrt_start'))
             self._run_lrt_analysis()
@@ -874,9 +775,8 @@ class CodemlBatchAnalysis:
                 notes.append(note)
 
     def _write_failures_file(self) -> None:
-        """genes_status.tsv: uma linha por gene, 'ok' ou o motivo da falha, e
-        os avisos de genes que rodaram (stop codon mascarado, sequência
-        excluída) para não se perderem depois da análise."""
+        """genes_status.tsv: ok or the failure reason per gene, plus warnings for genes
+        that ran (masked stop codon, excluded sequence)."""
         path = Path(self.config['output_folder']) / 'genes_status.tsv'
         clean = lambda t: t.replace('\t', ' ').replace('\n', ' ')
         with open(path, 'w', encoding='utf-8') as fh:
@@ -912,7 +812,6 @@ class CodemlBatchAnalysis:
 
         self._emit('info', self._t('gene_start', i=idx, n=n_total, gene=gene))
 
-        # ── Validação do alinhamento (mesmas regras do preflight) ──────────
         try:
             aln = read_alignment(fas_file)
         except AlignmentError as exc:
@@ -936,7 +835,6 @@ class CodemlBatchAnalysis:
             _done()
             return gene, {}
 
-        # ── Stop codons: decididos ANTES de rodar ─────────────────────────
         stops = find_stop_codons(aln.names, aln.seqs)
         last_codon = aln.length // 3
         internal = [s for s in stops if s[1] != last_codon]
@@ -965,7 +863,7 @@ class CodemlBatchAnalysis:
         models_ordered = (['M0'] + [m for m in cfg['models'] if m != 'M0']
                           if 'M0' in cfg['models'] else list(cfg['models']))
 
-        # Warm-start opcional via M0 implícito (ver AGENTS.md / METODOS.md)
+        # optional warm start from a hidden M0 (METHODS.md)
         _needs_warmup = bool(set(models_ordered) & self._SITE_WARMUP) and cfg.get('warm_start_m0', False)
         if 'M0' not in models_ordered and _needs_warmup:
             self._emit('debug', f"    {gene} · M0 (implicit warm-start)…")
@@ -1033,29 +931,20 @@ class CodemlBatchAnalysis:
 
     @staticmethod
     def _labeled_root_check(nwk_content: str) -> str:
-        """
-        Verifica se os dois ramos ao redor da raiz de uma árvore labelada têm a
-        mesma designação (ambos foreground #1 ou ambos background) ou designações
-        diferentes (um foreground, um background).
-
-        Conforme o guia do PAML (Figura S1D):
-        - 'mixed' → ramos com designações diferentes → árvore ENRAIZADA necessária
-        - 'same'  → ramos com mesma designação     → árvore não-enraizada pode ser usada
-        - 'unknown' → não foi possível determinar (tree com < 2 filhos no root, etc.)
-        """
-        # Remover cabeçalho PHYLIP ("N  1") se presente
+        """Compare the labels of the two branches around the root of a labelled tree:
+        'mixed' (one foreground, one background) needs a rooted tree, 'same' does
+        not (PAML guide, Figure S1D)."""
         lines = nwk_content.strip().splitlines()
         nwk = ''
         for line in lines:
             stripped = line.strip()
             if stripped and stripped[0].isdigit() and len(stripped.split()) <= 2:
-                continue   # linha de cabeçalho
+                continue
             nwk += stripped
         nwk = nwk.strip().rstrip(';').strip()
         if not nwk.startswith('('):
             return 'unknown'
 
-        # Encontrar vírgulas de nível 1 (filhos diretos da raiz)
         depth = 0
         top_comma = -1
         for i, ch in enumerate(nwk):
@@ -1065,14 +954,13 @@ class CodemlBatchAnalysis:
                 depth -= 1
             elif ch == ',' and depth == 1:
                 top_comma = i
-                break   # basta a primeira vírgula top-level para separar os dois filhos
+                break
 
         if top_comma == -1:
             return 'unknown'
 
-        child1 = nwk[1:top_comma]          # conteúdo do 1º filho
-        child2_raw = nwk[top_comma + 1:]   # restante (2º filho + ")...")
-        # Isolar o 2º filho: tudo até a última ')' de nível 0
+        child1 = nwk[1:top_comma]
+        child2_raw = nwk[top_comma + 1:]
         depth = 0
         end_pos = len(child2_raw)
         for i, ch in enumerate(child2_raw):
@@ -1090,22 +978,14 @@ class CodemlBatchAnalysis:
 
         return 'mixed' if c1_fg != c2_fg else 'same'
 
-    # Espectro purificadora / neutra / diversificadora -- cobre os regimes
-    # onde um otimo local costuma prender a busca de omega. So testado com
-    # branch lengths/kappa ja warm-started (o multistart de omega puro e
-    # barato; refazer a busca de branch length e que seria caro de repetir).
+    # purifying, neutral and diversifying starting ω
     _WARM_START_OMEGA_TRIALS = (0.2, 1.0, 2.5)
 
     def _run_model_multistart(self, fas_file: Path, model_name: str, log_file: Path,
                                warm_start_kappa: float, fitted_tree: str,
                                aln=None) -> Dict:
-        """Roda o mesmo modelo com warm-start de branch length/kappa varias
-        vezes, cada uma com omega inicial diferente, e fica com o de maior
-        lnL. Mitiga o risco medido do warm-start (2026-09-18: em teste com
-        loci reais, ~1/3 convergiu pra otimo local pior partindo so de
-        omega=0.5) sem pagar o custo total de reotimizar branch length do
-        zero em cada tentativa -- so a parte barata (omega) e repetida.
-        """
+        """Run a model from the warm-start branch lengths and kappa once per initial ω
+        in _WARM_START_OMEGA_TRIALS and keep the best lnL."""
         best = None
         last = None
         for omega0 in self._WARM_START_OMEGA_TRIALS:
@@ -1121,17 +1001,13 @@ class CodemlBatchAnalysis:
                 best = r
         return best if best is not None else last
 
-    # ── Monitoramento do processo codeml ─────────────────────────────────
 
     @staticmethod
     def _process_cpu_seconds(pid: int) -> Optional[float]:
-        """Tempo de CPU acumulado do processo E dos descendentes (s).
+        """CPU seconds used by a process and its descendants, or None if unknown.
 
-        No Debian/Ubuntu, /usr/bin/codeml é um script sh que roda
-        /usr/lib/paml/bin/codeml como filho (sem exec): medir só o pid do
-        script daria 0 s para sempre e a detecção de inatividade mataria um
-        codeml que está trabalhando. psutil se houver; /proc no Linux; None
-        se não for possível medir (aí só o timeout vale)."""
+        On Debian/Ubuntu /usr/bin/codeml is a sh script that runs the real codeml
+        as a child, so the child must be counted. Uses psutil, else /proc."""
         try:
             import psutil
             proc = psutil.Process(pid)
@@ -1172,11 +1048,8 @@ class CodemlBatchAnalysis:
 
     @staticmethod
     def _terminate(process) -> None:
-        """Encerra o codeml e recolhe o processo (sem deixar zumbi/órfão).
-
-        Fora do Windows o codeml roda num grupo de processos próprio
-        (start_new_session): o sinal vai para o grupo inteiro, assim o codeml
-        real também morre quando o executável é um script que o chama."""
+        """End codeml and reap it. Outside Windows codeml runs in its own process
+        group, so the signal also reaches a codeml started by a wrapper script."""
         if process.poll() is not None:
             return
         import signal
@@ -1200,7 +1073,7 @@ class CodemlBatchAnalysis:
                 pass
 
     def stop_all_processes(self) -> int:
-        """Encerra todos os codeml em execução (botão Parar). Retorna quantos."""
+        """End every running codeml (Stop button). Returns how many."""
         with self._processes_lock:
             procs = list(self._active_processes)
         for proc in procs:
@@ -1209,11 +1082,9 @@ class CodemlBatchAnalysis:
 
     @staticmethod
     def _prune_keep_labels(tree, keep: set) -> None:
-        """Poda as folhas que não estão em `keep` sem perder marcas de ramo.
-
-        Quando a poda deixa um nó interno com um só filho, o Bio.Phylo
-        colapsa o nó -- e a marca dele (#1, #2...) sumia. Aqui o filho que
-        sobra herda a marca (o ramo resultante é a soma dos dois ramos)."""
+        """Prune tips not in `keep` without losing branch labels: when pruning leaves an
+        internal node with one child, Bio.Phylo collapses it and its #N label would
+        be lost, so the remaining child inherits the label."""
         label_re = re.compile(r'[#$]\d+$')
 
         def _label(clade):
@@ -1242,7 +1113,6 @@ class CodemlBatchAnalysis:
         while len(tree.root.clades) == 1 and not tree.root.clades[0].is_terminal():
             tree.root = tree.root.clades[0]
 
-    # ── Uma execução do codeml (gene × modelo) ───────────────────────────
 
     def _failed(self, reason: str, exec_start: float = None, **extra) -> Dict:
         d = {
@@ -1261,19 +1131,9 @@ class CodemlBatchAnalysis:
                              omega_override: float = None,
                              aln=None,
                              save_outputs: bool = True) -> Dict:
-        """Executa o CODEML para um gene e um modelo. Sempre retorna um dict
-        com 'status' = 'success' | 'failed' | 'stopped' (e 'fail_reason').
-
-        Pasta de saída MODELO/ (reprodutível: `cd MODELO && codeml GENE_MODELO.ctl`):
-          GENE_MODELO.ctl            todos os parâmetros, caminhos relativos
-          GENE_MODELO_seq.fasta      alinhamento exatamente como o codeml leu
-          GENE_MODELO_tree.nwk       árvore exatamente como o codeml leu
-          GENE_MODELO_results.txt    saída bruta do codeml (mlc)
-          GENE_MODELO_sitemap.json   numeração de sítios codeml -> alinhamento
-
-        warm_start_kappa / fitted_tree: ponto de partida vindo do M0
-        (fix_blength = 1). omega_override: multi-start de omega.
-        """
+        """Run codeml for one gene and model. Returns a dict with status 'success',
+        'failed' or 'stopped' (and fail_reason). Inputs and outputs are kept in
+        MODEL/ with relative paths, so `cd MODEL && codeml GENE_MODEL.ctl` repeats it."""
         cfg = self.config
         log_file = log_file or getattr(self, '_log_path', None)
         if not hasattr(self, '_log_lock'):
@@ -1306,8 +1166,8 @@ class CodemlBatchAnalysis:
             model_output_dir.mkdir(parents=True, exist_ok=True)
 
         prefix = f"{safe}_{model_name}"
-        output_filename = f"{base_name}_{model_name}_results.txt"   # nome esperado pelo painel
-        codeml_outfile = f"{prefix}_results.txt"                     # sem espaços para o codeml
+        output_filename = f"{base_name}_{model_name}_results.txt"
+        codeml_outfile = f"{prefix}_results.txt"
         ctl_filename = f"{prefix}.ctl"
         seq_filename = f"{prefix}_seq.fasta"
         tree_filename = f"{prefix}_tree.nwk"
@@ -1315,13 +1175,11 @@ class CodemlBatchAnalysis:
         temp_dir = Path(tempfile.mkdtemp(prefix=f'easypam_{prefix}_', dir=self._get_fast_tempdir()))
         exec_start = time.time()
         try:
-            # ── Alinhamento ──────────────────────────────────────────────
             if aln is None:
                 aln = read_alignment(fas_file)
             names = list(aln.names)
             excluded: List[str] = []
 
-            # ── Árvore: leitura, poda e desenraizamento ─────────────────
             from io import StringIO
             from Bio import Phylo
             tree_path = Path(cfg.get('tree_file')) if cfg.get('tree_file') else None
@@ -1356,7 +1214,7 @@ class CodemlBatchAnalysis:
                         first = base_name not in warned
                         warned.add(base_name)
                         self._excluded_warned = warned
-                    if first:   # uma vez por gene, não uma por modelo
+                    if first:   # once per gene, not once per model
                         self._emit('warn', msg)
                         self._add_gene_note(base_name, self._t('note_excluded',
                                                                names=', '.join(not_in_tree)))
@@ -1372,18 +1230,16 @@ class CodemlBatchAnalysis:
                                             error=f"{len(names)} sequence(s) shared with the tree"),
                                     exec_start)
 
-            # Cópia FASTA (sempre FASTA, mesmo que o original seja PHYLIP)
             seqs_used = {n: aln.seqs[n] for n in names}
             (temp_dir / seq_filename).write_text(to_fasta(names, seqs_used), encoding='utf-8')
 
             def _newick(tree) -> str:
                 io_ = StringIO()
-                # árvore sem comprimentos de ramo: não inventar ':0' em todos
-                # os ramos (o Bio.Phylo escreveria 0.00000 no lugar de None)
+                # a tree without branch lengths stays without them (Bio.Phylo would write 0.00000)
                 has_bl = any(c.branch_length for c in tree.find_clades())
                 Phylo.write(tree, io_, 'newick', plain=not has_bl)
                 txt = io_.getvalue().strip()
-                # Bio.Phylo escreve comprimento no nó raiz (":0.00000;"), que o codeml rejeita
+                # codeml rejects the root length Bio.Phylo writes (":0.00000;")
                 return re.sub(r'\):[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?;$', ');', txt)
 
             if model_name in self._SITE_MODELS_UNROOT and len(tree_obj.root.clades) == 2:
@@ -1396,7 +1252,6 @@ class CodemlBatchAnalysis:
             else:
                 tree_note = "as given (pruned if needed)"
 
-            # Árvore marcada (Branch / Branch-site)
             labeled_full = cfg.get('labeled_tree_content')
             labeled_bs = cfg.get('labeled_tree_branchsite')
             if model_name.startswith(('BranchSite', 'Branch-site')):
@@ -1423,9 +1278,7 @@ class CodemlBatchAnalysis:
                     self._log(f"[tree] {base_name} [{model_name}]: root designation {status}")
             elif fitted_tree and not model_name.startswith('Branch') and model_name != 'M0':
                 tree_out = fitted_tree.strip()
-                # fix_blength = 1 ("initial"): os comprimentos do M0 são só o
-                # ponto de partida e continuam sendo estimados. (2 = "fixed"
-                # os prenderia nos valores do M0 -- ver pamlDOC, fix_blength.)
+                # fix_blength = 1: the M0 lengths are starting values (2 would fix them)
                 fix_bl = 1
                 tree_note = "M0 fitted tree as starting values (fix_blength = 1)"
             else:
@@ -1434,7 +1287,6 @@ class CodemlBatchAnalysis:
             (temp_dir / tree_filename).write_text(f"{n_tips}  1\n{tree_out}\n", encoding='utf-8')
             self._log(f"[tree] {base_name} [{model_name}]: {tree_filename} ({tree_note})")
 
-            # ── .ctl ─────────────────────────────────────────────────────
             omega_initial = (float(omega_override) if omega_override is not None
                              else float(cfg.get('omega', model_config.get('omega', 0.5) or 0.5)))
             cleandata_val = int(cfg.get('cleandata', 1))
@@ -1456,18 +1308,15 @@ class CodemlBatchAnalysis:
                     model_name=model_name, kappa=warm_start_kappa, fix_blength=fix_bl)
             (temp_dir / ctl_filename).write_text(ctl_content, encoding='utf-8')
 
-            # ── Executar o codeml ───────────────────────────────────────
             cmd = [codeml_path, ctl_filename]
             self._log(f"[{model_name}] {base_name}: Running command: {cmd} in {temp_dir}")
             popen_kw = {}
             if platform.system() == 'Windows':
                 popen_kw['creationflags'] = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
             else:
-                popen_kw['start_new_session'] = True   # ver _terminate
-            # stdin FECHADO: quando o codeml encontra um stop codon ele imprime
-            # "Press Enter to continue" e chama getchar(); com a entrada padrão
-            # fechada ele segue na hora (tratando a coluna como dado ausente)
-            # em vez de esperar para sempre por um Enter que nunca chega.
+                popen_kw['start_new_session'] = True   # see _terminate
+            # stdin closed: after a stop codon codeml waits for "Press Enter";
+            # with stdin closed it continues at once
             process = subprocess.Popen(
                 cmd, cwd=temp_dir, stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -1482,8 +1331,7 @@ class CodemlBatchAnalysis:
                     for line in iter(stream.readline, ''):
                         text_line = line.rstrip()
                         stdout_lines.append(text_line)
-                        # skip_beb: o lnL/np/omega usados no LRT já foram escritos
-                        # no outfile antes do BEB começar (ver AGENTS.md / METODOS.md)
+                        # skip_beb: lnL, np and ω are already written when BEB starts
                         if skip_beb and 'BEBing' in text_line and not beb_was_skipped[0]:
                             beb_was_skipped[0] = True
                             self._log(f"[{model_name}] {base_name}: skip_beb -- stopping before BEB")
@@ -1520,7 +1368,7 @@ class CodemlBatchAnalysis:
                     paused = pause_event is not None and not pause_event.is_set()
                     now = time.time()
                     if paused:
-                        # tempo pausado não conta para timeout nem inatividade
+                        # paused time counts neither for the limit nor the idle check
                         deadline += 0.25
                         last_progress = now
                     elif now > deadline:
@@ -1567,7 +1415,7 @@ class CodemlBatchAnalysis:
             output_path = model_output_dir / output_filename
             last_line = next((l for l in reversed(stdout_lines) if l.strip()), '')
 
-            # skip_beb mata o processo de propósito: truncar seções incompletas
+            # skip_beb stops codeml on purpose: cut incomplete sections
             if beb_was_skipped[0] and codeml_out.exists():
                 try:
                     text = codeml_out.read_text(encoding='utf-8', errors='ignore')
@@ -1583,7 +1431,6 @@ class CodemlBatchAnalysis:
                 except Exception as exc:
                     self._log(f"[{model_name}] {base_name}: truncation after skip_beb failed: {exc}")
 
-            # ── Guardar arquivos (reprodutibilidade) ─────────────────────
             if save_outputs:
                 (model_output_dir / ctl_filename).write_text(ctl_content, encoding='utf-8')
                 for fname in (seq_filename, tree_filename):
@@ -1598,7 +1445,7 @@ class CodemlBatchAnalysis:
                             pass
             else:
                 output_path = temp_dir / codeml_outfile
-                # resultado temporário (M0 implícito): copiar para fora do sandbox
+                # hidden M0: copy the result out of the temporary folder
                 if output_path.exists():
                     keep = Path(tempfile.mkdtemp(prefix='easypam_m0_')) / codeml_outfile
                     shutil.copy2(output_path, keep)
@@ -1613,7 +1460,6 @@ class CodemlBatchAnalysis:
                 except Exception:
                     omega = None
 
-            # ── Mapa de sítios (numeração original) ──────────────────────
             if save_outputs and output_path.exists():
                 try:
                     kept = (cleandata_kept_codons(names, seqs_used) if cleandata_val == 1
@@ -1642,10 +1488,8 @@ class CodemlBatchAnalysis:
                 elif lnL is None:
                     fail_reason = self._t('reason_no_lnl', line=last_line[:200])
 
-            # Execução que falhou (inatividade, tempo limite, código de erro):
-            # a saída parcial fica para diagnóstico, mas com outro nome, para
-            # nenhum leitor de *_results.txt (LRT, painel, Atualizar
-            # Resultados) usar um lnL de um codeml interrompido.
+            # keep a failed run's output under another name so no reader of
+            # *_results.txt uses its lnL
             if fail_reason and save_outputs and output_path.exists():
                 failed_path = output_path.with_name(
                     output_path.name[:-len('_results.txt')] + FAILED_RESULTS_SUFFIX)
@@ -1682,11 +1526,7 @@ class CodemlBatchAnalysis:
                 except Exception:
                     time.sleep(0.5)
 
-    # Padroes que identificam a linha de resultado final do CODEML, em ordem
-    # de preferencia -- cobre as variantes de formato conhecidas ("lnL(ntime:
-    # X np: Y): valor" eh a forma padrao; as outras sao formatos mais antigos/
-    # alternativos). So essa linha (nunca a "lnL0 = ..." pre-otimizacao) tem
-    # lnL, ntime e np juntos.
+    # final result line of codeml, standard form first
     _LNL_LINE_PATTERNS = (
         r'lnL[^:]*:\s*([+-]?\d+\.\d+)',
         r'lnL\([^)]*\):\s*([+-]?\d+\.\d+)',
@@ -1694,13 +1534,7 @@ class CodemlBatchAnalysis:
     )
 
     def _extract_model_stats(self, output_file: Path) -> Dict[str, Optional[float]]:
-        """Le o outfile do CODEML uma unica vez e extrai lnL, np e ntime da
-        mesma linha de resultado final ("lnL(ntime: X  np: Y): valor").
-
-        Substitui os antigos _extract_likelihood/_extract_np/_extract_ntime,
-        que abriam e varriam o arquivo tres vezes separadas pra ler tres
-        valores que sempre estao na mesma linha.
-        """
+        """lnL, np and ntime from the final "lnL(ntime: X  np: Y): value" line."""
         lnL = np_params = ntime_params = None
         try:
             with open(output_file, 'r', encoding='utf-8', errors='ignore') as f:
@@ -1732,21 +1566,18 @@ class CodemlBatchAnalysis:
 
 
     def _lrt_comparisons_for(self, selected_models):
-        """Pares (null, alt, nome_da_coluna) validos dado o conjunto de modelos
-        selecionados -- fonte unica em lrt_stats.PAIRS (usada tambem pelo
-        painel de resultados)."""
+        """LRT pairs available for the selected models (from lrt_stats.PAIRS)."""
         comparisons = [(n, a, lrt_stats.lrt_column(n, a))
                        for n, a in lrt_stats.pairs_for(selected_models)]
-        # Compatibilidade com pastas antigas (BranchSite_A)
+        # legacy BranchSite_A folders
         if 'BranchSite_A_null' in selected_models and 'BranchSite_A' in selected_models:
             comparisons.append(('BranchSite_A_null', 'BranchSite_A',
                                 'lrt_BranchSite_A_null_vs_BranchSite_A'))
         return comparisons
 
     def _save_summary(self):
-        """Salva analysis_summary.tsv: uma linha por gene com status, lnL/np/
-        ntime/omega por modelo, ω e p₁ da classe positiva (M2a/M8), e para
-        cada par de LRT a estatística 2Δl, o p e o q (BH)."""
+        """Write analysis_summary.tsv: per gene, status, lnL/np/ntime/ω per model, the
+        positive class (M2a/M8) and 2Δl, p and q per test."""
         summary_file = self.config['output_folder'] / "analysis_summary.tsv"
         models = self.config['models']
         comparisons = self._lrt_comparisons_for(models)
@@ -1808,38 +1639,32 @@ class CodemlBatchAnalysis:
         self._emit('debug', f"Summary saved: {summary_file}")
 
     LRT_METHOD_NOTE = (
-        "NOTA METODOLOGICA / METHODS NOTE:\n"
-        "  Estatistica: 2*(lnL_alternativo - lnL_nulo); valores negativos (o\n"
-        "  alternativo nao melhorou) sao truncados em 0 e dao p = 1.\n"
-        "  Graus de liberdade = parametros livres a mais no alternativo\n"
-        "  (os comprimentos de ramo entram igualmente nos dois modelos):\n"
-        "    M0  vs M1a  : df = 2  (p0 e omega0)\n"
-        "    M1a vs M2a  : df = 2  (p2 e omega2)\n"
-        "    M7  vs M8   : df = 2  (p1 e omega_s)\n"
-        "    M8a vs M8   : df = 1  (omega_s livre vs fixo em 1)\n"
-        "    M0  vs Branch : df = numero de grupos foreground (#1, #2, ...)\n"
-        "  Distribuicao nula: chi2 com esses df. Para M8a vs M8 e Branch-site\n"
-        "  (nulo na fronteira, omega = 1 fixo) a significancia usa chi2(1) puro,\n"
-        "  como o manual do PAML recomenda para o branch-site; a mistura\n"
-        "  0.5*chi2(0) + 0.5*chi2(1) (Self & Liang 1987) e reportada so como\n"
-        "  referencia. p-valores calculados com a funcao de sobrevivencia\n"
-        "  (chi2.sf), sem arredondar para zero.\n"
-        "  q-value = p corrigido por Benjamini-Hochberg (FDR) DENTRO de cada\n"
-        "  comparacao (familia = todos os genes testados nesse par de modelos\n"
-        "  nesta execucao).\n"
-        "  M7 vs M8 pode rejeitar M7 so porque ha sitios neutros (omega = 1);\n"
-        "  M8a vs M8 nao tem esse problema (Swanson et al. 2003).\n"
+        "METHODS NOTE:\n"
+        "  Statistic: 2*(lnL_alternative - lnL_null); negative values (the\n"
+        "  alternative did not improve) are set to 0, giving p = 1.\n"
+        "  df = extra free parameters in the alternative (branch lengths count\n"
+        "  equally in both models):\n"
+        "    M0  vs M1a  : df = 1\n"
+        "    M1a vs M2a  : df = 2  (p2 and omega2)\n"
+        "    M7  vs M8   : df = 2  (p1 and omega_s)\n"
+        "    M8a vs M8   : df = 1  (omega_s free vs fixed at 1)\n"
+        "    M0  vs Branch : df = number of foreground groups (#1, #2, ...)\n"
+        "  Null distribution: chi2 with that df. For tests whose null lies on the\n"
+        "  boundary (M0 vs M1a, M8a vs M8, branch-site) significance uses chi2(1),\n"
+        "  as the PAML manual recommends for branch-site; the 0.5*chi2(0) +\n"
+        "  0.5*chi2(1) mixture (Self & Liang 1987) is printed for reference.\n"
+        "  p-values use the survival function (chi2.sf), never rounded to zero.\n"
+        "  q-value = p corrected by Benjamini-Hochberg within each pair of models\n"
+        "  (family = every gene tested in that pair in this run).\n"
+        "  M7 vs M8 can reject M7 only because some sites are neutral (omega = 1);\n"
+        "  M8a vs M8 does not have this problem (Swanson et al. 2003).\n"
     )
 
     def _run_lrt_analysis(self):
-        """Executa Likelihood Ratio Tests + correcao Benjamini-Hochberg (FDR).
-
-        BH precisa da familia COMPLETA de p-valores de uma comparacao antes de
-        corrigir -- por isso o metodo e em duas fases por comparacao. Os
-        q-valores ficam em self._lrt_qvalues[(null_model, alt_model)][gene] e
-        os p em self._lrt_pvalues, que _save_summary() anexa como colunas
-        q_*/p_* no TSV (por isso este metodo roda ANTES de _save_summary()).
-        """
+        """Likelihood ratio tests with Benjamini-Hochberg correction. BH needs every
+        p-value of a pair first, so each pair is collected, corrected, then written.
+        q and p are kept in self._lrt_qvalues and self._lrt_pvalues for
+        _save_summary(), which runs after this."""
         lrt_file = self.config['output_folder'] / "LRT_results.txt"
         self._lrt_qvalues = {}
         self._lrt_pvalues = {}
@@ -1869,7 +1694,6 @@ class CodemlBatchAnalysis:
                 f.write(f"Description: {descriptions.get((null_model, alt_model), '')}\n")
                 f.write("="*80 + "\n\n")
 
-                # Fase 1: coletar todos os genes validos ANTES de corrigir por BH
                 collected = []
                 for gene_name in sorted(self.results.keys()):
                     gene_results = self.results[gene_name]
@@ -1886,7 +1710,7 @@ class CodemlBatchAnalysis:
                     ntime_null, ntime_alt = null_res.get('ntime'), alt_res.get('ntime')
 
                     df = info['df']
-                    if df is None:  # M0 vs Branch: grupos foreground
+                    if df is None:  # M0 vs Branch: number of foreground groups
                         df = abs(np_alt - np_null) if (np_alt and np_null) else 1
                         if ntime_null is not None and ntime_alt is not None:
                             df = max(1, df - (ntime_alt - ntime_null))
@@ -1904,13 +1728,11 @@ class CodemlBatchAnalysis:
                         'p_value': p_value, 'p_value_mixture': p_mix,
                     })
 
-                # Fase 2: BH na familia completa desta comparacao
                 for c, q in zip(collected, lrt_stats.bh_qvalues([c['p_value'] for c in collected])):
                     c['q_value'] = q
                 self._lrt_qvalues[(null_model, alt_model)] = {c['gene']: c['q_value'] for c in collected}
                 self._lrt_pvalues[(null_model, alt_model)] = {c['gene']: c['p_value'] for c in collected}
 
-                # Fase 3: escrever
                 sig_count_05 = sig_count_01 = sig_count_q05 = 0
                 for c in collected:
                     sig_count_05 += c['p_value'] < 0.05
@@ -1921,13 +1743,13 @@ class CodemlBatchAnalysis:
                     f.write(f"  lnL {alt_model}: {c['lnL_alt']:.6f} (np={c['np_alt']})\n")
                     f.write(f"  2Δl = {c['lrt_stat']:.6f}")
                     if c['raw_stat'] < 0:
-                        f.write(f"  (bruto {c['raw_stat']:.6f} < 0: otimizacao do alternativo nao "
-                                f"alcancou o nulo; considere rodar de novo)")
+                        f.write(f"  (raw {c['raw_stat']:.6f} < 0: the alternative did not reach "
+                                f"the null; consider running it again)")
                     f.write("\n")
                     f.write(f"  df = {c['df_display']}\n")
                     f.write(f"  p-value = {c['p_value']:.6e}\n")
                     if c.get('p_value_mixture') is not None:
-                        f.write(f"  p-value (mistura 50:50, referencia -- NAO usado pro q-valor) = "
+                        f.write(f"  p-value (50:50 mixture, reference only, not used for q) = "
                                 f"{c['p_value_mixture']:.6e}\n")
                     f.write(f"  q-value (BH) = {c['q_value']:.6e}\n")
                     if c['q_value'] < 0.01:
@@ -1939,12 +1761,12 @@ class CodemlBatchAnalysis:
                     f.write("\n" + "-"*60 + "\n\n")
 
                 total_valid = len(collected)
-                f.write("\nRESUMO:\n")
-                f.write(f"  Total de genes analisados: {total_valid}\n")
+                f.write("\nSUMMARY:\n")
+                f.write(f"  Genes tested: {total_valid}\n")
                 if total_valid > 0:
-                    f.write(f"  Significativo em p bruto < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
-                    f.write(f"  Significativo em p bruto < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
-                    f.write(f"  Significativo em q (BH) < 0.05: {sig_count_q05} ({100*sig_count_q05/total_valid:.1f}%)\n")
+                    f.write(f"  Significant at raw p < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
+                    f.write(f"  Significant at raw p < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
+                    f.write(f"  Significant at BH q < 0.05: {sig_count_q05} ({100*sig_count_q05/total_valid:.1f}%)\n")
                 f.write("\n")
                 self._emit('info', self._t('lrt_pair_done', null=null_model, alt=alt_model,
                                            n=total_valid, sig=sig_count_q05))
@@ -1953,28 +1775,19 @@ class CodemlBatchAnalysis:
             self._emit('warn', self._t('warn_m7m8_without_m8a'))
         self._emit('debug', f"LRT results saved: {lrt_file}")
 
-    # ══════════════════════════════════════════════════════════════════
-    # WGS / ndata MODE  (genome-scale multi-gene analysis)
-    # ══════════════════════════════════════════════════════════════════
 
     @staticmethod
     def _fasta_to_phylip_block(fas_path: Path) -> Optional[str]:
-        """Converte um arquivo FASTA para um bloco no formato PHYLIP do CODEML.
-
-        Retorna None se o arquivo já estiver em formato PHYLIP (primeira linha
-        com '<ntaxa> <nsite>').
-        """
+        """FASTA file as a PHYLIP block, or None if the file is already PHYLIP."""
         text = fas_path.read_text(encoding='utf-8', errors='ignore').strip()
         lines = text.splitlines()
         if not lines:
             return None
 
-        # Detectar se já é PHYLIP (primeira linha = dois inteiros)
         first = lines[0].strip().split()
         if len(first) == 2 and first[0].isdigit() and first[1].isdigit():
             return text + '\n'
 
-        # Parsear FASTA
         seqs: Dict[str, List[str]] = {}
         order: List[str] = []
         current = None
@@ -1993,40 +1806,20 @@ class CodemlBatchAnalysis:
         n_taxa = len(order)
         lengths = {len(s) for s in sequences.values()}
         if len(lengths) != 1:
-            print(f"  [WARN] {fas_path.name}: sequências com tamanhos diferentes — pulando")
+            print(f"  [WARN] {fas_path.name}: sequences of different lengths, skipped")
             return None
         n_sites = lengths.pop()
 
-        # Montar bloco PHYLIP
         block_lines = [f" {n_taxa} {n_sites}"]
         for name in order:
-            # PHYLIP: nome com 10 chars (padded/truncated)
             padded = name[:10].ljust(10)
             block_lines.append(f"{padded}  {sequences[name]}")
         return '\n'.join(block_lines) + '\n'
 
     @staticmethod
     def regenerate_summary_files(results_folder: Path) -> Dict[str, str]:
-        """
-        Atualiza os 3 arquivos de síntese a partir de resultados já existentes
-        
-        Detecta automaticamente quais modelos estão presentes na pasta e regenera:
-        - analysis_summary.tsv: Tabela com lnL, np, ω, e LRTs
-        - batch_analysis_log.txt: Log consolidado de todas as análises
-        - LRT_results.txt: Resultados detalhados dos testes LRT
-        
-        Considera modelos neutros:
-        - M1a é neutro de M2a
-        - M7 é neutro de M8
-        - BranchSite_A_null é neutro de BranchSite_A
-        - M0 é neutro de Branch
-        
-        Args:
-            results_folder: Pasta contendo os subdirectórios de modelos (M0, M1a, etc.)
-        
-        Returns:
-            Dict com paths dos arquivos gerados: {'analysis_summary', 'batch_analysis_log', 'LRT_results'}
-        """
+        """Rebuild LRT_results.txt, analysis_summary.tsv, batch_analysis_log.txt and
+        sites_BEB.tsv from an existing results folder. Returns {name: path}."""
         results_folder = Path(results_folder)
         
         if not results_folder.exists():
@@ -2035,24 +1828,19 @@ class CodemlBatchAnalysis:
         generated_files = {}
 
         try:
-            # ═══ 1. REGENERAR LRT_results.txt (+ q-valores BH) ═══
-            # Roda primeiro porque analysis_summary.tsv precisa dos q-valores
-            # pra anexar as colunas q_* -- mesma dependência que uma run ao
-            # vivo tem (_run_lrt_analysis antes de _save_summary).
+            # LRT first: the summary needs its q-values
             print("\n[1/3] Generating LRT_results.txt...")
             lrt_file, qvalues = CodemlBatchAnalysis._regenerate_lrt_results(results_folder)
             if lrt_file:
                 generated_files['LRT_results'] = str(lrt_file)
                 print(f"  OK: {lrt_file.name}")
 
-            # ═══ 2. REGENERAR analysis_summary.tsv ═══
             print("\n[2/3] Generating analysis_summary.tsv...")
             summary_file = CodemlBatchAnalysis._regenerate_analysis_summary(results_folder, qvalues)
             if summary_file:
                 generated_files['analysis_summary'] = str(summary_file)
                 print(f"  OK: {summary_file.name}")
 
-            # ═══ 3. REGENERAR batch_analysis_log.txt ═══
             print("\n[3/3] Generating batch_analysis_log.txt...")
             log_file = CodemlBatchAnalysis._regenerate_batch_log(results_folder)
             if log_file:
@@ -2074,10 +1862,9 @@ class CodemlBatchAnalysis:
 
     @staticmethod
     def write_sites_table(results_folder: Path) -> Optional[Path]:
-        """sites_BEB.tsv: todos os sítios que o codeml listou no BEB (Pr(ω>1) >
-        0,5) de M2a, M8 e Branch-site, um gene por linha de sítio, com as duas
-        numerações. NEB só quando o arquivo não tem BEB (coluna method). Genes
-        que falharam ficam fora. Mesmo conteúdo da aba de sítios do painel."""
+        """sites_BEB.tsv: every BEB site codeml listed (Pr(ω>1) > 0.5) for M2a, M8 and
+        Branch-site, with both numberings; NEB only when there is no BEB. Failed
+        genes are left out."""
         from .site_map import attach_original_positions
         results_folder = Path(results_folder)
         status = CodemlBatchAnalysis._read_gene_status(results_folder)
@@ -2121,72 +1908,55 @@ class CodemlBatchAnalysis:
 
     @staticmethod
     def _regenerate_analysis_summary(results_folder: Path, qvalues: Optional[dict] = None) -> Optional[Path]:
-        """Regenera analysis_summary.tsv.
-
-        qvalues (opcional): {(null_model, alt_model): {gene: q_value}}, vindo
-        de _regenerate_lrt_results() -- anexa colunas q_{null}_vs_{alt} do
-        mesmo jeito que uma run normal faz via _save_summary(). Sem isso o
-        TSV regenerado ficaria sem correção de múltiplos testes, divergindo
-        do schema de uma run ao vivo."""
+        """Rebuild analysis_summary.tsv. qvalues ({(null, alt): {gene: q}}) come from
+        _regenerate_lrt_results()."""
         results_folder = Path(results_folder)
         qvalues = qvalues or {}
         summary_file = results_folder / "analysis_summary.tsv"
 
-        # Mapeamento de nomes de pasta (legados) para nomes de modelo (atuais)
         model_name_mapping = CodemlBatchAnalysis._LEGACY_MODEL_NAMES
         
-        # Descobrir quais modelos estão presentes
         models = []
         for item in results_folder.iterdir():
             if item.is_dir() and item.name not in ['reports']:
-                # Mapear nomes antigos para novos
                 model_name = model_name_mapping.get(item.name, item.name)
                 models.append(model_name)
         
-        models = sorted(set(models))  # Remove duplicatas e ordena
+        models = sorted(set(models))
         
         if not models:
             print("  [WARN] No model folders found")
             return None
         
-        # Coletar dados de todos os genes
         data = {}
         
-        # Mapa reverso: nome do modelo novo -> nome da pasta antiga
         reverse_mapping = {v: k for k, v in model_name_mapping.items()}
         
         for model in models:
-            # Usar o nome da pasta original (se existir) para encontrar os arquivos
             folder_name = reverse_mapping.get(model, model)
             model_folder = results_folder / folder_name
             if not model_folder.exists():
                 continue
             
             for results_file in sorted(model_folder.glob("*_results.txt")):
-                # Extrair nome do gene - precisa usar o nome da pasta original nos arquivos
                 gene_name = results_file.name.split(f'_{folder_name}_results')[0]
                 
                 if gene_name not in data:
                     data[gene_name] = {'Gene': gene_name}
                 
-                # Extrair valores
                 try:
                     with open(results_file, 'r', encoding='utf-8', errors='ignore') as f:
                         content = f.read()
                     
-                    # Extrair lnL
                     lnL_match = re.search(r'lnL\(ntime:.*?\):\s+([-\d.]+)', content)
                     lnL = float(lnL_match.group(1)) if lnL_match else None
                     
-                    # Extrair np e ntime
                     np_match = re.search(r'lnL\(ntime:\s*(\d+)\s+np:\s*(\d+)\)', content)
                     np_val    = int(np_match.group(2)) if np_match else None
                     ntime_val = int(np_match.group(1)) if np_match else None
 
-                    # Extrair omega
                     omega = SitesParser.extract_omega_robust(results_file)
                     
-                    # Extrair tempo de execução
                     time_match = re.search(r'Time used:\s+(\d+):(\d+)', content)
                     exec_time = None
                     if time_match:
@@ -2194,10 +1964,8 @@ class CodemlBatchAnalysis:
                         s = int(time_match.group(2))
                         exec_time = m * 60 + s
                     
-                    # Contar STOPs
                     stop_count = content.count('***')
                     
-                    # Guardar dados
                     data[gene_name][f'{model}_lnL']   = lnL
                     data[gene_name][f'{model}_np']    = np_val
                     data[gene_name][f'{model}_ntime'] = ntime_val
@@ -2205,26 +1973,21 @@ class CodemlBatchAnalysis:
                     data[gene_name][f'{model}_time'] = exec_time
                     data[gene_name][f'{model}_stops'] = stop_count
 
-                    # Para Branch model: guardar omegas por tag (#1, #2, ... e background)
-                    # A linha "w (dN/dS) for branches:" lista os grupos na ordem:
-                    #   [0]=background, [1]=#1, [2]=#2, ... conforme definido no PAML
+                    # Branch: "w (dN/dS) for branches:" lists background, #1, #2, ...
                     if model == 'Branch':
                         tag_omegas = SitesParser.extract_omega_by_tags(results_file)
                         for tag, tag_omega in tag_omegas.items():
                             data[gene_name][f'{model}_{tag}_omega'] = tag_omega
 
-                    # Se é Branch-site ou Branch-site_null, extrair dados de classes de sítios
                     if 'Branch-site' in model:
                         class_data = SitesParser.extract_branchsite_class_data(results_file)
                         if class_data:
-                            # Armazenar os dados de classe para exibição estruturada
                             data[gene_name][f'{model}_class_data'] = class_data
                 
                 except Exception as e:
                     print(f"  [WARN] Error processing {gene_name} ({model}): {str(e)}")
 
         
-        # Calcular LRTs (pares em lrt_stats.PAIRS) e p-valores
         gene_status = CodemlBatchAnalysis._read_gene_status(results_folder)
         for gene_name in data:
             row = data[gene_name]
@@ -2256,43 +2019,35 @@ class CodemlBatchAnalysis:
                     row[f'{m}_p_pos'] = pc.get('p')
                     row[f'{m}_w_pos'] = pc.get('omega')
 
-        # Anexar q-valores (BH), se fornecidos por _regenerate_lrt_results()
         for (null_model, alt_model), gene_qvals in qvalues.items():
             col = f'q_{null_model}_vs_{alt_model}'
             for gene_name, q in gene_qvals.items():
                 if gene_name in data:
                     data[gene_name][col] = q
 
-        # ═══ PÓS-PROCESSAMENTO: Expandir dados de classes Branch-site ═══
-        # Adicionar colunas de foreground omega para cada classe
         for gene_name in data:
             row = data[gene_name]
             
-            # Se existe dados de classe do Branch-site, extrair e adicionar colunas
             if 'Branch-site_class_data' in row and row['Branch-site_class_data']:
                 class_data = row['Branch-site_class_data']
                 
-                # Classes em ordem: 0, 1, 2a, 2b
                 for cls in ['0', '1', '2a', '2b']:
                     if cls in class_data:
-                        # Adicionar colunas com proporção, background omega e foreground omega
                         row[f'Branch-site_class{cls}_prop'] = class_data[cls].get('prop')
                         row[f'Branch-site_class{cls}_bg_w'] = class_data[cls].get('bg_w')
                         row[f'Branch-site_class{cls}_fg_w'] = class_data[cls].get('fg_w')
             
-            # Remover a coluna temporária class_data (não salvar no TSV)
             if 'Branch-site_class_data' in row:
                 del row['Branch-site_class_data']
             if 'Branch-site_null_class_data' in row:
                 del row['Branch-site_null_class_data']
         
-        # Converter para DataFrame e salvar. p/q em notação científica: com
-        # '%.6f' um p de 4e-23 virava "0.000000" (o "p = 0" de volta).
+        # p and q in scientific notation ('%.6f' would print 4e-23 as 0.000000)
         for gene_name, (st, _reason) in gene_status.items():
-            if gene_name not in data:   # falhou em todos os modelos: sem *_results.txt
+            if gene_name not in data:   # failed in every model: no *_results.txt
                 data[gene_name] = {'Gene': gene_name, 'status': st}
         df = pd.DataFrame(list(data.values()))
-        if 'status' in df.columns:   # mesma posição que numa execução normal
+        if 'status' in df.columns:   # same column position as in a normal run
             df.insert(1, 'status', df.pop('status').fillna('ok'))
         for col in df.columns:
             if col.startswith(('p_', 'q_')):
@@ -2300,23 +2055,14 @@ class CodemlBatchAnalysis:
                            for v in df[col]]
         df.to_csv(summary_file, sep='\t', index=False, float_format='%.6f')
 
-        # Alertar sobre genes com .ctl mas sem resultado (worker crash / sessão interrompida)
         CodemlBatchAnalysis._find_orphaned_analyses(results_folder)
 
         return summary_file
     
     @staticmethod
     def _find_orphaned_analyses(results_folder: Path) -> dict:
-        """Detecta genes com arquivo .ctl mas sem resultado (_results.txt).
-
-        Retorna dict  { gene_name: [model, ...] }  listando, para cada gene,
-        os modelos cujo CODEML foi iniciado (ctl gravado) mas nunca concluiu.
-        Causas típicas: worker paralelo morreu por pressão de memória ou
-        crash numérico do CODEML, sessão interrompida pelo usuário.
-
-        Use _regenerate_analysis_summary() depois de corrigir os órfãos para
-        atualizar o TSV.
-        """
+        """{gene: [models]} whose .ctl exists but whose codeml never finished (crash or
+        interrupted session). Failed runs are not counted."""
         results_folder = Path(results_folder)
         _legacy = CodemlBatchAnalysis._LEGACY_MODEL_NAMES
         _reverse = {v: k for k, v in _legacy.items()}
@@ -2327,7 +2073,7 @@ class CodemlBatchAnalysis:
             if not item.is_dir() or item.name in {'reports'}:
                 continue
             model = _legacy.get(item.name, item.name)
-            folder_name = item.name  # nome real da pasta
+            folder_name = item.name
 
             for ctl_file in item.glob(f"*_{folder_name}.ctl"):
                 gene_name = ctl_file.stem.replace(f"_{folder_name}", "")
@@ -2346,27 +2092,24 @@ class CodemlBatchAnalysis:
 
     @staticmethod
     def _regenerate_batch_log(results_folder: Path) -> Optional[Path]:
-        """Regenera batch_analysis_log.txt"""
+        """Rebuild batch_analysis_log.txt."""
         results_folder = Path(results_folder)
         log_file = results_folder / "batch_analysis_log.txt"
 
-        # Mapeamento de nomes legados → atuais (centralizado na constante de classe)
         model_name_mapping = CodemlBatchAnalysis._LEGACY_MODEL_NAMES
-        # Mapeamento inverso: nome de exibição → nome da pasta no disco
         reverse_mapping = {v: k for k, v in model_name_mapping.items()}
 
         with open(log_file, 'w', encoding='utf-8') as f:
             f.write("="*80 + "\n")
-            f.write("LOG DE ANÁLISE CODEML (REGENERADO)\n")
+            f.write("EASYPAML ANALYSIS LOG (REGENERATED)\n")
             f.write("="*80 + "\n")
-            f.write(f"Regenerado em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Pasta de resultados: {results_folder}\n")
+            f.write(f"Regenerated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Results folder: {results_folder}\n")
             f.write("="*80 + "\n\n")
 
-            f.write("RESUMO DA ANÁLISE:\n")
+            f.write("SUMMARY:\n")
             f.write("-"*80 + "\n")
 
-            # Descobrir modelos e genes — usa item.name (pasta real) para o split do gene
             models = set()
             genes = set()
 
@@ -2376,18 +2119,16 @@ class CodemlBatchAnalysis:
                     models.add(model_display)
 
                     for results_file in item.glob("*_results.txt"):
-                        # CORREÇÃO: split pelo nome real da pasta (item.name), não pelo
-                        # nome de exibição (model_display), que pode ser diferente.
+                        # split by the folder name, which may differ from the model name
                         gene = results_file.name.split(f'_{item.name}_results')[0]
                         genes.add(gene)
 
-            f.write(f"Modelos encontrados: {', '.join(sorted(models))}\n")
-            f.write(f"Genes encontrados: {len(genes)} genes\n")
+            f.write(f"Models: {', '.join(sorted(models))}\n")
+            f.write(f"Genes: {len(genes)}\n")
             f.write(f"  {', '.join(sorted(genes)[:5])}" + ("..." if len(genes) > 5 else "") + "\n")
             f.write("\n")
 
-            # Detalhes de cada gene/modelo
-            f.write("RESULTADOS DETALHADOS:\n")
+            f.write("DETAILS:\n")
             f.write("-"*80 + "\n\n")
 
             for gene in sorted(genes):
@@ -2395,8 +2136,7 @@ class CodemlBatchAnalysis:
                 f.write("-"*40 + "\n")
 
                 for model_display in sorted(models):
-                    # CORREÇÃO: usar o nome real da pasta (folder_name) para construir
-                    # os caminhos — o nome de exibição pode não corresponder ao nome no disco.
+                    # paths use the folder name, which may differ from the model name
                     folder_name = reverse_mapping.get(model_display, model_display)
                     model_folder = results_folder / folder_name
                     results_file = model_folder / f"{gene}_{folder_name}_results.txt"
@@ -2414,21 +2154,21 @@ class CodemlBatchAnalysis:
 
                             f.write(f"  {model_display:20s} | lnL = {lnL:>12} | np = {np_val:>2}\n")
                         except Exception:
-                            f.write(f"  {model_display:20s} | Erro ao ler arquivo\n")
+                            f.write(f"  {model_display:20s} | could not read the file\n")
                     else:
-                        f.write(f"  {model_display:20s} | Não encontrado\n")
+                        f.write(f"  {model_display:20s} | not found\n")
 
                 f.write("\n")
 
             f.write("="*80 + "\n")
-            f.write("FIM DO LOG\n")
+            f.write("END OF LOG\n")
             f.write("="*80 + "\n")
 
         return log_file
     
     @staticmethod
     def _read_gene_status(results_folder: Path) -> Dict[str, Tuple[str, str]]:
-        """{gene: (status, motivo)} de genes_status.tsv ({} se não existir)."""
+        """{gene: (status, reason)} from genes_status.tsv, or {}."""
         path = Path(results_folder) / 'genes_status.tsv'
         out: Dict[str, Tuple[str, str]] = {}
         try:
@@ -2443,24 +2183,16 @@ class CodemlBatchAnalysis:
 
     @staticmethod
     def _regenerate_lrt_results(results_folder: Path) -> tuple:
-        """Regenera LRT_results.txt, com correcao Benjamini-Hochberg (FDR) por
-        comparacao -- mesma logica de duas fases que _run_lrt_analysis (coleta
-        todos os p-valores da familia, corrige, so depois escreve).
-
-        Retorna (lrt_file, qvalues) onde qvalues e
-        {(null_model, alt_model): {gene: q_value}} -- usado por
-        regenerate_summary_files() pra anexar colunas q_* no TSV, do mesmo
-        jeito que uma run normal faz via _save_summary()."""
+        """Rebuild LRT_results.txt with BH correction per pair. Returns (lrt_file,
+        {(null, alt): {gene: q}})."""
         results_folder = Path(results_folder)
         lrt_file = results_folder / "LRT_results.txt"
         qvalues: dict = {}
         gene_status = CodemlBatchAnalysis._read_gene_status(results_folder)
 
-        # Mapeamento de nomes legados → atuais (centralizado na constante de classe)
         model_name_mapping = CodemlBatchAnalysis._LEGACY_MODEL_NAMES
         reverse_mapping = {v: k for k, v in model_name_mapping.items()}
         
-        # Descobrir quais modelos estão presentes
         models = set()
         genes = set()
         
@@ -2473,7 +2205,6 @@ class CodemlBatchAnalysis:
                     gene = results_file.name.split(f'_{folder_name}_results')[0]
                     genes.add(gene)
         
-        # Pares e df: fonte unica em lrt_stats.PAIRS
         _desc = {(n, a): d for grp in CodemlBatchAnalysis.LRT_COMPARISONS.values() for n, a, d in grp}
         comparisons = [(n, a, _desc.get((n, a), ''), info['df'] if info['df'] is not None else 1)
                        for (n, a), info in lrt_stats.PAIRS.items() if n in models and a in models]
@@ -2495,14 +2226,11 @@ class CodemlBatchAnalysis:
                 f.write(f"Description: {description}\n")
                 f.write("="*80 + "\n\n")
 
-                # Fase 1: coletar todos os genes validos ANTES de corrigir por BH
-                # (q-valor de um gene depende do rank do seu p-valor entre todos
-                # os outros da mesma comparacao -- nao da pra escrever linha a
-                # linha como o p bruto).
+                # collect every gene before the BH correction
                 collected = []
                 for gene in sorted(genes):
                     if gene_status.get(gene, ('',))[0] == 'failed':
-                        continue   # pasta antiga: saída de um codeml interrompido
+                        continue   # older folders: output of a stopped codeml
                     null_folder = reverse_mapping.get(null_model, null_model)
                     alt_folder = reverse_mapping.get(alt_model, alt_model)
                     
@@ -2518,7 +2246,6 @@ class CodemlBatchAnalysis:
                         with open(alt_file, 'r', encoding='utf-8', errors='ignore') as af:
                             alt_content = af.read()
                         
-                        # Extrair lnL
                         null_lnL_match = re.search(r'lnL\(.*?\):\s+([-\d.]+)', null_content)
                         alt_lnL_match = re.search(r'lnL\(.*?\):\s+([-\d.]+)', alt_content)
                         
@@ -2528,12 +2255,10 @@ class CodemlBatchAnalysis:
                         lnL_null = float(null_lnL_match.group(1))
                         lnL_alt = float(alt_lnL_match.group(1))
                         
-                        # Calcular LRT
                         lrt_stat = 2 * (lnL_alt - lnL_null)
 
-                        # Para M0 vs Branch: df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
-                        # M0 usa árvore não-enraizada (ntime = 2n-3); Branch usa a árvore
-                        # rotulada/enraizada (ntime = 2n-2).  Sem a correção, df = k+1.
+                        # M0 vs Branch: df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0), because
+                        # M0 uses the unrooted tree (2n-3 branches) and Branch the rooted one (2n-2)
                         gene_df = df
                         if null_model == 'M0' and alt_model == 'Branch':
                             np_null_m    = re.search(r'lnL\(ntime:\s*(\d+)\s+np:\s*(\d+)\)', null_content)
@@ -2544,13 +2269,9 @@ class CodemlBatchAnalysis:
                                 ntime_alt_v  = int(np_alt_m.group(1))
                                 gene_df      = max(1, raw_df - (ntime_alt_v - ntime_null_v))
                             elif gene_df == 0:
-                                gene_df = 1  # fallback seguro
+                                gene_df = 1
 
-                        # Branch-site: a mistura 50:50 de χ²(0)+χ²(1) e a nula
-                        # assintotica correta (Self & Liang 1987), mas o manual do
-                        # PAML recomenda explicitamente usar χ²(1) puro em vez dela
-                        # ("guard against violations of model assumptions") -- ver
-                        # nota completa em _run_lrt_analysis. Consistente com la.
+                        # boundary tests use χ²₁, as the PAML manual recommends for branch-site
                         is_boundary = lrt_stats.PAIRS[(null_model, alt_model)]['boundary']
                         lrt_stat = max(0.0, lrt_stat)
                         p_value = lrt_stats.p_value(lrt_stat, gene_df, boundary=is_boundary)
@@ -2566,14 +2287,12 @@ class CodemlBatchAnalysis:
                     except Exception:
                         continue
 
-                # Fase 2: corrigir por BH usando a familia completa desta comparacao
                 if collected:
                     qvals = stats.false_discovery_control([c['p_value'] for c in collected], method='bh')
                     for c, q in zip(collected, qvals):
                         c['q_value'] = q
                 qvalues[(null_model, alt_model)] = {c['gene']: c['q_value'] for c in collected}
 
-                # Fase 3: escrever (p bruto e q-valor BH lado a lado)
                 sig_count_05 = sig_count_01 = sig_count_q05 = 0
                 for c in collected:
                     if c['p_value'] < 0.05:
@@ -2590,27 +2309,26 @@ class CodemlBatchAnalysis:
                     f.write(f"  df = {c['df_display']}\n")
                     f.write(f"  p-value = {c['p_value']:.6e}\n")
                     if c['p_value_mixture'] is not None:
-                        f.write(f"  p-value (mistura 50:50, referencia -- NAO usado pro q-valor) = "
+                        f.write(f"  p-value (50:50 mixture, reference only, not used for q) = "
                                 f"{c['p_value_mixture']:.6e}\n")
                     f.write(f"  q-value (BH) = {c['q_value']:.6e}\n")
 
                     if c['q_value'] < 0.01:
-                        f.write(f"  Result: [OK][OK] {alt_model} significantly better (q < 0.01, BH-corrected)\n")
+                        f.write(f"  Result: SIGNIFICANT -- {alt_model} better (q < 0.01, BH-corrected)\n")
                     elif c['q_value'] < 0.05:
-                        f.write(f"  Result: [OK] {alt_model} significantly better (q < 0.05, BH-corrected)\n")
+                        f.write(f"  Result: SIGNIFICANT -- {alt_model} better (q < 0.05, BH-corrected)\n")
                     else:
-                        f.write(f"  Result: [ERROR] No significant difference (q >= 0.05, BH-corrected)\n")
+                        f.write(f"  Result: not significant (q >= 0.05, BH-corrected)\n")
 
                     f.write("\n" + "-"*60 + "\n\n")
 
-                # Resumo
                 total_valid = len(collected)
                 if total_valid > 0:
-                    f.write("\nRESUMO:\n")
-                    f.write(f"  Total de genes analisados: {total_valid}\n")
-                    f.write(f"  Significativo em p bruto < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
-                    f.write(f"  Significativo em p bruto < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
-                    f.write(f"  Significativo em q (BH) < 0.05: {sig_count_q05} ({100*sig_count_q05/total_valid:.1f}%)\n")
+                    f.write("\nSUMMARY:\n")
+                    f.write(f"  Genes tested: {total_valid}\n")
+                    f.write(f"  Significant at raw p < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
+                    f.write(f"  Significant at raw p < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
+                    f.write(f"  Significant at BH q < 0.05: {sig_count_q05} ({100*sig_count_q05/total_valid:.1f}%)\n")
                     f.write("\n")
 
         return lrt_file, qvalues

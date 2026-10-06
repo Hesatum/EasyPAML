@@ -1,6 +1,4 @@
-"""methods_text.txt e commit da versão (rodada 2 do teste de usabilidade: o
-revisor não conseguia citar a versão exata nem dizer quantos genes entraram
-na correção BH)."""
+"""methods_text.txt, the version commit and the Interpretation tab criteria."""
 from src.backend.methods_text import build_methods_text
 from src.backend.version import source_commit, version_string
 
@@ -34,15 +32,14 @@ def test_version_string_has_commit_in_a_clone():
 
 
 def test_interpretation_candidates_use_panel_q_and_m8a(tmp_path):
-    """Aba Interpretação (rodada 2): usava max(LRT) com df = 2, ignorava o
-    M8a×M8 e contava genes que falharam."""
+    """Candidates use the panel q-values and M8a vs M8, and failed genes are left out."""
     from src.backend.go_enrichment import rank_candidates
     tsv = tmp_path / 'analysis_summary.tsv'
     tsv.write_text(
         "Gene\tstatus\tp_M7_vs_M8\tq_M7_vs_M8\tp_M8a_vs_M8\tq_M8a_vs_M8\n"
-        "gA\tok\t1e-10\t1e-9\t1e-8\t1e-7\n"        # candidato pelo M8a×M8
-        "gB\tok\t1e-10\t1e-9\t0.4\t0.6\n"           # só M7×M8: sítios neutros, não é candidato
-        "gC\tfailed\t1e-20\t1e-19\t1e-20\t1e-19\n"  # falhou: fora
+        "gA\tok\t1e-10\t1e-9\t1e-8\t1e-7\n"        # candidate through M8a vs M8
+        "gB\tok\t1e-10\t1e-9\t0.4\t0.6\n"           # only M7 vs M8 (neutral sites): not a candidate
+        "gC\tfailed\t1e-20\t1e-19\t1e-20\t1e-19\n"  # failed: left out
     )
     ann = tmp_path / 'go.tsv'
     ann.write_text("gene_id_full\tgo_biological_process\tgo_cellular_component\tgo_molecular_function\n"

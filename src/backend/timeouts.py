@@ -1,21 +1,17 @@
 """
-Tempo limite de cada execução do codeml, proporcional ao tamanho do gene.
+Time limit of each codeml run, scaled to the model and gene size
+(docs/timing_benchmark.md):
 
-O tempo do codeml cresce com o número de táxons (forte) e de códons (fraco).
-Medido em docs/benchmark_tempos.md (codeml 4.9j, dados simulados com o
-evolverNSsites, 10/30/60 táxons × 150/500/1500 códons) e conferido em 25 genes
-reais de exemplos_teste:
+    time ≈ T_ref[model] × (taxa / 30)^2.73 × (codons / 500)^0.71
 
-    tempo ≈ T_ref[modelo] × (táxons / 30)^2,73 × (códons / 500)^0,71
-
-O limite é SLACK vezes essa estimativa, nunca menos que MIN_SECONDS. Quem
-protege contra um codeml travado é a detecção de inatividade (idle_timeout);
-o limite total só corta otimizações que não terminam.
+The limit is SLACK times this estimate and at least MIN_SECONDS. A stuck
+codeml is caught by the idle check (idle_timeout); this limit only stops
+optimizations that never finish.
 """
 
 from typing import Optional
 
-# Segundos para 30 táxons × 500 códons (ajuste de mínimos quadrados em log)
+# seconds for 30 taxa × 500 codons (least-squares fit on the log scale)
 T_REF = {
     'M0': 140,
     'M1a': 340,
@@ -36,7 +32,7 @@ MIN_SECONDS = 1800
 
 
 def estimate_seconds(model: str, n_taxa: int, n_codons: int) -> float:
-    """Tempo esperado do codeml (mediana do ajuste) para um gene × modelo."""
+    """Expected codeml time (fit median) for one gene and model."""
     ref = T_REF.get(model)
     if ref is None:
         ref = T_REF['Branch-site'] if str(model).startswith('Branch') else max(T_REF.values())
@@ -50,7 +46,7 @@ def auto_timeout(model: str, n_taxa: int, n_codons: int) -> int:
 
 
 def user_timeout(value) -> int:
-    """Segundos escolhidos pelo usuário; 0 quando vazio, None, 0 ou inválido (= automático)."""
+    """Seconds chosen by the user; 0 (automatic) when empty, None, 0 or invalid."""
     try:
         v = float(value) if value not in (None, '') else 0.0
     except (TypeError, ValueError):
@@ -59,5 +55,5 @@ def user_timeout(value) -> int:
 
 
 def resolve_timeout(user_value: Optional[float], model: str, n_taxa: int, n_codons: int) -> int:
-    """Valor do usuário (> 0) tem prioridade; senão, o limite automático."""
+    """The user value (> 0) wins; otherwise the automatic limit."""
     return user_timeout(user_value) or auto_timeout(model, n_taxa, n_codons)

@@ -1,8 +1,5 @@
-"""
-Peças de interface compartilhadas pela janela principal e pelo painel de
-resultados: diálogos (validação antes de rodar, confirmação, Sobre), ajuste
-de janela à tela, abrir pasta no gerenciador de arquivos, cores.
-"""
+"""Interface pieces shared by the main window and the results panel: palettes and
+theme, dialogs, folder picker, window sizing."""
 
 import os
 import platform
@@ -19,8 +16,8 @@ _ON_WIN = platform.system() == "Windows"
 FONT_UI = "DejaVu Sans" if _ON_LINUX else "Roboto"
 FONT_MONO = "Cascadia Code" if _ON_WIN else "DejaVu Sans Mono"
 
-# Paletas com contraste >= 4,5:1 (WCAG AA) para todo texto sobre os fundos
-# de cada uma. Ver tests/test_gui_texts.py.
+# Text colours have a contrast of at least 4.5:1 (WCAG AA) on every background
+# of their palette (tests/test_gui_texts.py).
 DARK_PALETTE = {
     'bg_dark': '#0d0d11',
     'bg_card': '#17171f',
@@ -29,8 +26,8 @@ DARK_PALETTE = {
     'text_secondary': '#a3a3b8',
     'text_tertiary': '#8e8ea4',
     'text_muted': '#8a8aa0',
-    'accent_text': '#818cf8',       # índigo legível como texto
-    'accent_fill': '#4f46e5',       # índigo como fundo (texto branco 6,3:1)
+    'accent_text': '#818cf8',
+    'accent_fill': '#4f46e5',
     'success_text': '#22c55e',
     'success_fill': '#15803d',
     'warning_text': '#f59e0b',
@@ -41,31 +38,25 @@ DARK_PALETTE = {
     'info_fill': '#0e7490',
     'border': '#262632',
     'border_hover': '#3a3a4e',
-    # Camadas da janela principal (escuro -> claro), separadas por tom, não
-    # por bordas. Texto primário/secundário/terciário >= 4,5:1 em todas.
     'bg_window': '#0a0b0e',          # fundo da janela
     'bg_panel': '#111318',           # painel lateral
-    'bg_surface': '#181a21',         # cartões, abas, log
-    'bg_elevated': '#20232c',        # cartão de modelo, botão de tom
-    'bg_elevated_hover': '#292c37',  # hover sobre bg_elevated (só texto primário)
+    'bg_surface': '#181a21',
+    'bg_elevated': '#20232c',
+    'bg_elevated_hover': '#292c37',
     'bg_inset': '#0e1014',           # campos de entrada
     'divider': '#262a34',            # linha de 1 px entre grupos
-    'control_border': '#2c303c',     # contorno de botão secundário / campo
+    'control_border': '#2c303c',
     'control_border_hover': '#3b4050',
-    'neutral_fill': '#343846',       # botão neutro preenchido (texto branco 11,7:1)
+    'neutral_fill': '#343846',
     'switch_knob': '#e6e7ee',
     'switch_track': '#3b4050',
-    # Cores semânticas "subtle" (estilo Primer) do painel de resultados: fundo
-    # quase neutro + texto claro só no valor/rótulo do veredito. Cada *_fg tem
-    # >= 4,5:1 sobre o seu *_subtle e sobre todas as camadas acima.
-    'success_subtle': '#0f2a1d',     # q < 0,05: fundo do rótulo "significativo"
+    'success_subtle': '#0f2a1d',
     'success_fg': '#86efac',         # texto sobre success_subtle (10,9:1)
-    'warning_subtle': '#2e2108',     # avisos (M7×M8 sem M8a×M8, análises órfãs)
+    'warning_subtle': '#2e2108',
     'warning_fg': '#fcd34d',         # texto sobre warning_subtle (10,9:1)
-    'danger_subtle': '#341719',      # só falha de execução
+    'danger_subtle': '#341719',
     'danger_fg': '#fca5a5',          # texto sobre danger_subtle (8,6:1)
     'row_alt': '#15171d',            # zebra suave das tabelas (entre bg_panel e bg_surface)
-    # usados por janelas e gráficos que não são widgets CTk
     'accent_blue': '#6366f1',
     'accent_cyan': '#22d3ee',
     'accent_purple': '#a78bfa',
@@ -133,8 +124,7 @@ LIGHT_PALETTE = {
     'canvas_text': '#111827',
 }
 
-# Paleta em uso: escura ou clara. Preenchida por apply_theme() antes de
-# qualquer janela ser criada; os módulos leem PALETTE[...] ao montar widgets.
+# Active palette, filled by apply_theme() before any window is built.
 PALETTE: dict = {}
 THEME_CHOICES = ('system', 'light', 'dark')
 _THEME_PREF = Path.home() / '.easypaml_theme'
@@ -157,7 +147,7 @@ def save_theme_pref(choice: str) -> None:
 
 
 def system_theme() -> str:
-    """'light' ou 'dark' conforme o sistema (darkdetect); 'light' se não souber."""
+    """'light' or 'dark' from the system (darkdetect); 'light' if unknown."""
     try:
         import darkdetect
         return 'dark' if (darkdetect.theme() or '').lower() == 'dark' else 'light'
@@ -178,10 +168,10 @@ def apply_theme(choice: str = None) -> str:
 
 apply_theme()
 
-# Escala de espaçamento (grade de 4 px) e raios de canto
+# spacing (4 px grid) and corner radii
 SPACE = {'xs': 4, 'sm': 8, 'md': 12, 'lg': 16, 'xl': 24, 'xxl': 32}
 RADIUS = {'field': 6, 'card': 8, 'panel': 12}
-# Escala de fontes (pt): nada abaixo de 11
+# font sizes (pt), none below 11
 FONT_SIZE = {'xs': 11, 'sm': 12, 'md': 13, 'lg': 15, 'xl': 17, 'xxl': 20}
 
 
@@ -193,13 +183,13 @@ def mix(color_a: str, color_b: str, t: float) -> str:
 
 
 def hover_tint(accent: str, background: str = '#17171f') -> str:
-    """Fundo de hover de um botão de contorno: um tom escuro da cor de
-    destaque, para o texto (na cor de destaque) continuar legível."""
+    """Hover background of an outlined button: a dark shade of the accent, so
+    accent-coloured text stays legible."""
     return mix(background, accent, 0.22)
 
 
 def fit_to_screen(win, width: int, height: int, min_w: int = 1024, min_h: int = 640) -> None:
-    """Abre a janela no tamanho pedido, mas nunca maior que a tela."""
+    """Open the window at the requested size, never larger than the screen."""
     win.update_idletasks()
     sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
     w = min(width, sw - 40)
@@ -211,8 +201,7 @@ def fit_to_screen(win, width: int, height: int, min_w: int = 1024, min_h: int = 
 
 
 def disable_mouse_wheel(widget) -> None:
-    """Impede que a roda do mouse mude o valor de um CTkSlider ao rolar o
-    painel (a rolagem segue para o painel)."""
+    """Keep the mouse wheel from changing a CTkSlider while the panel scrolls."""
     canvas = getattr(widget, '_canvas', None)
     if canvas is None:
         return
@@ -278,7 +267,7 @@ def _button(parent, text, command, fill, **kw):
 
 
 def ask_yes_no(parent, title: str, message: str, yes: str = None, no: str = None) -> bool:
-    """Confirmação com botões traduzidos (o messagebox do Tk usa Yes/No do sistema)."""
+    """Yes/no dialog with translated buttons (Tk's messagebox uses the system's)."""
     dlg = _Modal(parent, title, 460, 220)
     ctk.CTkLabel(dlg, text=message, font=(FONT_UI, FONT_SIZE['md']), wraplength=400, justify='left',
                  text_color=PALETTE['text_primary']).pack(padx=SPACE['xl'], pady=(SPACE['xl'], SPACE['lg']),
@@ -295,7 +284,6 @@ def show_message(parent, title: str, message: str, kind: str = 'info') -> None:
     dlg = _Modal(parent, title, 560, 300)
     color = {'error': PALETTE['danger_text'], 'warning': PALETTE['warning_text']}.get(
         kind, PALETTE['text_primary'])
-    # borda só em aviso/erro (comunica o tipo); mensagem comum separa pelo tom
     box = ctk.CTkTextbox(dlg, font=(FONT_UI, FONT_SIZE['md']), fg_color=PALETTE['bg_surface'],
                          text_color=color, wrap='word', corner_radius=RADIUS['card'],
                          border_width=1 if kind in ('error', 'warning') else 0,
@@ -309,7 +297,7 @@ def show_message(parent, title: str, message: str, kind: str = 'info') -> None:
 
 
 class PreflightDialog(_Modal):
-    """Problemas encontrados ANTES de rodar. Retorna 'continue' ou 'fix'."""
+    """Problems found before running. Returns 'continue' or 'fix'."""
 
     def __init__(self, parent, report):
         super().__init__(parent, TEXTS['preflight_title'], 900, 620)
@@ -369,10 +357,8 @@ def show_about(parent) -> None:
 
 
 class FolderPicker(_Modal):
-    """Seletor de pasta no tema do programa, usado no Linux no lugar do
-    diálogo do Tk (que mostrava só pastas, escolhia a pasta de cima com um
-    clique e exigia dois cliques ou Enter no OK). Mostra os arquivos em cinza
-    para conferência; o botão diz exatamente qual pasta será escolhida."""
+    """Themed folder picker, used on Linux instead of Tk's dialog. Files are
+    shown greyed out, and the button names the folder that will be chosen."""
 
     def __init__(self, parent, title: str, initialdir=None, allow_new: bool = False,
                  must_exist: bool = True):
@@ -511,8 +497,8 @@ class FolderPicker(_Modal):
 
 def ask_directory(parent, title: str, initialdir=None, allow_new: bool = False,
                   must_exist: bool = True):
-    """Pasta escolhida (caminho absoluto) ou None. No Linux usa FolderPicker;
-    no Windows e no macOS o diálogo nativo do sistema."""
+    """Absolute path of the chosen folder, or None. FolderPicker on Linux, the
+    native dialog on Windows and macOS."""
     if platform.system() == 'Linux':
         return FolderPicker(parent, title, initialdir, allow_new, must_exist).show()
     from tkinter import filedialog

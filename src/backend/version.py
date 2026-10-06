@@ -1,9 +1,7 @@
-"""Versão do EasyPAML -- fonte única, usada pela GUI (menu Sobre), pelo CLI
-(--version) e gravada em run_config.json.
+"""EasyPAML version, shown under About, by --version and in run_config.json.
 
-Além do número, o commit exato: do git, quando a pasta é um clone; senão de
-_commit.txt, que o GitHub preenche ao gerar o ZIP ou o tar.gz (export-subst
-em .gitattributes)."""
+The exact commit comes from git in a clone, or from _commit.txt, which GitHub
+fills in when it builds a ZIP or tar.gz (export-subst in .gitattributes)."""
 
 import subprocess
 from functools import lru_cache
@@ -18,8 +16,8 @@ _COMMIT_FILE = Path(__file__).with_name('_commit.txt')
 
 @lru_cache(maxsize=1)
 def source_commit() -> Optional[str]:
-    """Hash completo do commit do código em uso, com '-dirty' se houver
-    mudanças locais não commitadas; None se não der para saber."""
+    """Full hash of the running code's commit, with '-dirty' if there are
+    uncommitted changes; None if unknown."""
     if (_ROOT / '.git').exists():
         try:
             head = subprocess.run(['git', '-C', str(_ROOT), 'rev-parse', 'HEAD'],
@@ -39,7 +37,7 @@ def source_commit() -> Optional[str]:
 
 
 def version_string() -> str:
-    """'0.3.0.dev0 (commit e1a7f4a)' -- para citar."""
+    """'0.3.0.dev0 (commit e1a7f4a)', for citing."""
     c = source_commit()
     return f"{__version__} (commit {c[:7]}{'-dirty' if c and c.endswith('-dirty') else ''})" \
         if c else __version__

@@ -1,51 +1,20 @@
-"""
-gui_texts.py — Dicionário Central de Textos da Interface EasyPAML
-=================================================================
-
-Internacionalização (i18n):
-  - TEXTS_PT  : textos em Português do Brasil (padrão)
-  - TEXTS_EN  : textos em Inglês
-  - TEXTS     : proxy transparente — roteia para o idioma ativo.
-                Todo código existente que usa TEXTS["key"] continua
-                funcionando sem nenhuma alteração.
-
-Para mudar o idioma em tempo de execução:
-    from src.gui.gui_texts import set_language
-    set_language('en')   # ou 'pt'
-
-Para ler o idioma atual:
-    from src.gui.gui_texts import get_language
-    get_language()  # → 'pt' ou 'en'
-
-ORGANIZAÇÃO DOS DICIONÁRIOS
-----------------------------
-  Seção 1 — main_gui.py › ModelConfigWindow
-  Seção 2 — main_gui.py › TreeLabelWindow
-  Seção 3 — main_gui.py › App  (janela principal, sidebar, log)
-  Seção 4 — results_viewer.py › ResultsViewerWindow
-
-TEMPLATES (strings com {placeholders})
----------------------------------------
-  Use .format() para substituir variáveis dinâmicas. Exemplos:
-    TEXTS["sites_file_not_found"].format(filename="gene_M8.txt")
-    TEXTS["lrt_footer_template"].format(total=30, sig=5, df=2)
-    TEXTS["status_stops_template"].format(n=3)
-"""
+"""Every interface text, in Portuguese (TEXTS_PT) and English (TEXTS_EN).
+TEXTS reads from the active language; set_language() switches it."""
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PORTUGUÊS DO BRASIL
+# Portuguese
 # ═══════════════════════════════════════════════════════════════════════════
 
 TEXTS_PT: dict[str, object] = {
 
-    # ── Seção 1 — ModelConfigWindow ─────────────────────────────────────────
+    # ── ModelConfigWindow ─────────────────────────────────────────
     "model_config_header":      "Modelo: {model_code}",
     "model_config_btn_cancel":  "Cancelar",
     "model_config_btn_save":    "Salvar",
     "model_status_default":     "Padrão",
     "model_status_configured":  "Configurado",
 
-    # ── Seção 2 — TreeLabelWindow ────────────────────────────────────────────
+    # ── TreeLabelWindow ────────────────────────────────────────────
     "tree_labeler_sidebar_title": "Instruções",
 
     "tree_labeler_instructions_branchsite": (
@@ -64,7 +33,7 @@ TEXTS_PT: dict[str, object] = {
     "tree_labeler_btn_save":     "Salvar",
     "tree_labeler_btn_cancel":   "Cancelar",
 
-    # ── Seção 3 — App (janela principal) ────────────────────────────────────
+    # ── App (main window) ────────────────────────────────────
     "app_sidebar_title":    "EasyPAML",
     "app_sidebar_subtitle": "Seleção Positiva",
 
@@ -189,7 +158,7 @@ TEXTS_PT: dict[str, object] = {
     "model_info_use_case":       "Quando usar:",
     "model_info_references":     "Referências:",
 
-    # ── Seção 4 — ResultsViewerWindow ───────────────────────────────────────
+    # ── ResultsViewerWindow ───────────────────────────────────────
     "viewer_window_title":       "EasyPAML — Painel de Análise",
     "viewer_error_no_tsv":       "Arquivo analysis_summary.tsv não encontrado!",
     "viewer_error_run_analysis": "Execute uma análise para gerar resultados.",
@@ -212,11 +181,6 @@ TEXTS_PT: dict[str, object] = {
     "lrt_no_comparisons": "Nenhuma comparação LRT disponível",
     "lrt_label_model":    "Teste:",
 
-    "lrt_branch_warning": (
-        "Branch e Branch-site requerem sequências com mais de "
-        "200 pb para estimativas confiáveis de ω. Genes mais curtos podem "
-        "produzir estimativas instáveis ou não convergir."
-    ),
 
     "lrt_no_data_for_comparison": "Nenhum dado de LRT para esta comparação",
 
@@ -316,7 +280,7 @@ TEXTS_PT: dict[str, object] = {
     "tree_err_no_tree":       "Nenhuma árvore selecionada.",
     "tree_err_load":          "Erro ao carregar a árvore:\n{error}",
 
-    # ── TreeLabelWindow — diálogos de tag ────────────────────────────────
+    # ── TreeLabelWindow dialogs ────────────────────────────────
     "tag_dialog_edit_title":  "Editar Tag",
     "tag_dialog_edit_prompt": "Ramo atual: {tag}\n\nDigite novo número ou 'remover':",
     "tag_dialog_new_title":   "Número da Tag",
@@ -344,7 +308,7 @@ TEXTS_PT: dict[str, object] = {
     "log_analysis_stopped":   "Análise interrompida.\n",
     "log_analysis_done":      "Análise terminada.\n",
 
-    # ── App — diálogos de arquivo ────────────────────────────────────────
+    # ── App file dialogs ────────────────────────────────────────
     "dialog_select_results_folder": "Selecione a pasta com resultados para atualizar síntese",
 
     # ── App — troca de idioma ────────────────────────────────────────────
@@ -379,11 +343,11 @@ TEXTS_PT: dict[str, object] = {
     "msg_html_exported":        "Relatório HTML exportado:\n{path}",
     "msg_html_err":             "Erro ao exportar HTML:\n{error}",
 
-    # ── ResultsViewerWindow — diálogos de arquivo ────────────────────────
+    # ── ResultsViewerWindow file dialogs ────────────────────────
     "dialog_export_cladogram":  "Exportar cladograma",
     "dialog_save_csv":          "Salvar CSVs — escolha o nome base (sem extensão)",
 
-    # ── Gráficos (matplotlib) ─────────────────────────────────────────────
+    # ── Charts (matplotlib) ─────────────────────────────────────────────
     "chart_omega_dist":         "Distribuição de ω",
     "chart_freq":               "Frequência",
 
@@ -559,7 +523,7 @@ TEXTS_PT: dict[str, object] = {
     "summary_verdict_failed": "FALHOU",
     "summary_verdict_warning": "AVISO",
     "summary_sites_n": "{n} sítio(s) com Pr(ω>1) ≥ 0,95",
-    # ── Janela principal (2ª passada visual): etapas, cartões, resumo ──
+    # ── Main window: steps, cards, summary ──
     "app_main_title":     "Análise de seleção positiva",
     "app_main_subtitle":  "Modelos de códons do PAML/codeml para vários genes de uma vez",
     "step_data":          "Dados",
@@ -773,11 +737,6 @@ TEXTS_EN: dict[str, object] = {
     "lrt_no_comparisons": "No LRT comparison available",
     "lrt_label_model":    "Test:",
 
-    "lrt_branch_warning": (
-        "Branch and Branch-site require sequences longer than "
-        "200 bp for reliable ω estimates. Shorter genes may "
-        "produce unstable estimates or fail to converge."
-    ),
 
     "lrt_no_data_for_comparison": "No LRT data for this comparison",
 
@@ -1153,7 +1112,7 @@ TEXTS_EN: dict[str, object] = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PROXY TRANSPARENTE — roteia TEXTS["key"] pelo idioma ativo
+# TEXTS["key"] reads from the active language
 # ═══════════════════════════════════════════════════════════════════════════
 
 _AVAILABLE: dict[str, dict] = {
@@ -1172,21 +1131,17 @@ def set_language(lang: str) -> None:
 
 
 def tr(pt: str, en: str) -> str:
-    """Mensagem curta bilíngue (para textos montados em código)."""
+    """Short text in the active language, for strings built in code."""
     return pt if _current_lang == 'pt' else en
 
 
 def get_language() -> str:
-    """Retorna o código do idioma ativo ('pt' ou 'en')."""
+    """Active language code ('pt' or 'en')."""
     return _current_lang
 
 
 class _TextProxy:
-    """Proxy transparente: TEXTS['key'] sempre lê do idioma ativo.
-
-    Todo código que faz ``from .gui_texts import TEXTS`` continua
-    funcionando sem alteração — a troca de idioma é invisível.
-    """
+    """TEXTS['key'] always reads from the active language."""
 
     def __getitem__(self, key: str):
         return _AVAILABLE.get(_current_lang, TEXTS_PT)[key]

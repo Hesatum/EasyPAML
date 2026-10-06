@@ -1,13 +1,10 @@
 """
-Leitura de alinhamentos de códons (FASTA e PHYLIP) e utilitários de códons.
+Codon alignment reading (FASTA and PHYLIP) and codon utilities.
 
-PHYLIP: aceita sequencial e intercalado, com nomes "estritos" (10 colunas)
-ou "relaxados" (nome separado da sequência por espaço, qualquer tamanho).
-O formato é escolhido pela interpretação em que todas as sequências ficam
-com o comprimento declarado no cabeçalho.
-
-O resto do EasyPAML sempre passa ao codeml uma cópia em FASTA (ver
-codeml_backend), então qualquer variante aceita aqui funciona igual.
+PHYLIP may be sequential or interleaved, with strict (10-column) or relaxed
+(space-separated) names; the reading that gives every sequence the length in
+the header wins. codeml always receives a FASTA copy, so every accepted
+variant behaves the same.
 """
 
 import re
@@ -24,7 +21,7 @@ _WS = re.compile(r'\s+')
 
 
 class AlignmentError(ValueError):
-    """Arquivo que não pode ser lido como alinhamento."""
+    """A file that cannot be read as an alignment."""
 
 
 @dataclass
@@ -32,7 +29,7 @@ class Alignment:
     path: Path
     fmt: str                                # 'fasta' | 'phylip'
     names: List[str]
-    seqs: Dict[str, str]                    # nome -> sequência (maiúsculas, sem espaços)
+    seqs: Dict[str, str]                    # name -> sequence (upper case, no spaces)
     phylip_variant: Optional[str] = None    # 'relaxed-sequential', 'strict-interleaved', ...
     duplicate_names: List[str] = field(default_factory=list)
 
@@ -87,7 +84,7 @@ def _phylip_sequential(lines: List[str], ntax: int, nchar: int, strict: bool):
     for line in lines:
         if cur is None or len(seqs[cur]) >= nchar:
             if len(names) == ntax:
-                return None  # sobrou texto: interpretação errada
+                return None  # text left over: wrong reading
             if strict:
                 name, rest = line[:10].strip(), line[10:]
             else:
@@ -129,11 +126,10 @@ def _phylip_interleaved(lines: List[str], ntax: int, nchar: int, strict: bool):
 def parse_phylip(text: str) -> Tuple[List[str], Dict[str, str], str]:
     lines = [l.rstrip('\r') for l in text.splitlines() if l.strip()]
     if not lines or not _is_phylip_header(lines[0]):
-        raise AlignmentError("cabeçalho PHYLIP ('N  L') ausente")
+        raise AlignmentError("missing PHYLIP header ('N  L')")
     ntax, nchar = (int(x) for x in lines[0].split()[:2])
     body = lines[1:]
-    # Ordem de tentativa: relaxado primeiro (é o que o codeml também aceita,
-    # nomes separados por espaço), depois estrito de 10 colunas.
+    # try relaxed names first (codeml accepts them too), then strict 10-column names
     for variant, fn, strict in (
         ('relaxed-sequential', _phylip_sequential, False),
         ('strict-sequential', _phylip_sequential, True),
@@ -159,7 +155,7 @@ def read_alignment(path) -> Alignment:
         raise AlignmentError(f"não foi possível ler o arquivo: {exc}") from exc
     stripped = text.lstrip()
     if not stripped:
-        raise AlignmentError("arquivo vazio")
+        raise AlignmentError("empty file")
     if stripped.startswith('>'):
         names, seqs, dups = parse_fasta(text)
         return Alignment(path, 'fasta', names, seqs, duplicate_names=dups)
@@ -167,7 +163,7 @@ def read_alignment(path) -> Alignment:
     if _is_phylip_header(first):
         names, seqs, variant = parse_phylip(text)
         return Alignment(path, 'phylip', names, seqs, phylip_variant=variant)
-    raise AlignmentError("formato não reconhecido (esperado FASTA '>' ou PHYLIP 'N  L')")
+    raise AlignmentError("unknown format (expected FASTA '>' or PHYLIP 'N  L')")
 
 
 def to_fasta(names: List[str], seqs: Dict[str, str], width: int = 60) -> str:
@@ -184,7 +180,7 @@ def codons(seq: str) -> List[str]:
 
 
 def find_stop_codons(names: List[str], seqs: Dict[str, str]) -> List[Tuple[str, int, str]]:
-    """[(sequência, posição do códon 1-based, códon)] para cada stop codon."""
+    """[(sequence, 1-based codon position, codon)] for every stop codon."""
     hits = []
     for n in names:
         for i, c in enumerate(codons(seqs[n].replace('U', 'T')), 1):
@@ -194,14 +190,12 @@ def find_stop_codons(names: List[str], seqs: Dict[str, str]) -> List[Tuple[str, 
 
 
 def cleandata_kept_codons(names: List[str], seqs: Dict[str, str]) -> List[int]:
-    """Posições (1-based) dos códons que o codeml mantém com cleandata = 1.
+    """1-based positions of the codons codeml keeps with cleandata = 1.
 
-    Regra do codeml (verificada com 4.9j e 4.10.x): uma coluna de códon sai
-    da análise se, em QUALQUER sequência, o códon tiver algo diferente de
-    A/C/G/T (gap, N, ?, ambiguidade) ou for um stop codon (o codeml converte a
-    coluna inteira em '???'). As posições BEB do codeml são contadas nas
-    colunas que sobram; este mapa permite voltar à numeração do alinhamento
-    do usuário.
+    codeml's rule (checked with 4.9j and 4.10): a codon column is removed if any
+    sequence has something other than A/C/G/T there (gap, N, ?, ambiguity) or a
+    stop codon. codeml numbers BEB sites over the remaining columns; this list
+    maps them back to the alignment.
     """
     if not names:
         return []

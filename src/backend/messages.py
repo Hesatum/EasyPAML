@@ -1,8 +1,5 @@
-"""
-Mensagens que o backend mostra ao usuário (log da janela e do CLI), em
-português e inglês. A GUI chama set_language() com o idioma da interface; o
-CLI usa --lang (padrão: inglês, ou português se o sistema estiver em pt).
-"""
+"""Backend messages shown in the window log and on the command line, in English
+and Portuguese."""
 
 import locale
 import os
@@ -175,14 +172,14 @@ def get_language() -> str:
 
 
 def system_language() -> str:
-    """'pt' se o sistema estiver em português, senão 'en'."""
+    """'pt' if the system language is Portuguese, otherwise 'en'."""
     candidates = [os.environ.get(k, '') for k in ('LC_ALL', 'LC_MESSAGES', 'LANG', 'LANGUAGE')]
     try:
         loc = locale.getlocale()[0] or ''
         candidates.append(loc)
     except Exception:
         pass
-    try:  # Windows: idioma da interface do usuário
+    try:  # Windows: user interface language
         import ctypes
         lcid = ctypes.windll.kernel32.GetUserDefaultUILanguage()  # type: ignore[attr-defined]
         if (lcid & 0x3FF) == 0x16:  # LANG_PORTUGUESE

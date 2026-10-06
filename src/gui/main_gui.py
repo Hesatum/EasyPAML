@@ -10,15 +10,14 @@ import os
 import signal
 import platform as _platform
 
-# Ajuste de caminho para importação do backend
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# ── Compatibilidade de plataforma ─────────────────────────────────────────────
+# ── Platform ─────────────────────────────────────────────
 _ON_LINUX  = _platform.system() == "Linux"
 _ON_WIN    = _platform.system() == "Windows"
-# Fonte sans-serif: Roboto no Windows/Mac, DejaVu Sans no Linux
+# sans-serif font: Roboto on Windows/macOS, DejaVu Sans on Linux
 _FONT_UI   = "Roboto" if not _ON_LINUX else "DejaVu Sans"
-# Fonte monoespaçada: Cascadia Code no Windows, DejaVu Sans Mono em outros
+# monospace font: Cascadia Code on Windows, DejaVu Sans Mono elsewhere
 _FONT_MONO = "Cascadia Code" if _ON_WIN else "DejaVu Sans Mono"
 
 from backend.codeml_backend import CodemlBatchAnalysis
@@ -48,8 +47,8 @@ import matplotlib.pyplot as plt
 ctk.set_default_color_theme("blue")
 
 class StdoutRedirect:
-    """print() de bibliotecas/partes antigas vira mensagem 'debug' (escondida
-    até o usuário marcar "Mostrar detalhes técnicos")."""
+    """print() output from libraries goes to the log as 'debug' messages, hidden
+    until "Show technical details" is ticked."""
     def __init__(self, append_func):
         self.append = append_func
     def write(self, s):
@@ -59,9 +58,7 @@ class StdoutRedirect:
     def flush(self): pass
 
 class ModelConfigWindow(ctk.CTkToplevel):
-    """Edita os parâmetros do .ctl de um modelo (em memória). CodonFreq é uma
-    lista suspensa com número e nome de cada opção; embaixo, a prévia de
-    TODOS os parâmetros que irão para o .ctl."""
+    """Edit one model's .ctl parameters, with a preview of the whole .ctl."""
 
     COLORS = {
         'bg_dark':        PALETTE['bg_window'],
@@ -204,9 +201,8 @@ class ModelConfigWindow(ctk.CTkToplevel):
 
 
 class TreeLabelWindow(ctk.CTkToplevel):
-    """Janela para marcar ramos com cladograma retangular biologicamente correto - Premium Styling"""
+    """Window for labelling branches on a rectangular cladogram."""
     
-    # Cores para consistent styling
     BG_DARK    = PALETTE['bg_window']
     BG_SIDEBAR = PALETTE['bg_panel']
     BG_CARD    = PALETTE['bg_surface']
@@ -215,7 +211,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
     TEXT_TERTIARY  = PALETTE['text_tertiary']
     ACCENT_BLUE  = PALETTE['accent_text']
     ACCENT_PINK  = '#f472b6'
-    SUCCESS      = PALETTE['success_fill']      # botão preenchido: texto branco 5,0:1
+    SUCCESS      = PALETTE['success_fill']
     SUCCESS_HOVER = mix(PALETTE['success_fill'], '#000000', 0.2)
     DANGER       = PALETTE['danger_text']
     DANGER_HOVER = '#ef4444'
@@ -242,7 +238,6 @@ class TreeLabelWindow(ctk.CTkToplevel):
                         text_color=self.TEXT_SECONDARY).pack(padx=SPACE['xl'], pady=SPACE['xl'])
             return
 
-        # Layout premium
         left_frame = ctk.CTkFrame(self, width=280, fg_color=self.BG_SIDEBAR,
                                  corner_radius=0, border_width=0)
         left_frame.pack(side='left', fill='y', padx=0, pady=0)
@@ -251,7 +246,6 @@ class TreeLabelWindow(ctk.CTkToplevel):
         plot_frame = ctk.CTkFrame(self, fg_color=self.BG_DARK)
         plot_frame.pack(side='left', fill='both', expand=True, padx=SPACE['md'], pady=SPACE['md'])
 
-        # Sidebar premium
         title_label = ctk.CTkLabel(left_frame, text=TEXTS["tree_labeler_sidebar_title"],
                                   font=(_FONT_UI, FONT_SIZE['lg'], "bold"),
                                   text_color=self.TEXT_PRIMARY)
@@ -285,7 +279,6 @@ class TreeLabelWindow(ctk.CTkToplevel):
                      command=self.destroy, height=40, font=(_FONT_UI, FONT_SIZE['md'], "bold"),
                      text_color='#ffffff', corner_radius=RADIUS['card']).pack(fill='x')
 
-        # Gráfico
         if self.tree_path is None:
             ctk.CTkLabel(plot_frame, text=TEXTS["tree_err_no_tree"], font=(_FONT_UI, FONT_SIZE['lg']),
                          text_color=self.TEXT_SECONDARY).pack(pady=48)
@@ -298,7 +291,6 @@ class TreeLabelWindow(ctk.CTkToplevel):
                          text_color=PALETTE['danger_text']).pack(pady=48)
             return
 
-        # Matplotlib
         self.fig = Figure(figsize=(12, 10), dpi=110)
         self.fig.patch.set_facecolor(self.BG_DARK)
         self.ax = self.fig.add_subplot(111)
@@ -339,31 +331,23 @@ class TreeLabelWindow(ctk.CTkToplevel):
             depths[clade] = accumulated_depth
 
             for child in clade.clades:
-                # Cladograma: passo uniforme independente dos branch lengths reais.
-                # Branch lengths reais distorcem muito a visualização quando as
-                # sequências têm taxas de evolução heterogêneas — para o propósito
-                # de etiquetagem, topologia importa; comprimento, não.
+                # for labelling only the topology matters; branch lengths are ignored
                 calc_depth_with_lengths(child, accumulated_depth + 1.0)
         
         calc_depth_with_lengths(self.tree.root, 0.0)
 
-        # Profundidade máxima entre todos os terminais — todos serão alinhados neste X.
-        # Isso cria o visual clássico de cladograma retangular onde todos os tips
-        # ficam na mesma coluna da direita, independente de sua profundidade real.
+        # every tip in the rightmost column
         max_depth = max(
             (depths[t] for t in terminals if t in depths),
             default=1.0
         )
-        # Guardado como atributo para que _draw_tree possa usar o offset de label correto
         self._cladogram_depth = max_depth
 
         for clade in self.tree.find_clades(order='postorder'):
             if clade.is_terminal():
-                # Alinhar todos os tips na coluna máxima
                 x = max_depth
                 y = terminal_y_map[clade]
             else:
-                # Nós internos: profundidade real (posição topológica na árvore)
                 x = depths.get(clade, 0.0)
                 child_ys = [self.clade_positions[child][1] for child in clade.clades
                             if child in self.clade_positions]
@@ -372,11 +356,8 @@ class TreeLabelWindow(ctk.CTkToplevel):
             self.clade_positions[clade] = (x, y)
 
     def _draw_tree(self):
-        """Desenha cladograma colorindo APENAS do nó marcado até os tips
-        
-        Lógica: A cor flui como uma tubulação, do nó marcado até seus tips.
-        Se um nó descendente também foi marcado, aquela cor SOBREPÕE a anterior.
-        """
+        """Draw the cladogram, colouring from each labelled node down to its tips; a
+        labelled descendant overrides its ancestor."""
         self.ax.clear()
         self.ax.set_facecolor(self.BG_DARK)
         
@@ -388,33 +369,19 @@ class TreeLabelWindow(ctk.CTkToplevel):
         self.scatter_objects.clear()
 
         def get_tag_for_branch(clade):
-            """
-            Retorna a tag que deve colorir este clado.
-            
-            Lógica (como tubulação, flui para BAIXO):
-            1. Se o próprio clado foi marcado → usa sua tag
-            2. Senão, procura o nó marcado mais PRÓXIMO na cadeia ancestral direta
-            3. Senão, retorna None (cinza)
-            
-            "Mais próximo" = primeiro nó marcado quando sobe na árvore
-            """
-            # Primeiro: este clado foi marcado?
+            """Label that colours this clade: its own, else the nearest labelled ancestor,
+            else None."""
             if clade in self.marked_clades:
                 return self.marked_clades[clade]
             
-            # Segundo: percorrer a cadeia de ancestrais e achar o primeiro marcado
-            # Biopython não tem parent direto, então vamos comparar com todos os marcados
             try:
-                # Para cada nó marcado, verificar se é ancestral
                 closest_tag = None
                 min_distance = float('inf')
                 
                 for marked_clade, tag in self.marked_clades.items():
-                    # Verificar se marked_clade é ancestral de clade
                     try:
                         all_descendants = list(marked_clade.find_clades())
                         if clade in all_descendants:
-                            # Calcular distância: número de nós entre marked_clade e clade
                             distance = len(all_descendants) - len(list(clade.find_clades()))
                             if distance < min_distance:
                                 min_distance = distance
@@ -429,11 +396,10 @@ class TreeLabelWindow(ctk.CTkToplevel):
             return None
 
         def is_descendant_of_marked(clade):
-            """Verifica se este clado é descendente de um nó marcado"""
+            """True if this clade descends from a labelled node."""
             tag = get_tag_for_branch(clade)
             return (tag is not None, tag)
 
-        # === DESENHAR LINHAS ===
         for clade in self.tree.find_clades():
             if clade.is_terminal():
                 continue
@@ -455,7 +421,6 @@ class TreeLabelWindow(ctk.CTkToplevel):
             y_min = min(child_ys)
             y_max = max(child_ys)
             
-            # LINHA VERTICAL: usar a tag do nó marcado mais próximo na subárvore
             parent_tag = get_tag_for_branch(clade)
             
             if parent_tag:
@@ -473,7 +438,6 @@ class TreeLabelWindow(ctk.CTkToplevel):
                            zorder=1, alpha=vertical_alpha, solid_capstyle='round')
             
             for child, (x_child, y_child) in children_positions:
-                # LINHA HORIZONTAL: cada filho herda a tag do seu próprio ramo
                 branch_tag = get_tag_for_branch(child)
                 
                 if branch_tag:
@@ -489,7 +453,6 @@ class TreeLabelWindow(ctk.CTkToplevel):
                            color=branch_color, linewidth=branch_width, 
                            zorder=2, alpha=branch_alpha, solid_capstyle='round')
 
-        # === MARCADORES ===
         for clade in self.tree.find_clades():
             if clade not in self.clade_positions:
                 continue
@@ -522,7 +485,6 @@ class TreeLabelWindow(ctk.CTkToplevel):
             scatter.clade_obj = clade
             self.scatter_objects.append((scatter, clade))
 
-        # === LABELS ===
         for term in self.tree.get_terminals():
             if term not in self.clade_positions:
                 continue
@@ -540,7 +502,6 @@ class TreeLabelWindow(ctk.CTkToplevel):
                 weight = 'normal'
                 fontsize = 10
             
-            # Offset proporcional à profundidade do cladograma para não sobrepor o círculo
             label_offset = getattr(self, '_cladogram_depth', 10) * 0.03
             self.ax.text(x + label_offset, y, name,
                         va='center', ha='left',
@@ -550,7 +511,6 @@ class TreeLabelWindow(ctk.CTkToplevel):
                         zorder=20,
                         family='monospace')
 
-        # === LIMITES ===
         if self.clade_positions:
             all_x = [x for x, y in self.clade_positions.values()]
             all_y = [y for x, y in self.clade_positions.values()]
@@ -565,8 +525,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
                 max_label_len = 20
             
             x_range = max_x - min_x if max_x > min_x else 0.01
-            # espaço à direita proporcional ao maior nome (não corta rótulos
-            # quando a janela é ajustada a telas menores)
+            # right margin sized to the longest name so labels are not cut off
             right_margin = max(x_range * (0.25 + 0.012 * max_label_len), 0.003)
             
             self.ax.set_xlim(min_x - x_range * 0.03, max_x + right_margin)
@@ -575,7 +534,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
         self.canvas.draw_idle()
 
     def _on_pick(self, event):
-        """Callback quando nódulo é clicado"""
+        """Label the clicked node."""
         artist = event.artist
         clade = getattr(artist, 'clade_obj', None)
         if clade is None:
@@ -657,7 +616,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
                 self.marked_clades.pop(desc, None)
 
     def _get_clade_name(self, clade) -> str:
-        """Nome legível do clado"""
+        """Readable name of a clade."""
         if clade.is_terminal():
             return clade.name or "terminal"
         else:
@@ -669,7 +628,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
                 return f"clado({len(terminals)} terminais)"
 
     def _get_tag_color(self, tag: str) -> str:
-        """Cor baseada no número da tag"""
+        """Colour of a label number."""
         if not tag or not tag.startswith('#'):
             return '#888888'
         
@@ -682,7 +641,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
             return '#ff0000'
 
     def _delete_tag(self, tag: str):
-        """Remove todas as ocorrências de uma tag da árvore e redesenha."""
+        """Remove a label everywhere and redraw."""
         for clade in [c for c, t in list(self.clade_tags.items()) if t == tag]:
             self.clade_tags.pop(clade, None)
         for clade in [c for c, t in list(self.marked_clades.items()) if t == tag]:
@@ -692,7 +651,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
         self.parent.append_log(tr(f"Marca {tag} removida.", f"Tag {tag} removed.") + "\n")
 
     def _refresh_legend(self):
-        """Atualiza legenda com tags ativas e botão de exclusão por tag."""
+        """Refresh the legend of active labels."""
         for widget in self.legend_frame.winfo_children():
             widget.destroy()
 
@@ -737,7 +696,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
                 del_btn.pack(side='right', padx=(0, SPACE['xs']))
 
     def _on_save(self):
-        """Salva árvore etiquetada em formato Newick"""
+        """Save the labelled tree as Newick."""
         import re
 
         for c in self.tree.find_clades():
@@ -787,12 +746,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
 
 
 class App(ctk.CTk):
-    # ═══════════════════════════════════════════════════════════════════════
-    # PALETA — dark mode em camadas (janela -> painel -> cartão -> elevado),
-    # separadas por tom. Valores centralizados em ui_helpers.PALETTE.
-    # ═══════════════════════════════════════════════════════════════════════
     COLORS = {
-        # Fundos (do mais escuro ao mais claro)
         'bg_darkest':     PALETTE['bg_window'],
         'bg_dark':        PALETTE['bg_window'],
         'bg_sidebar':     PALETTE['bg_panel'],
@@ -802,19 +756,16 @@ class App(ctk.CTk):
         'bg_hover':       PALETTE['bg_elevated_hover'],
         'bg_input':       PALETTE['bg_inset'],
 
-        # Texto (contraste >= 4,5:1 em todas as camadas acima)
         'text_primary':   PALETTE['text_primary'],
         'text_secondary': PALETTE['text_secondary'],
         'text_tertiary':  PALETTE['text_tertiary'],
         'text_muted':     PALETTE['text_muted'],
 
-        # Acento principal — índigo (foco / ação primária)
         'accent_blue':        PALETTE['accent_blue'],
         'accent_blue_hover':  mix(PALETTE['accent_fill'], '#000000', 0.2),
         'accent_blue_light':  PALETTE['accent_text'],
         'accent_fill':        PALETTE['accent_fill'],
 
-        # Acentos secundários (só cores de modelo / ícones de estado)
         'accent_cyan':        PALETTE['accent_cyan'],
         'accent_cyan_hover':  PALETTE['info_fill'],
         'accent_purple':      PALETTE['accent_purple'],
@@ -822,7 +773,6 @@ class App(ctk.CTk):
         'accent_pink':        '#f472b6',
         'accent_pink_hover':  '#db2777',
 
-        # Estado
         'success':        PALETTE['success_text'],
         'success_hover':  '#16a34a',
         'success_light':  PALETTE['success_light'],
@@ -833,7 +783,6 @@ class App(ctk.CTk):
         'info':           PALETTE['info_text'],
         'info_hover':     '#06b6d4',
 
-        # Contornos (só em controles: campo, botão secundário)
         'border':         PALETTE['control_border'],
         'border_hover':   PALETTE['control_border_hover'],
         'divider':        PALETTE['divider'],
@@ -848,10 +797,8 @@ class App(ctk.CTk):
         fit_to_screen(self, 1400, 850)
         
         
-        # Configure janela principal
         self.configure(fg_color=self.COLORS['bg_dark'])
 
-        # Inicializar backend
         self.codeml_backend = CodemlBatchAnalysis()
 
         self.custom_model_params = {}
@@ -867,13 +814,11 @@ class App(ctk.CTk):
         self.pause_event = threading.Event()
         self.stop_event = threading.Event()
         
-        # Opção para incluir modelos neutros automaticamente
         self.include_neutral_models = ctk.BooleanVar(value=True)
         self.include_m8a_var = ctk.BooleanVar(value=True)
 
-        # Auto-detect CPU cores; user can adjust via slider
         _max_cores = CodemlBatchAnalysis.available_cores()
-        # padrão: metade dos núcleos (deixa o computador usável durante a análise)
+        # default: half the cores, so the computer stays usable
         self.cores_var = ctk.IntVar(value=max(1, _max_cores // 2))
         self.ignore_stop_codons_var = ctk.BooleanVar(value=False)
         self.auto_prune_tree_var = ctk.BooleanVar(value=True)
@@ -881,7 +826,6 @@ class App(ctk.CTk):
         self.tree_branch_labeled = None
         self.tree_branchsite_labeled = None
 
-        # estado só de aparência (lido por _refresh_visual_state)
         self._visual_sig = None
         self._gene_count_cache = {}
         self._slots = {}
@@ -892,16 +836,14 @@ class App(ctk.CTk):
         C = self.COLORS
         sp = SPACE
         fs = FONT_SIZE
-        # largura útil do conteúdo do painel lateral (painel - barra de rolagem - margens)
         side_inner = self.SIDEBAR_WIDTH - 28 - sp['lg'] - sp['sm']
 
-        # ═══ SIDEBAR ═══
         self.sidebar = ctk.CTkFrame(self, width=self.SIDEBAR_WIDTH, corner_radius=0,
                                     fg_color=C['bg_sidebar'], border_width=0)
         self.sidebar.pack(side="left", fill="y", padx=0, pady=0)
         self.sidebar.pack_propagate(False)
 
-        # ── Marca: logo + nome + versão em chip ──────────────────────
+        # ── Logo, name and version ──────────────────────
         logo_frame = ctk.CTkFrame(self.sidebar, fg_color='transparent')
         logo_frame.pack(fill="x", padx=sp['lg'], pady=(sp['lg'], 0))
 
@@ -924,17 +866,17 @@ class App(ctk.CTk):
                      fg_color=C['bg_card_hover'], corner_radius=RADIUS['field'], height=20,
                      text_color=C['text_secondary']).pack(side='right', ipadx=sp['xs'])
 
-        # ── Container rolável com as etapas ──────────────────────────
+        # ── Scrollable steps ──────────────────────────
         _sb = ctk.CTkScrollableFrame(self.sidebar, fg_color='transparent', corner_radius=0,
                                      scrollbar_button_color=C['border'],
                                      scrollbar_button_hover_color=C['border_hover'])
         _sb.pack(fill='both', expand=True, padx=0, pady=(sp['md'], 0))
 
-        # ── Rodapé de idioma (fixo, fora do scroll) ──────────────────────
+        # ── Footer (outside the scroll area) ──────────────────────
         self._build_lang_footer()
 
         def _step(parent, number, title, first=False):
-            """Cabeçalho de etapa: círculo numerado (vira ✓) + título em maiúsculas."""
+            """Step header: numbered circle (✓ when done) and title."""
             sec = ctk.CTkFrame(parent, fg_color='transparent')
             sec.pack(fill='x', padx=(sp['lg'], sp['sm']), pady=(sp['sm'] if first else sp['xl'], 0))
             hdr = ctk.CTkFrame(sec, fg_color='transparent')
@@ -954,7 +896,7 @@ class App(ctk.CTk):
             return inner, circle, side
 
         def _obtn(parent, text, cmd, **kw):
-            """Botão secundário de contorno (tom + borda discreta)."""
+            """Outlined secondary button."""
             return ctk.CTkButton(
                 parent, text=text, command=cmd,
                 fg_color=C['bg_card'],
@@ -966,7 +908,7 @@ class App(ctk.CTk):
                 corner_radius=RADIUS['card'], **kw)
 
         def _help(parent, title_key, hint_key, fill=None, command=None):
-            """'?' de ajuda: sempre 20×20, mesmo estilo em todo o app."""
+            """The '?' help button."""
             fill = fill or C['bg_card_hover']
             return ctk.CTkButton(
                 parent, text="?", width=20, height=20, corner_radius=10,
@@ -983,8 +925,7 @@ class App(ctk.CTk):
                 button_hover_color=PALETTE['switch_knob'], fg_color=PALETTE['switch_track'], **kw)
 
         def _slot(parent, title_key, command):
-            """Cartão de arquivo: ícone + título + estado; o cartão inteiro e o
-            botão chamam a mesma função select_* de antes."""
+            """File card; the whole card opens the same chooser as its button."""
             card = ctk.CTkFrame(parent, fg_color=C['bg_card'], corner_radius=RADIUS['card'],
                                 border_width=1, border_color=C['border'])
             card.pack(fill='x', pady=(0, sp['sm']))
@@ -1001,21 +942,18 @@ class App(ctk.CTk):
                                 text_color=C['text_secondary'], border_width=1,
                                 border_color=C['border'])
             btn.pack(side='right', anchor='s')
-            # o texto completo continua no rótulo de sempre (escrito por select_*);
-            # o cartão mostra uma versão curta dele (_apply_visual_state)
             detail = ctk.CTkLabel(card, text=TEXTS["label_not_selected"])
             shown = ctk.CTkLabel(row, text=TEXTS["label_not_selected"], font=(_FONT_UI, fs['xs']),
                                  anchor='w', justify='left', text_color=C['text_tertiary'],
                                  wraplength=150)
             shown.pack(side='left', fill='x', expand=True)
-            # quebra de linha na largura real (antes o texto era cortado com "…")
             row.bind('<Configure>', lambda e, l=shown: l.configure(
                 wraplength=max(100, e.width - 64 - sp['sm'])), add='+')
             self._make_clickable(card, (card, col, title, row, shown), command,
                                  lambda: self._slots and self._apply_visual_state(force=True))
             return card, title, btn, detail, shown
 
-        # ── 1 · Dados ────────────────────────────────────────────────
+        # ── 1 · Data ────────────────────────────────────────────────
         fi, self._step1_circle, _ = _step(_sb, 1, TEXTS["step_data"], first=True)
         for key, title_key, cmd in (
                 ('input', "btn_input_folder", self.select_input_folder),
@@ -1026,17 +964,15 @@ class App(ctk.CTk):
             setattr(self, f"label_{key}", detail)
             setattr(self, f"btn_{key}", btn)
 
-        # ── 2 · Modelos (resumo; os cartões ficam à direita) ─────────
+        # ── 2 · Models ─────────
         mi, self._step2_circle, _ = _step(_sb, 2, TEXTS["step_models"])
         self._step2_text = ctk.CTkLabel(mi, text=TEXTS["step_models_none"], font=(_FONT_UI, fs['sm']),
                                         anchor='w', text_color=C['text_tertiary'])
         self._step2_text.pack(fill='x', padx=(sp['xs'], 0))
 
-        # ── 3 · Configurações ────────────────────────────────────────
-        # Grade única: rótulo (col 0) | "?" (col 1) | controle (col 2).
+        # ── 3 · Advanced settings ────────────────────────────────────────
         ci, _c3, side3 = _step(_sb, 3, TEXTS["step_settings"])
         side3.destroy()
-        # recolhida por padrão: cabeçalho clicável + resumo de uma linha
         sec3, hdr3 = ci.master, ci.master.winfo_children()[0]
         ci.pack_forget()
         self._settings_body = ci
@@ -1079,9 +1015,7 @@ class App(ctk.CTk):
             _row[0] += 1
             widget.grid(row=_row[0], column=0, columnspan=3, sticky='ew', pady=(gap, 0))
 
-        # ω inicial
         _setting_label("label_omega_initial", 0)
-        self.omega_label = ctk.CTkLabel(ci, text="")  # kept for compat, unused
         self.entry_omega = ctk.CTkEntry(ci, placeholder_text="0.5", width=CTRL_W,
                                         fg_color=C['bg_input'],
                                         border_color=C['border'],
@@ -1093,7 +1027,6 @@ class App(ctk.CTk):
         _place_ctrl(self.entry_omega, 0)
         _place_help(_help(ci, "label_omega_initial", "label_omega_initial_hint"), 0)
 
-        # Frequências de códons (global; a janela "editar" de cada modelo pode mudar)
         _row[0] += 1
         _setting_label("label_codonfreq", sp['md'])
         _place_help(_help(ci, "label_codonfreq", "label_codonfreq_hint"), sp['md'])
@@ -1109,7 +1042,6 @@ class App(ctk.CTk):
                                       corner_radius=RADIUS['field'],
                                       font=(_FONT_UI, fs['sm'])))
 
-        # Categorias da beta
         _row[0] += 1
         _setting_label("label_ncatg", sp['md'])
         self.entry_ncatg = ctk.CTkEntry(ci, fg_color=C['bg_input'], width=CTRL_W,
@@ -1120,7 +1052,6 @@ class App(ctk.CTk):
         _place_ctrl(self.entry_ncatg, sp['md'])
         _place_help(_help(ci, "label_ncatg", "label_ncatg_hint"), sp['md'])
 
-        # Tempo limite por execução (vazio = automático)
         _row[0] += 1
         _setting_label("label_timeout", sp['md'])
         self.entry_timeout = ctk.CTkEntry(ci, placeholder_text=TEXTS["label_timeout_auto"],
@@ -1133,7 +1064,6 @@ class App(ctk.CTk):
         _place_ctrl(self.entry_timeout, sp['md'])
         _place_help(_help(ci, "label_timeout", "label_timeout_hint"), sp['md'])
 
-        # Remover gaps toggle
         self.cleandata_var = ctk.BooleanVar(value=True)
         _row[0] += 1
         _setting_label("label_remove_gaps", sp['md'])
@@ -1141,7 +1071,6 @@ class App(ctk.CTk):
         _place_ctrl(self.cb_cleandata, sp['md'])
         _place_help(_help(ci, "label_remove_gaps", "label_remove_gaps_hint"), sp['md'])
 
-        # CPU slider
         _row[0] += 1
         _setting_label("label_cpus", sp['md'])
         _max = CodemlBatchAnalysis.available_cores()
@@ -1163,32 +1092,29 @@ class App(ctk.CTk):
             button_hover_color=C['accent_blue_light'],
             progress_color=C['accent_blue'])
         _place_full(self.cores_slider, sp['xs'])
-        disable_mouse_wheel(self.cores_slider)   # rolar o painel não muda o valor
+        disable_mouse_wheel(self.cores_slider)
         _place_full(ctk.CTkLabel(ci, text=TEXTS["label_cpus_detected"].format(n=_max),
                                  font=(_FONT_UI, fs['xs']), anchor='w', height=16,
                                  text_color=C['text_muted']), sp['xs'])
 
-        # Ignorar Stop Codons toggle
         _row[0] += 1
         _setting_label("label_ignore_stops", sp['md'])
         self.cb_ignore_stops = _switch(ci, self.ignore_stop_codons_var, C['accent_cyan'])
         _place_ctrl(self.cb_ignore_stops, sp['md'])
         _place_help(_help(ci, "label_ignore_stops", "label_ignore_stops_hint"), sp['md'])
 
-        # Incluir M8a como nulo automático do M8
         _row[0] += 1
         _setting_label("label_include_m8a", sp['md'])
         _place_ctrl(_switch(ci, self.include_m8a_var, C['accent_cyan']), sp['md'])
         _place_help(_help(ci, "label_include_m8a", "label_include_m8a_hint"), sp['md'])
 
-        # Poda automática de árvore toggle
         _row[0] += 1
         _setting_label("label_auto_prune", sp['md'])
         self.cb_auto_prune = _switch(ci, self.auto_prune_tree_var, C['accent_cyan'])
         _place_ctrl(self.cb_auto_prune, sp['md'])
         _place_help(_help(ci, "label_auto_prune", "label_auto_prune_hint"), sp['md'])
 
-        # ── Resultados de uma análise anterior ───────────────────────
+        # ── Results of an earlier run ───────────────────────
         ri, _c4, _ = _step(_sb, None, TEXTS["step_results"])
         self.btn_results = _obtn(ri, TEXTS["btn_view_results"], self._open_results_viewer)
         self.btn_results.pack(fill='x', pady=(0, sp['sm']))
@@ -1204,14 +1130,13 @@ class App(ctk.CTk):
                                                   text_color=C['text_muted'])
         self.label_update_results.pack(fill='x', padx=sp['xs'], pady=(sp['xs'], 0))
 
-        # respiro no fim da rolagem
         ctk.CTkFrame(_sb, fg_color='transparent', height=sp['xl']).pack(fill='x')
 
-        # ═══ ÁREA PRINCIPAL ═══
+        # ── Main area ──
         self.main_frame = ctk.CTkFrame(self, fg_color=C['bg_dark'], corner_radius=0)
         self.main_frame.pack(side="right", fill="both", expand=True, padx=sp['xl'], pady=sp['lg'])
 
-        # ── Cabeçalho: título forte + chip de estado ────────────────
+        # ── Header ────────────────
         top = ctk.CTkFrame(self.main_frame, fg_color='transparent')
         top.pack(fill='x', pady=(0, sp['md']))
         tcol = ctk.CTkFrame(top, fg_color='transparent')
@@ -1241,7 +1166,7 @@ class App(ctk.CTk):
                                        text_color=C['warning'], wraplength=900)
         self.files_hint.pack(fill='x', pady=(0, sp['md']), ipadx=sp['md'])
 
-        # ── 2 · Modelos: abas com "tiles" ──────────────────────────
+        # ── Model cards ──────────────────────────
         self.tabs = ctk.CTkTabview(self.main_frame, fg_color=C['bg_dark'],
                                    segmented_button_fg_color=C['bg_card'],
                                    segmented_button_selected_color=C['border_hover'],
@@ -1250,13 +1175,11 @@ class App(ctk.CTk):
                                    segmented_button_unselected_hover_color=C['bg_card_hover'],
                                    text_color=C['text_primary'], anchor='nw',
                                    corner_radius=RADIUS['card'], border_width=0, height=224)
-        # altura fixa: os cartões cabem e o log fica com o espaço que sobra
         self.tabs.pack(fill="x", padx=0, pady=(0, sp['md']))
         self.tabs.add(TEXTS["tab_site_models"])
         self.tabs.add(TEXTS["tab_branch_model"])
         self.tabs.add(TEXTS["tab_branchsite"])
 
-        # na mesma linha das abas, à direita: contagem + modelos nulos automáticos
         models_hdr = ctk.CTkFrame(self.tabs, fg_color=C['bg_dark'], corner_radius=0)
         models_hdr.place(relx=1.0, x=0, y=0, anchor='ne')
         self._models_count = ctk.CTkLabel(models_hdr, text="", font=(_FONT_UI, fs['xs'], "bold"),
@@ -1267,7 +1190,6 @@ class App(ctk.CTk):
                      text_color=C['text_secondary']).pack(side='left')
         help_btn = _help(models_hdr, None, None, command=self._show_neutral_models_info)
         help_btn.pack(side="left", padx=sp['sm'])
-        # rótulo | ? | interruptor — mesma ordem do painel lateral
         neutral_sw = _switch(models_hdr, self.include_neutral_models, C['accent_blue'])
         neutral_sw.pack(side='left')
 
@@ -1278,7 +1200,7 @@ class App(ctk.CTk):
 
         self._setup_model_list()
 
-        # ── Execução: ação primária + resumo + ações secundárias ─────
+        # ── Run panel ─────
         self.ctrl_frame = ctk.CTkFrame(self.main_frame, fg_color=C['bg_card'],
                                        corner_radius=RADIUS['panel'], border_width=0)
         self.ctrl_frame.pack(fill="x", padx=0, pady=(0, sp['md']))
@@ -1296,7 +1218,6 @@ class App(ctk.CTk):
         self.btn_run.pack(side="left")
 
         def _action_btn(parent, text, cmd, color):
-            # secundário compacto; hover = tom escuro da cor (texto legível)
             return ctk.CTkButton(
                 parent, text=text, command=cmd,
                 fg_color='transparent',
@@ -1307,7 +1228,6 @@ class App(ctk.CTk):
                 font=(_FONT_UI, fs['sm'], "bold"),
                 height=32, corner_radius=RADIUS['card'])
 
-        # resumo: genes · modelos · CPUs e, embaixo, os testes LRT que sairão nos resultados
         sum_col = ctk.CTkFrame(run_row, fg_color='transparent')
         sum_col.pack(side='left', fill='x', expand=True, padx=(sp['lg'], 0))
         self._summary_label = ctk.CTkLabel(sum_col, text="", font=(_FONT_UI, fs['md'], "bold"),
@@ -1344,7 +1264,6 @@ class App(ctk.CTk):
         self.progress_bar.pack(fill='x', padx=sp['lg'], pady=(0, sp['md']))
         self.progress_bar.set(0)
 
-        # ═══ CONSOLE (log) ═══
         log_container = ctk.CTkFrame(self.main_frame, fg_color=C['bg_input'],
                                      corner_radius=RADIUS['panel'], border_width=1,
                                      border_color=C['divider'])
@@ -1393,7 +1312,6 @@ class App(ctk.CTk):
         self.log.tag_config("header", foreground=C['accent_blue_light'])
         self.log.tag_config("debug", foreground=C['text_tertiary'], elide=True)
 
-        # Mensagem inicial — editar em gui_texts.py › "log_welcome"
         self.log.insert("end", TEXTS["log_welcome"])
         backend_messages.set_language(get_language())
 
@@ -1402,10 +1320,10 @@ class App(ctk.CTk):
         self._refresh_visual_state()
         self.bind_all("<Control-q>", lambda e: self.destroy())
 
-    # ── Só aparência: estados visuais derivados do estado existente ─────────
+    # ── Appearance derived from the state ─────────
 
     def _make_clickable(self, frame, widgets, command, after=None):
-        """Torna um cartão inteiro clicável (mesmo command) com hover por tom."""
+        """Make a whole card clickable, with a hover tint."""
         def _enter(_e=None):
             frame._hovering = True
             base = getattr(frame, '_base_fg', None)
@@ -1442,7 +1360,7 @@ class App(ctk.CTk):
                 pass
 
     def _toggle_settings(self):
-        """Mostra/oculta as configurações avançadas (só pack/pack_forget)."""
+        """Show or hide the advanced settings."""
         body = self._settings_body
         if body.winfo_ismapped():
             body.pack_forget()
@@ -1468,8 +1386,7 @@ class App(ctk.CTk):
             switch.toggle()
 
     def _paint_tile(self, code):
-        """Ligado: tingido + borda. Auto (nulo que entra sozinho): tom leve,
-        interruptor atenuado e explicação. Desligado: neutro."""
+        """Card colours: on, added automatically as a null, or off."""
         p = self._tile_parts.get(code)
         if not p:
             return
@@ -1512,7 +1429,7 @@ class App(ctk.CTk):
             pass
 
     def _toggle_log_panel(self):
-        """Recolhe/expande o console (só aparência)."""
+        """Collapse or expand the log."""
         if self.log.winfo_ismapped():
             self.log.pack_forget()
             self._log_container.pack_configure(expand=False)
@@ -1536,7 +1453,7 @@ class App(ctk.CTk):
         return self._gene_count_cache[key]
 
     def _refresh_visual_state(self):
-        """Lê o estado (pastas, modelos, CPUs, status) e atualiza só a aparência."""
+        """Poll the state and refresh the appearance when it changes."""
         try:
             sig = (str(self.input_folder), str(self.tree_file), len(self.per_gene_trees),
                    str(self.output_folder),
@@ -1560,7 +1477,6 @@ class App(ctk.CTk):
                 'output': bool(self.output_folder)}
         next_slot = next((k for k in ('input', 'tree', 'output') if not done[k]), None)
         for key, (card, title, btn, detail, shown) in self._slots.items():
-            # versão curta do texto escrito por select_* (sem a lista de arquivos)
             lines = []
             for line in str(detail.cget('text')).splitlines():
                 lines.append(line.split(': ')[0] if ': ' in line else line)
@@ -1605,7 +1521,6 @@ class App(ctk.CTk):
             text=(count + ": " + ", ".join(chosen)) if chosen else TEXTS["step_models_none"],
             text_color=C['text_secondary'] if chosen else C['text_tertiary'])
 
-        # nulos que entram sozinhos (só leitura: _selected_models não muda nada)
         models = self._selected_models() if chosen else []
         order = list(self.model_vars)
         models = sorted(models, key=lambda m: order.index(m) if m in order else len(order))
@@ -1627,7 +1542,6 @@ class App(ctk.CTk):
         if auto:
             self._step2_text.configure(text=self._step2_text.cget('text') + f" (+{len(auto)} auto)")
 
-        # resumo: genes · modelos · CPUs; embaixo, os testes LRT que sairão nos resultados
         n_genes = self._gene_count()
         parts = [TEXTS["run_summary_no_data"] if n_genes is None
                  else TEXTS["run_summary_genes"].format(n=n_genes)]
@@ -1646,7 +1560,6 @@ class App(ctk.CTk):
             tcolor = C['text_secondary']
         self._summary_models.configure(text=tests, text_color=tcolor)
 
-        # resumo das configurações avançadas (uma linha)
         try:
             cf = str(self.codonfreq_var.get()).split('= ')[-1]
             omega = self.entry_omega.get().strip() or '0.5'
@@ -1658,7 +1571,6 @@ class App(ctk.CTk):
         except Exception:
             pass
 
-        # chip de stops: vermelho só quando há stops
         try:
             import re as _re
             n_stops = int((_re.findall(r'\d+', str(self.stop_label.cget('text'))) or ['0'])[-1])
@@ -1666,7 +1578,6 @@ class App(ctk.CTk):
         except Exception:
             pass
 
-        # chip de estado tingido pela cor do texto de status
         try:
             col = self.status_indicator.cget('text_color')
             col = col if isinstance(col, str) and col.startswith('#') else C['text_tertiary']
@@ -1675,7 +1586,7 @@ class App(ctk.CTk):
             pass
 
     def _global_ctl_options(self) -> dict:
-        """Opções globais do .ctl escolhidas em Configurações."""
+        """.ctl options chosen under Advanced settings."""
         try:
             ncatg = int(self.entry_ncatg.get().strip() or DEFAULT_CTL_PARAMS['ncatG'])
         except (ValueError, AttributeError):
@@ -1694,7 +1605,7 @@ class App(ctk.CTk):
         open_folder(self.output_folder)
 
     def _toggle_details(self):
-        """Mostra/esconde as mensagens de depuração no log."""
+        """Show or hide debug messages in the log."""
         show = self.show_details_var.get()
         try:
             self.log.tag_config("debug", elide=not show)
@@ -1727,50 +1638,15 @@ class App(ctk.CTk):
 
     def _setup_model_list(self):
         MODEL_META = {
-            'M0': {
-                'color': '#3b82f6',
-                'desc': 'Um único ω para todo o gene. Não detecta variação entre sítios. '
-                        'Usado como baseline e como modelo nulo para o Branch Model.'
-            },
-            'M1a': {
-                'color': '#06b6d4',
-                'desc': 'Permite purificação (0 < ω < 1) e neutralidade (ω = 1) — sem seleção positiva. '
-                        'Modelo nulo (null) para M2a no teste LRT.'
-            },
-            'M2a': {
-                'color': '#10b981',
-                'desc': 'Acrescenta classe com ω > 1 ao M1a. LRT M2a vs M1a indica seleção positiva por sítio. '
-                        'BEB/NEB identificam os sítios sob seleção.'
-            },
-            'M7': {
-                'color': '#8b5cf6',
-                'desc': 'ω segue distribuição Beta contínua — todos os sítios têm ω ≤ 1. '
-                        'Modelo nulo mais flexível para comparar com M8.'
-            },
-            'M8': {
-                'color': '#ec4899',
-                'desc': 'Beta(p,q) + classe discreta com ω > 1. LRT M8 vs M7 é o teste mais '
-                        'robusto para seleção positiva por sítio. Requer comparação com M7.'
-            },
-            'M8a': {
-                'color': '#f472b6',
-                'desc': '',
-            },
-            'Branch': {
-                'color': '#f59e0b',
-                'desc': 'Estima ω independente por ramo etiquetado. LRT com M0 testa se há '
-                        'pressão seletiva diferente nas linhagens marcadas.'
-            },
-            'Branch-site': {
-                'color': '#ef4444',
-                'desc': 'Detecta seleção positiva em sítios específicos do ramo foreground (#1). '
-                        'Combina variação por sítio e por linhagem — o teste mais poderoso.'
-            },
-            'Branch-site_null': {
-                'color': '#6d6d6d',
-                'desc': 'Versão restrita do Branch-site com ω₂=1 fixado. '
-                        'Adicionado automaticamente como null para o LRT do Branch-site.'
-            },
+            'M0': {'color': '#3b82f6'},
+            'M1a': {'color': '#06b6d4'},
+            'M2a': {'color': '#10b981'},
+            'M7': {'color': '#8b5cf6'},
+            'M8': {'color': '#ec4899'},
+            'M8a': {'color': '#f472b6'},
+            'Branch': {'color': '#f59e0b'},
+            'Branch-site': {'color': '#ef4444'},
+            'Branch-site_null': {'color': '#6d6d6d'},
         }
 
         models = {
@@ -1782,7 +1658,7 @@ class App(ctk.CTk):
         C = self.COLORS
         sp = SPACE
         tile_bg = C['bg_card']
-        # Ordem dos cartões = ordem de leitura do LRT (nulo antes do alternativo)
+        # card order follows the LRT pairs (null before alternative)
         layout = {
             TEXTS["tab_site_models"]: [['M0', 'M1a', 'M2a'], ['M7', 'M8', 'M8a']],
             TEXTS["tab_branch_model"]: [['Branch']],
@@ -1790,7 +1666,7 @@ class App(ctk.CTk):
         }
 
         def _tile(parent, code):
-            meta = MODEL_META.get(code, {'color': C['accent_blue'], 'desc': ''})
+            meta = MODEL_META.get(code, {'color': C['accent_blue']})
             accent = meta['color']
             card = ctk.CTkFrame(parent, fg_color=tile_bg, corner_radius=RADIUS['card'],
                                 border_width=1, border_color=C['border'])
@@ -1847,22 +1723,18 @@ class App(ctk.CTk):
                                text_color=C['text_tertiary'])
             lbl.pack(fill='x', padx=(sp['md'] + 4, sp['md']), pady=(sp['xs'], sp['sm']))
 
-            # quebra a descrição na largura real do cartão (só aparência)
             def _wrap(e, l=lbl):
                 w = max(160, e.width - 2 * sp['md'] - 4)
                 if abs(int(l.cget('wraplength')) - w) > 4:
                     l.configure(wraplength=w)
             card.bind('<Configure>', _wrap, add='+')
 
-            # estado "incluído automaticamente" (só aparência; não mexe em model_vars)
             auto_lbl = ctk.CTkLabel(card, text="", font=(_FONT_UI, FONT_SIZE['xs']), anchor='nw',
                                     justify='left', wraplength=240, height=32,
                                     text_color=C['text_secondary'])
             card.bind('<Configure>', lambda e, l=auto_lbl: l.configure(
                 wraplength=max(160, e.width - 2 * sp['md'] - 4)), add='+')
 
-            # cartão inteiro clicável: alterna o MESMO interruptor (mesmo command);
-            # em estado "auto" só explica por que o nulo entra
             self._make_clickable(card, (card, top, lbl, auto_lbl),
                                  lambda c=code, sw=cb: self._tile_click(c, sw))
 
@@ -1885,7 +1757,6 @@ class App(ctk.CTk):
             for c in range(3):
                 outer.grid_columnconfigure(c, weight=1, uniform='tiles')
             outers[tab_name] = outer
-        # cria na mesma ordem de antes (a ordem de model_vars não muda)
         for tab_name, codes in models.items():
             for code in codes:
                 _tile(outers[tab_name], code)
@@ -1896,7 +1767,6 @@ class App(ctk.CTk):
                                            padx=sp['xs'], pady=(0, sp['sm']))
 
         def _label_btn(tab, text, mode):
-            # ação secundária: contorno discreto, texto em índigo
             btn = ctk.CTkButton(
                 tab, text=text,
                 fg_color='transparent',
@@ -1912,11 +1782,9 @@ class App(ctk.CTk):
             btn.pack(fill='x', padx=sp['xs'], pady=(sp['md'], 0))
             return btn
 
-        # ═══ BRANCH: Botão de etiquetagem ═══
         self.btn_label_branch = _label_btn(self.tabs.tab(TEXTS["tab_branch_model"]),
                                            TEXTS["btn_label_branch"], 'branch')
 
-        # ═══ BRANCHSITE: Botão de etiquetagem ═══
         self.btn_label_branchsite = _label_btn(self.tabs.tab(TEXTS["tab_branchsite"]),
                                                TEXTS["btn_label_branchsite"], 'branchsite')
 
@@ -1969,7 +1837,7 @@ class App(ctk.CTk):
             self._update_models_state()
 
     def select_output_folder(self):
-        """Aceita uma pasta que ainda não existe (digitada no diálogo) e a cria."""
+        """Choose the output folder, creating it if needed."""
         start = str(self.output_folder.parent if self.output_folder else
                     (self.input_folder.parent if self.input_folder else Path.home()))
         path = ask_directory(self, TEXTS["dialog_choose_output"], start,
@@ -2038,15 +1906,13 @@ class App(ctk.CTk):
                          padx=SPACE['xl'], pady=(SPACE['sm'], SPACE['lg']), anchor='w')
 
     def _show_model_info(self, model_code: str):
-        """Mostra informações detalhadas sobre um modelo específico"""
-        # Obter informações do modelo
+        """Help window for one model."""
         info_src = (self.codeml_backend.MODEL_INFO_PT if get_language() == 'pt'
                     else self.codeml_backend.MODEL_INFO)
         model_info = info_src.get(model_code) or self.codeml_backend.MODEL_INFO.get(model_code)
         if not model_info:
             return
         
-        # Criar janela de informações
         info_window = ctk.CTkToplevel(self)
         info_window.title(TEXTS["model_config_header"].format(model_code=model_code))
         fit_to_screen(info_window, 750, 600, min_w=480, min_h=360)
@@ -2056,7 +1922,6 @@ class App(ctk.CTk):
         
         info_window.configure(fg_color=self.COLORS['bg_dark'])
 
-        # Header com nome do modelo
         display_name = self.codeml_backend.MODEL_CONFIGS[model_code].get('display_name', model_code)
         header = ctk.CTkLabel(info_window, 
                              text=f"{model_code} - {model_info.get('full_name', '')}",
@@ -2065,13 +1930,11 @@ class App(ctk.CTk):
                              text_color=self.COLORS['text_primary'])
         header.pack(fill='x', padx=SPACE['xl'], pady=(SPACE['xl'], SPACE['md']))
         
-        # Scrollable frame para conteúdo
         scroll_frame = ctk.CTkScrollableFrame(info_window, fg_color=self.COLORS['bg_card'],
                                               corner_radius=RADIUS['panel'],
                                               scrollbar_button_color=self.COLORS['border'])
         scroll_frame.pack(fill="both", expand=True, padx=SPACE['xl'], pady=(0, SPACE['xl']))
 
-        # Seções: título pequeno em índigo + texto; mesma hierarquia em todas
         sections = (
             (TEXTS["model_info_test_type"], model_info.get('test_type', ''), self.COLORS['text_primary'], ''),
             (TEXTS["model_info_params"], model_info.get('parameters', ''), self.COLORS['text_primary'], ''),
@@ -2090,17 +1953,17 @@ class App(ctk.CTk):
             ctk.CTkLabel(scroll_frame, text=value, font=font, text_color=color,
                          wraplength=640, justify="left").pack(anchor="w", padx=SPACE['md'], pady=0)
 
-    # ── Idioma ───────────────────────────────────────────────────────────────
+    # ── Language and theme ───────────────────────────────────────────────────────────────
 
     @staticmethod
     def _lang_pref_path() -> Path:
-        """Caminho do arquivo de preferência de idioma."""
+        """File that stores the chosen language."""
         return Path.home() / '.easypml_lang'
 
     @staticmethod
     def load_language_pref() -> None:
-        """Idioma inicial: o salvo pelo usuário; sem preferência salva, o do
-        sistema (português -> PT; qualquer outro -> EN, o padrão)."""
+        """Saved language, or the system language (Portuguese -> PT, anything
+        else -> EN)."""
         lang = None
         try:
             p = App._lang_pref_path()
@@ -2120,7 +1983,7 @@ class App(ctk.CTk):
             pass
 
     def _build_lang_footer(self) -> None:
-        """Rodapé fixo da sidebar com botões PT / EN (separado por uma linha)."""
+        """Sidebar footer: language, About and theme."""
         C = self.COLORS
         footer = ctk.CTkFrame(self.sidebar, fg_color='transparent', corner_radius=0, border_width=0)
         footer.pack(fill='x', side='bottom', padx=0, pady=0)
@@ -2151,7 +2014,6 @@ class App(ctk.CTk):
                       fg_color='transparent', hover_color=C['bg_card_hover'],
                       text_color=C['text_secondary'], command=lambda: show_about(self)).pack(side='right')
 
-        # Tema: Auto (segue o sistema), Claro ou Escuro; a escolha fica salva
         row = ctk.CTkFrame(footer, fg_color='transparent')
         row.pack(fill='x', padx=SPACE['lg'], pady=(0, SPACE['md']))
         ctk.CTkLabel(row, text=TEXTS["theme_label"], font=(_FONT_UI, FONT_SIZE['sm']),
@@ -2172,7 +2034,7 @@ class App(ctk.CTk):
         self._theme_seg = seg
 
     def _switch_theme(self, choice: str) -> None:
-        """Salva o tema escolhido e reabre o programa para aplicá-lo."""
+        """Save the chosen theme and reopen the program to apply it."""
         import subprocess
         if choice == CURRENT_THEME['choice']:
             return
@@ -2189,7 +2051,7 @@ class App(ctk.CTk):
                 show_message(self, "EasyPAML", TEXTS["lang_switch_err"].format(error=exc), 'error')
 
     def _switch_language(self, lang: str) -> None:
-        """Salva preferência e reinicia o app para aplicar o idioma."""
+        """Save the chosen language and reopen the program to apply it."""
         import subprocess
         current = get_language()
         if lang == current:
@@ -2207,9 +2069,8 @@ class App(ctk.CTk):
                 show_message(self, "EasyPAML", TEXTS["lang_switch_err"].format(error=exc), 'error')
 
     def _open_results_viewer(self):
-        """Abre o painel da pasta de resultados atual; se ela ainda não tem
-        resultados (ou não foi escolhida), pede a pasta de uma análise anterior
-        -- antes o botão ficava cinza sem dizer por quê."""
+        """Open the results panel; ask for a results folder when the current one has
+        no results."""
         folder = self.output_folder
         if not (folder and (Path(folder) / 'analysis_summary.tsv').exists()):
             chosen = ask_directory(self, TEXTS["dialog_select_results_folder"],
@@ -2228,7 +2089,7 @@ class App(ctk.CTk):
             self.append_log(traceback.format_exc())
 
     def _regenerate_summary_files(self):
-        """Abre diálogo para selecionar pasta e regenera os 3 arquivos de síntese"""
+        """Regenerate the summary files of a chosen results folder."""
         results_folder = ask_directory(self, TEXTS["dialog_select_results_folder"],
                                        self.output_folder or Path.home())
         
@@ -2240,12 +2101,10 @@ class App(ctk.CTk):
         self.append_log(TEXTS["log_updating_results"], "header")
         self.append_log(tr("Pasta de resultados: ", "Results folder: ") + f"{results_folder}", "info")
         
-        # Executar em thread separada para não travar GUI
         def _update_thread():
             try:
                 self.append_log(TEXTS["log_detecting_models"])
 
-                # Descobrir quais modelos estão presentes
                 models = set()
                 for item in results_folder.iterdir():
                     if item.is_dir() and item.name not in ['reports']:
@@ -2254,7 +2113,6 @@ class App(ctk.CTk):
                 models = sorted(models)
                 self.append_log(tr("Modelos encontrados: ", "Models found: ") + ", ".join(models), "info")
 
-                # Determinar comparações disponíveis
                 self.append_log(TEXTS["log_lrt_comparisons"])
                 comparisons = []
 
@@ -2280,7 +2138,6 @@ class App(ctk.CTk):
 
                 self.append_log(TEXTS["log_lrt_total"].format(n=len(comparisons)))
 
-                # Regenerar arquivos
                 self.append_log(TEXTS["log_regenerating"])
                 generated_files = CodemlBatchAnalysis.regenerate_summary_files(results_folder)
                 
@@ -2290,7 +2147,6 @@ class App(ctk.CTk):
                         filepath = Path(file_path)
                         size = filepath.stat().st_size if filepath.exists() else 0
                         self.append_log(f"  [OK] {file_type:25s} | {size:,} bytes", "ok")
-                    # Atualiza pasta de saída para a pasta selecionada e habilita o botão
                     self.output_folder = results_folder
                     self.after(0, self._update_models_state)
                 else:
@@ -2304,7 +2160,7 @@ class App(ctk.CTk):
         update_thread.start()
 
     def _update_results_files(self):
-        """Alias para _regenerate_summary_files com novo nome"""
+        """Update Results button."""
         self._regenerate_summary_files()
 
     def _all_genes_have_trees(self) -> bool:
@@ -2314,7 +2170,6 @@ class App(ctk.CTk):
         return bool(chosen) and all(g in self.per_gene_trees for g in chosen)
 
     def _update_models_state(self):
-        # árvore: o arquivo escolhido OU uma árvore por gene (GENE.nwk) para todos
         has_tree = bool(self.tree_file) or self._all_genes_have_trees()
         enabled = all([self.input_folder, has_tree, self.output_folder])
         state = "normal" if enabled else "disabled"
@@ -2349,9 +2204,9 @@ class App(ctk.CTk):
                    'header': 'header', 'debug': 'debug'}
 
     def append_log(self, text: str, level: str = None):
-        """Uma mensagem por linha. level: ok | error | warn | info | header | debug.
-        Sem level, a cor é deduzida do texto (mensagens antigas). Mensagens
-        'debug' só aparecem com "Mostrar detalhes técnicos"."""
+        """Add one line to the log. level: ok, error, warn, info, header or debug;
+        without it the colour is guessed from the text. debug lines show only with
+        "Show technical details"."""
         def _append():
             if level is not None:
                 tag = self._LEVEL_TAGS.get(level)
@@ -2423,7 +2278,7 @@ class App(ctk.CTk):
                 except Exception:
                     pass
         except ImportError:
-            pass  # psutil indisponível — pausa só entre genes
+            pass  # without psutil, pausing happens between genes
 
     def _resume_active_codeml(self):
         try:
@@ -2440,7 +2295,7 @@ class App(ctk.CTk):
     def _stop_analysis(self):
         if not self.analysis_thread or not self.analysis_thread.is_alive():
             return
-        # 1. backend para de iniciar genes/modelos; 2. encerra e recolhe os codeml
+        # stop starting new runs, then end the running codeml processes
         self.stop_event.set()
         if self.pause_event:
             self.pause_event.set()
@@ -2460,8 +2315,7 @@ class App(ctk.CTk):
         return selected
 
     def start_analysis(self):
-        """Iniciar: valida os dados ANTES de rodar e mostra um diálogo com os
-        problemas encontrados ("corrigir e voltar" / "continuar mesmo assim")."""
+        """Run: check the data first and show what was found."""
         if self.analysis_thread and self.analysis_thread.is_alive():
             return
         original = [k for k, v in self.model_vars.items() if v.get()]
@@ -2515,7 +2369,7 @@ class App(ctk.CTk):
             if choice != 'continue':
                 self.btn_run.configure(state="normal")
                 return
-            # "Continuar mesmo assim": o codeml trata stop codons como dado ausente
+            # "Continue anyway": codeml treats stop codons as missing data
             if any(i.kind == 'stop_codon' for i in report.issues):
                 ignore_stops = True
         self._launch(selected, ignore_stops)
@@ -2533,7 +2387,8 @@ class App(ctk.CTk):
         self.analysis_thread.start()
 
     def _timeout_seconds(self) -> int:
-        """Minutos digitados em Configurações -> segundos; vazio ou inválido = 0 (automático)."""
+        """Minutes typed under Advanced settings, in seconds; 0 (automatic) when
+        empty or invalid."""
         try:
             minutes = float((self.entry_timeout.get() or '').replace(',', '.'))
         except ValueError:
@@ -2612,7 +2467,6 @@ class App(ctk.CTk):
             show_message(self, TEXTS["failures_title"], TEXTS["failures_text"].format(
                 failed=summary['failed'], total=total, items=items,
                 path=Path(summary['output_folder']) / 'genes_status.tsv'), 'error')
-        # Abre os resultados ao terminar (como o README promete), se algum gene rodou
         if summary.get('ok') and not summary.get('stopped'):
             self._open_results_viewer()
 

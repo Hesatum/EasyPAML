@@ -1,15 +1,13 @@
 """
-Mapa entre a numeração de sítios do codeml e a do alinhamento do usuário.
+Map between codeml's site numbering and the user's alignment numbering.
 
-Com cleandata = 1 o codeml remove colunas (gaps, ambiguidades, stop codons)
-e numera os sítios do BEB/NEB nas colunas que SOBRARAM. Sem correção, um
-sítio que no alinhamento do usuário é o códon 221 aparece como 220 se uma
-coluna anterior foi removida.
+With cleandata = 1 codeml removes columns (gaps, ambiguities, stop codons) and
+numbers the BEB/NEB sites over the remaining columns, so codon 221 of the
+alignment becomes site 220 if an earlier column was removed.
 
-Para cada gene x modelo o backend grava, ao lado da saída bruta,
-  MODELO/GENE_MODELO_sitemap.json
-com a lista de códons mantidos. Este módulo lê esse arquivo e acrescenta a
-coluna 'position_original' às tabelas de sítios.
+For each gene and model the backend writes MODEL/GENE_MODEL_sitemap.json with
+the kept codons. This module reads it and adds 'position_original' to site
+tables.
 """
 
 import json
@@ -62,10 +60,8 @@ def read_sitemap(results_file) -> Optional[Dict]:
 
 
 def codeml_site_count(results_file) -> Optional[int]:
-    """Número de sítios (códons) que o codeml realmente analisou.
-
-    O mlc traz, no cabeçalho, 'ns = 10  ls = 299' (ls = códons após a
-    limpeza). Usado para verificar o mapa calculado pelo EasyPAML."""
+    """Number of sites (codons) codeml analysed: 'ls' in the 'ns = 10  ls = 299'
+    header of its output. Used to check the map computed by EasyPAML."""
     try:
         text = Path(results_file).read_text(encoding="utf-8", errors="ignore")
     except OSError:
@@ -84,10 +80,10 @@ def to_original(position: int, sitemap: Optional[Dict]) -> Optional[int]:
 
 
 def attach_original_positions(df: pd.DataFrame, results_file) -> pd.DataFrame:
-    """Acrescenta 'position_original' (numeração do alinhamento do usuário).
+    """Add 'position_original' (the user's alignment numbering).
 
-    Sem sitemap (resultado antigo) ou com cleandata = 0, a coluna repete
-    'position' e 'position_mapped' fica False para a interface avisar."""
+    Without a sitemap, or if it failed its check, the column repeats 'position'
+    and 'position_mapped' is False so the interface can warn."""
     if df is None or df.empty or "position" not in df.columns:
         return df
     sm = read_sitemap(results_file)

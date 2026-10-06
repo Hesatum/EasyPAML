@@ -1,14 +1,8 @@
 """
-Validação ANTES de rodar o codeml.
-
-Tudo que o teste de usabilidade mostrou que o programa só descobria durante
-(ou depois de) a execução -- stop codons, nomes que não batem com a árvore,
-táxons que a poda automática vai tirar, arquivos duplicados do mesmo gene,
-comprimento que não é múltiplo de 3 -- é verificado aqui, com nome da
-sequência e posição do códon, para a interface mostrar num diálogo e o CLI
-imprimir antes de começar.
-
-Não depende de Tk; testável isoladamente.
+Data check before codeml runs: stop codons, names missing from the tree, taxa
+that pruning will remove, duplicate files of one gene, and lengths that are not
+a multiple of 3, each with the sequence name and codon position. The window
+shows the result in a dialog and the command line prints it.
 """
 
 import difflib
@@ -21,9 +15,9 @@ from typing import Dict, List, Optional, Sequence
 from .alignment_io import (ALIGNMENT_SUFFIXES, AlignmentError, find_stop_codons,
                            read_alignment)
 
-ERROR = 'error'      # o gene não pode rodar assim
-WARNING = 'warning'  # roda, mas o usuário precisa saber (pode mudar o resultado)
-INFO = 'info'        # só informativo
+ERROR = 'error'      # the gene cannot run like this
+WARNING = 'warning'  # it runs, but the user should know (may change the result)
+INFO = 'info'        # information only
 
 
 @dataclass
@@ -73,13 +67,13 @@ class PreflightReport:
         return "\n".join(lines)
 
 
-# ── Árvore ──────────────────────────────────────────────────────────────────
+# ── Tree ──────────────────────────────────────────────────────────────────
 
 _LABEL_RE = re.compile(r"[#$]\d+$")
 
 
 def read_tree_taxa(tree_file) -> List[str]:
-    """Nomes das folhas da árvore (sem marcas #1/$1 e sem cabeçalho 'N 1')."""
+    """Tip names of the tree, without #1/$1 labels or an 'N 1' header."""
     from Bio import Phylo
     raw = Path(tree_file).read_text(encoding='utf-8', errors='replace')
     lines = raw.splitlines()
@@ -114,11 +108,10 @@ _FORMAT_PREFERENCE = {'.fasta': 0, '.fas': 1, '.fa': 2, '.fna': 3, '.phy': 4, '.
 
 
 def group_by_gene(files: Sequence[Path]):
-    """{gene: arquivo escolhido}, [arquivos ignorados por duplicidade].
+    """{gene: chosen file}, [files ignored as duplicates].
 
-    Dois arquivos com o mesmo nome-base (gene.fasta + gene.phy) são o MESMO
-    gene: usa-se um só (FASTA tem preferência) em vez de rodar duas vezes e
-    sobrescrever resultados.
+    Two files with the same base name (gene.fasta and gene.phy) are one gene;
+    only one is used, FASTA first.
     """
     groups: Dict[str, List[Path]] = {}
     for f in files:
@@ -136,9 +129,9 @@ TREE_SUFFIXES = ('.nwk', '.tree', '.tre', '.newick', '.treefile')
 
 
 def discover_per_gene_trees(alignment_folder, tree_folder=None, genes=None) -> Dict[str, Path]:
-    """Árvore por gene, pareada pelo nome do arquivo: gene.fasta <-> gene.nwk
-    (ou .tree/.tre/.newick/.treefile), procurada na pasta dos alinhamentos e,
-    se dada, numa pasta de árvores. {gene: arquivo}."""
+    """Per-gene trees matched by file name (gene.fasta <-> gene.nwk, .tree, .tre,
+    .newick or .treefile), in the alignments folder and, if given, a tree
+    folder. Returns {gene: file}."""
     found: Dict[str, Path] = {}
     folders = [Path(alignment_folder)] + ([Path(tree_folder)] if tree_folder else [])
     for folder in folders:
@@ -151,15 +144,15 @@ def discover_per_gene_trees(alignment_folder, tree_folder=None, genes=None) -> D
     return found
 
 
-# ── Verificação principal ──────────────────────────────────────────────────
+# ── Main check ──────────────────────────────────────────────────
 
 def run_preflight(input_folder, tree_file, auto_prune: bool = True,
                   ignore_stop_codons: bool = False,
                   per_gene_trees: Optional[Dict[str, Path]] = None) -> PreflightReport:
-    """Verifica todos os alinhamentos da pasta contra a árvore.
+    """Check every alignment in the folder against its tree.
 
-    per_gene_trees: {gene: arquivo de árvore} para os genes que têm árvore
-    própria (o resto usa tree_file).
+    per_gene_trees: {gene: tree file} for genes with their own tree; the
+    others use tree_file.
     """
     files = list_alignment_files(input_folder)
     chosen, ignored = group_by_gene(files)
@@ -189,7 +182,7 @@ def run_preflight(input_folder, tree_file, auto_prune: bool = True,
         if key not in tree_cache:
             try:
                 tree_cache[key] = read_tree_taxa(tf) if tf else None
-            except Exception as exc:  # árvore ilegível
+            except Exception as exc:  # unreadable tree
                 tree_cache[key] = None
                 issues.append(Issue('', 'tree_unreadable', ERROR,
                                     {'tree': Path(tf).name, 'error': str(exc)}))

@@ -1,11 +1,4 @@
-"""
-Visualizador de Resultados CODEML - EasyPAML
-=============================================
-Versão 2.0 - CORRIGIDA com busca recursiva em subpastas
-- Fix na busca de arquivos em subpastas (M0/, M1a/, M2a/, M7/, M8/, Branch/)
-- Extração correta de ω de cada tipo de modelo
-- Detecção adequada de seleção positiva
-"""
+"""Results panel: summary, LRT tables, sites, branch analysis, export."""
 
 import customtkinter as ctk
 from pathlib import Path
@@ -30,7 +23,7 @@ from .ui_helpers import (FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE, 
 
 
 class ResultsViewerWindow(ctk.CTkToplevel):
-    """Janela de visualização profissional de resultados"""
+    """Results panel window."""
     
     COLORS = {
         'bg_dark':        PALETTE['bg_window'],
@@ -62,7 +55,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         'border_hover':   PALETTE['control_border_hover'],
     }
 
-    # ── helpers visuais (só apresentação) ─────────────────────────────
+    # ── display helpers ─────────────────────────────
 
     @staticmethod
     def _font(size: str = 'sm', weight: str = 'normal'):
@@ -70,17 +63,15 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
     @staticmethod
     def _mono(size: str = 'sm', weight: str = 'normal'):
-        # algarismos de largura fixa: colunas numéricas alinhadas
         return (FONT_MONO, FONT_SIZE[size], weight)
 
     def _fit(self, text: str, px: int, font) -> str:
-        """Corta o texto com '…' para caber em px (nomes de gene longos não
-        empurram as colunas seguintes)."""
+        """Shorten text with '…' to fit a width in pixels."""
         import tkinter.font as tkfont
         scale = ctk.ScalingTracker.get_widget_scaling(self)
         cache = self.__dict__.setdefault('_tkfonts', {})
         f = cache.get(font)
-        if f is None:   # o CTk usa o tamanho da fonte em pixels (negativo no Tk)
+        if f is None:   # CTk font sizes are pixels (negative in Tk)
             f = cache[font] = tkfont.Font(family=font[0], size=-round(font[1] * scale),
                                           weight='bold' if 'bold' in font[2:] else 'normal')
         px = int(px * scale)
@@ -92,8 +83,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
     @staticmethod
     def _chip(parent, text: str, kind: str = 'neutral', font=None):
-        """Rótulo de veredito: fundo "subtle" + texto da mesma família de cor.
-        Sempre com texto (nunca só cor)."""
+        """Verdict chip: tinted background with text of the same colour family."""
         fg, bg = {
             'success': (PALETTE['success_fg'], PALETTE['success_subtle']),
             'warning': (PALETTE['warning_fg'], PALETTE['warning_subtle']),
@@ -118,8 +108,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         return combo
 
     def _style_tabs(self, tabs):
-        """Aba ativa: fundo índigo + texto branco (6,3:1); inativas: texto
-        secundário sem fundo; hover das inativas em cinza (não parece ativa)."""
+        """Mark the active tab."""
         seg = tabs._segmented_button
         seg.configure(font=(FONT_UI, FONT_SIZE['md'], 'bold'))
 
@@ -140,7 +129,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
     def __init__(self, parent, output_folder: Path):
         super().__init__(parent)
         self.title(TEXTS["viewer_window_title"])
-        # Nunca maior que a tela (antes: 1400x900 fixo, cortava em 1366x768)
+        # never larger than the screen
         fit_to_screen(self, 1400, 900, min_w=1024, min_h=640)
         self.bind("<Escape>", lambda e: self.destroy())
         
@@ -159,7 +148,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         self.setup_ui()
     
     def _load_data(self) -> bool:
-        """Carrega dados do TSV com tratamento robusto"""
+        """Load analysis_summary.tsv, regenerating it when model folders are missing from it."""
         tsv_file = self.output_folder / "analysis_summary.tsv"
         if not tsv_file.exists():
             return False
@@ -196,10 +185,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             for col in numeric_cols:
                 self.df[col] = pd.to_numeric(self.df[col], errors='coerce')
 
-            # Tentar recuperar omegas faltantes dos arquivos de resultados
             self._recover_missing_omegas()
 
-            # ── 3. Detectar órfãos (.ctl sem resultado) e guardar para aviso na UI
+            # ── 3. orphan runs (.ctl without results), shown as a warning
             try:
                 from src.backend.codeml_backend import CodemlBatchAnalysis
                 self._orphaned_analyses = CodemlBatchAnalysis._find_orphaned_analyses(
@@ -216,18 +204,15 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             return False
     
     def _recover_missing_omegas(self):
-        """Recupera omegas faltantes diretamente dos arquivos de resultados"""
+        """Fill missing ω values from the result files."""
         from src.backend.sites_parser import SitesParser
         from pathlib import Path
         
-        # Identificar colunas de omega que estão vazias
         omega_cols = [col for col in self.df.columns if '_omega' in col]
         
         for omega_col in omega_cols:
-            # Extrair nome do modelo (ex: M2a_omega -> M2a)
             model_name = omega_col.replace('_omega', '')
             
-            # Procurar por arquivos faltantes
             missing_rows = self.df[self.df[omega_col].isna()].index
             
             if len(missing_rows) == 0:
@@ -238,7 +223,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             for idx in missing_rows:
                 gene_name = self.df.loc[idx, 'Gene']
                 
-                # Procurar arquivo de resultados com suporte a múltiplas variações
                 results_file = self._find_results_file(gene_name, model_name)
                 
                 if results_file:
@@ -255,21 +239,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     print(f"  [INFO] {gene_name} ({model_name}): arquivo nao encontrado")
     
     def _find_results_file(self, gene_name: str, model_name: str):
-        """
-        Busca arquivo de resultados para um gene e modelo específico.
-        
-        A estrutura esperada é:
-        - results_folder/M8/gene_name_M8_results.txt
-        - results_folder/M2a/gene_name_M2a_results.txt
-        - results_folder/Branch-site/gene_name_Branch-site_results.txt
-        - results_folder/BranchSite_A/gene_name_BranchSite_A_results.txt (compatibilidade com versão antiga)
-        """
-        # Procurar no padrão padrão
+        """Result file of a gene and model, also under the legacy BranchSite_A name."""
         results_file = self.output_folder / model_name / f"{gene_name}_{model_name}_results.txt"
         if results_file.exists():
             return results_file
         
-        # Para Branch-site, tentar também o nome antigo (BranchSite_A)
         if model_name == 'Branch-site':
             results_file = self.output_folder / 'BranchSite_A' / f"{gene_name}_BranchSite_A_results.txt"
             if results_file.exists():
@@ -278,7 +252,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         return None
     
     def _extract_tag_columns(self):
-        """Extrai colunas dinâmicas de tags"""
+        """Columns of per-label ω values."""
         tag_pattern = r'(.+?)_([^_]+)_(omega|lnL)$'
         
         self.tag_columns = {}
@@ -300,22 +274,16 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         print(f"Tags detected: {self.tag_columns}")
     
     def _format_branchsite_class_data(self, gene_idx: int) -> str:
-        """
-        Formata dados de classes de Branch-site para exibição estruturada
-        Retorna string com formatação multilinea
-        """
+        """Branch-site class values as text."""
         row = self.df.iloc[gene_idx]
         
-        # Procurar colunas de classe
         class_cols = [col for col in self.df.columns if 'Branch-site_class' in col and 'null' not in col]
         
         if not class_cols:
             return "N/A"
         
-        # Agrupar por classe
         classes = {}
         for col in class_cols:
-            # Parse: Branch-site_class0_fg_w -> classe='0', métrica='fg_w'
             parts = col.replace('Branch-site_class', '').split('_', 1)
             if len(parts) == 2:
                 cls, metric = parts
@@ -323,10 +291,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     classes[cls] = {}
                 classes[cls][metric] = row[col]
         
-        # Construir string formatada
         lines = ["Branch-site Classes:"]
         
-        # Ordenar classes: 0, 1, 2a, 2b
         for cls in ['0', '1', '2a', '2b']:
             if cls in classes:
                 data = classes[cls]
@@ -349,14 +315,14 @@ class ResultsViewerWindow(ctk.CTkToplevel):
     
     @staticmethod
     def _fmt_pval(p: float) -> str:
-        """p em notação científica legível (4.70e-22), nunca "0.00000000"."""
+        """p in readable scientific notation, never "0.00000000"."""
         try:
             return lrt_stats.format_p(float(p))
         except (TypeError, ValueError):
             return "NA"
 
     def _show_error(self, message: str):
-        """Exibe tela de erro"""
+        """Show an error screen."""
         error_frame = ctk.CTkFrame(self, fg_color=self.COLORS['bg_dark'])
         error_frame.pack(fill='both', expand=True, padx=20, pady=20)
         
@@ -369,10 +335,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     text_color=self.COLORS['text_tertiary']).pack()
     
     def setup_ui(self):
-        """Setup da interface premium"""
+        """Build the window."""
 
-        # ── HEADER ──────────────────────────────────────────────────
-        # Cabeçalho compacto (52 px): sobra altura para as tabelas em 1366×768
         header = ctk.CTkFrame(self, fg_color=PALETTE['bg_panel'], corner_radius=0, height=52)
         header.pack(fill='x', padx=0, pady=0)
         header.pack_propagate(False)
@@ -395,12 +359,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         ctk.CTkLabel(right, text=TEXTS["viewer_genes_loaded"].format(n=len(self.df)),
                      font=self._font('sm'), text_color=PALETTE['text_secondary']).pack(side='right')
 
-        # PAINEL DE ESTATÍSTICAS
         stats_frame = ctk.CTkFrame(self, fg_color='transparent')
         stats_frame.pack(fill='x', padx=SPACE['lg'], pady=(SPACE['md'], 0))
         self._create_stats_panel(stats_frame)
 
-        # ── BANNER DE AVISO: análises órfãs (.ctl sem resultado) ──────────────
+        # ── warning banner: orphan runs ──────────────
         orphaned = getattr(self, '_orphaned_analyses', {})
         if orphaned:
             warn_frame = ctk.CTkFrame(self, fg_color=PALETTE['warning_subtle'],
@@ -430,7 +393,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 anchor='w',
             ).pack(padx=SPACE['md'], pady=SPACE['sm'], anchor='w')
 
-        # ABAS PRINCIPAIS
         tabs = ctk.CTkTabview(self, fg_color=PALETTE['bg_surface'],
                               segmented_button_fg_color=PALETTE['bg_panel'],
                               segmented_button_selected_color=PALETTE['accent_fill'],
@@ -447,7 +409,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         tabs.add(TEXTS["viewer_tab_lrt"])
         tabs.add(TEXTS["viewer_tab_sites"])
 
-        # Verificar se há dados de Branch-site para adicionar aba especial
         branchsite_cols = [col for col in self.df.columns if 'Branch-site_class' in col]
         if branchsite_cols:
             tabs.add(TEXTS["viewer_tab_branchsite_classes"])
@@ -468,10 +429,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         self._create_export_tab(tabs.tab(TEXTS["viewer_tab_export"]))
         self._style_tabs(tabs)
     
-    # ── p / q por gene e par (TSV novo traz p_/q_; resultados antigos: calcula) ──
+    # ── p and q per gene and pair (computed for older folders) ──
 
     def _pair_values(self, null: str, alt: str) -> dict:
-        """{gene: (lrt, p, q)} para um par de modelos; None se o par não existe."""
+        """{gene: (lrt, p, q)} for a model pair; None if the pair is absent."""
         cache = getattr(self, '_pq_cache', None)
         if cache is None:
             cache = self._pq_cache = {}
@@ -490,12 +451,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             if pd.isna(lrt):
                 continue
             if row.get('status') == 'failed':
-                # pasta de versão anterior: o LRT foi calculado com a saída de
-                # um codeml interrompido; não entra no teste nem na família BH
+                # older folders computed this LRT from a stopped codeml; leave it out
                 skipped_failed = True
                 continue
             p = row.get(pcol) if pcol in self.df.columns else np.nan
-            if pd.isna(p) or p <= 0:   # p = 0 só aparece por arredondamento: recalcula
+            if pd.isna(p) or p <= 0:   # p = 0 only comes from rounding: recompute
                 df_ = info['df'] or 1
                 p = lrt_stats.p_value(max(0.0, float(lrt)), df_, boundary=info['boundary'])
             genes.append(row['Gene']); lrts.append(float(lrt)); ps.append(float(p))
@@ -514,10 +474,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         return [pair for pair in lrt_stats.POSITIVE_SELECTION_PAIRS if self._pair_values(*pair)]
 
     def _create_stats_panel(self, parent):
-        """Cartões no estilo "painel": rótulo pequeno em cima, valor grande embaixo,
-        todos com a mesma altura. Genes, modelos, genes significativos POR TESTE
-        (q < 0,05) e genes que falharam. Sem "seleção global" nem média de ω entre
-        modelos (contradiziam o LRT no teste de usabilidade)."""
+        """Summary cards: genes, models, significant genes per test (q < 0.05) and
+        failed genes."""
         tests = []
         for null, alt in self._positive_tests():
             vals = self._pair_values(null, alt)
@@ -553,7 +511,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             for k, (name, n_sig, total) in enumerate(tests):
                 cell = ctk.CTkFrame(row, fg_color='transparent')
                 cell.pack(side='left', padx=(0, SPACE['xl']))
-                # valor grande + teste ao lado: lido de relance, com texto (não só cor)
                 ctk.CTkLabel(cell, text=f"{n_sig}/{total}", font=value_font,
                              text_color=PALETTE['success_fg'] if n_sig else PALETTE['text_secondary']
                              ).pack(side='left')
@@ -583,8 +540,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             return None
 
     def _create_summary_tab(self, parent):
-        """Uma linha por gene e por teste de seleção positiva. Ordem de leitura:
-        gene → teste → veredito → p → q → efeito (ω, p₁) → sítios."""
+        """One line per gene and positive-selection test."""
         info = ctk.CTkFrame(parent, fg_color='transparent')
         info.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], SPACE['xs']))
         ctk.CTkLabel(info, text=TEXTS["summary_title"], font=self._font('md', 'bold'),
@@ -602,7 +558,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             return
 
         mono = self._mono('sm')
-        # larguras mínimas fixas: as colunas se alinham de um gene para o outro
         col_min = (110, 150, 170, 170, 230, 220)
 
         max_genes = 300
@@ -709,12 +664,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         return self._status_columns()['reason'].get(gene, '?')
 
     def _gene_notes(self, gene: str) -> str:
-        """Avisos de um gene que rodou (stop codon mascarado, sequência excluída)."""
+        """Warnings of a gene that ran (masked stop codon, excluded sequence)."""
         return self._status_columns()['notes'].get(gene, '')
 
     @staticmethod
     def _compact_reason(reason: str) -> str:
-        """'M8: X; M8a: X; M7: Y' -> 'M8, M8a: X' / 'M7: Y' (modelos com o mesmo motivo juntos)."""
+        """'M8: X; M8a: X; M7: Y' -> 'M8, M8a: X' and 'M7: Y'."""
         import re as _re
         parts = _re.split(r';\s+(?=(?:M\d\w*|Branch[-\w]*):\s)', str(reason).strip())
         groups: dict = {}
@@ -727,7 +682,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                          for why, ms in groups.items())
 
     def _create_lrt_stats_tab(self, parent):
-        """Aba de Tabela LRT com p-valores"""
+        """LRT and p-values tab."""
         comparisons, descriptions = self._get_available_lrt_columns()
         if not comparisons:
             ctk.CTkLabel(parent, text=TEXTS["lrt_no_comparisons"],
@@ -735,7 +690,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         text_color=self.COLORS['warning']).pack(pady=50)
             return
 
-        # ── seletor de teste + hipótese (sem cartão: menos caixas competindo) ──
         ctrl_frame = ctk.CTkFrame(parent, fg_color='transparent')
         ctrl_frame.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], SPACE['xs']))
 
@@ -757,7 +711,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                                 anchor='w', justify='left', wraplength=1180)
         desc_lbl.pack(fill='x', pady=(SPACE['xs'], 0))
 
-        # cabeçalho da tabela fora da rolagem (fica fixo); preenchido por _render_pair_table
         body = ctk.CTkFrame(parent, fg_color='transparent')
         body.pack(fill='both', expand=True, padx=SPACE['md'], pady=(0, SPACE['md']))
         body.grid_columnconfigure(0, weight=1)
@@ -784,13 +737,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         update_lrt_table()
     
     def _create_go_interpretation_tab(self, parent):
-        """Candidatos com LRT significativo ranqueados + enriquecimento de GO.
-
-        Reduz "leia N tabelas BEB" pra "leia uma lista curta ranqueada" --
-        toda a logica (Fisher exato, parse de GO) mora em
-        src.backend.go_enrichment, testavel sem Tkinter; esta aba so chama
-        e desenha o resultado.
-        """
+        """Interpretation tab: candidate genes and GO enrichment (see go_enrichment)."""
         info = ctk.CTkFrame(parent, fg_color=PALETTE['bg_elevated'], corner_radius=8)
         info.pack(fill='x', padx=10, pady=(10, 2))
         ctk.CTkLabel(info, text=TEXTS["go_tab_title"], font=(FONT_UI, 11, "bold"),
@@ -871,8 +818,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         render(None)
 
     def _create_sites_tab(self, parent):
-        """Sítios sob seleção positiva (BEB/NEB) com a numeração do alinhamento
-        do usuário e a do codeml lado a lado, legenda de * / **, copiar/exportar."""
+        """Positive sites tab: BEB/NEB sites with alignment and codeml numbering."""
         ctrl = ctk.CTkFrame(parent, fg_color='transparent')
         ctrl.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], SPACE['xs']))
         line1 = ctk.CTkFrame(ctrl, fg_color='transparent')
@@ -934,7 +880,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 Path(path).write_text(_tsv(df), encoding='utf-8')
                 show_message(self, TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=path))
 
-        # botões secundários neutros (verde fica reservado a "significativo")
         for text, cmd in ((TEXTS["sites_btn_export"], export_sites),
                           (TEXTS["sites_btn_copy"], copy_sites)):
             ctk.CTkButton(line2, text=text, command=cmd, height=28, fg_color='transparent',
@@ -943,7 +888,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                           corner_radius=RADIUS['field'],
                           font=self._font('sm', 'bold')).pack(side='right', padx=(SPACE['sm'], 0))
 
-        # resumo do gene + cabeçalho da tabela ficam fixos, fora da rolagem
         head_host = ctk.CTkFrame(parent, fg_color='transparent')
         head_host.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], 0))
         table_frame = ctk.CTkScrollableFrame(parent, fg_color=PALETTE['bg_panel'], corner_radius=RADIUS['card'])
@@ -983,7 +927,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
     def _render_sites_table(self, parent, gene_name: str, model_name: str, method: str,
                             p_threshold: float = 0.95):
-        """Tabela de sítios. Retorna o DataFrame mostrado (para copiar/exportar)."""
+        """Site table; returns the DataFrame shown, for copying and export."""
         results_file = self._find_results_file(gene_name, model_name) if gene_name else None
         if not results_file:
             ctk.CTkLabel(parent, text=TEXTS["sites_file_not_found"].format(
@@ -1002,7 +946,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                          font=(FONT_UI, 12), text_color=self.COLORS['danger']).pack(pady=50)
             return None
 
-        # Resumo compacto numa linha: gene · nº de sítios · modelo · classe positiva
         from src.backend.sites_parser import SitesParser
         pc = SitesParser.extract_positive_class(results_file) or {}
         sub = f"{model_name} · {method}"
@@ -1024,7 +967,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         if mapped or df_f.empty:
             ctk.CTkLabel(banner, text=TEXTS["sites_position_note"], font=self._font('xs'), wraplength=1150,
                          justify='left', anchor='w', text_color=PALETTE['text_tertiary']).pack(anchor='w')
-        else:   # numeração não verificada: aviso em âmbar
+        else:
             ctk.CTkLabel(banner, text="⚠ " + TEXTS["sites_unmapped_note"], font=self._font('xs'),
                          wraplength=1150, justify='left', anchor='w', text_color=PALETTE['warning_fg'],
                          fg_color=PALETTE['warning_subtle'], corner_radius=RADIUS['field'],
@@ -1035,7 +978,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                          font=self._font('sm'), text_color=PALETTE['text_secondary']).pack(pady=30)
             return df_f
 
-        # (largura, alinhamento): posições e números à direita, em fonte monoespaçada
         cols = [(140, 'e'), (110, 'e'), (50, 'center'), (90, 'e'), (60, 'center'), (170, 'e')]
         cell_pad = (SPACE['xs'], SPACE['xs'])
         th = ctk.CTkFrame(top, fg_color='transparent', corner_radius=0)
@@ -1058,7 +1000,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             fr.pack(fill='x', padx=0, pady=0)
             for i, (c, (w, anchor)) in enumerate(zip(cells, cols)):
                 if i == 4 and sig:
-                    # ** ganha fundo "subtle"; * fica só no texto verde (tom um pouco mais fraco)
                     lbl = (self._chip(fr, c, 'success', font=self._mono('sm', 'bold')) if sig == '**' else
                            ctk.CTkLabel(fr, text=c, font=self._mono('sm', 'bold'),
                                         text_color=PALETTE['success_fg']))
@@ -1072,7 +1013,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         return df_f
 
     def _parse_sites_manual(self, filepath: Path, method: str):
-        """Parser manual básico caso SitesParser não esteja disponível"""
+        """Minimal parser used when SitesParser fails."""
         df_sites = pd.DataFrame()
         omega_global = None
         
@@ -1080,17 +1021,14 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             with open(filepath, 'r') as f:
                 content = f.read()
             
-            # Extrair ω global - usar função robusta de extração
             try:
                 from src.backend.sites_parser import SitesParser
                 omega_global = SitesParser.extract_omega_robust(str(filepath))
             except Exception:
-                # Fallback: padrão direto (para compatibilidade)
                 omega_match = re.search(r'omega \(dN/dS\)\s*=\s*([\d.]+)', content)
                 if omega_match:
                     omega_global = float(omega_match.group(1))
             
-            # Extrair sites (pattern simplificado)
             if method == 'BEB':
                 pattern = r'(\d+)\s+([A-Z])\s+([\d.]+)\*{0,2}\s+([\d.]+)\+?-\s+([\d.]+)'
             else:
@@ -1128,7 +1066,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         return df_sites, omega_global
     
     def _create_branchsite_class_tab(self, parent):
-        """Aba de visualizacao estruturada de classes de Branch-site"""
+        """Branch-site class tab."""
         ctrl_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'],
                                  corner_radius=8, height=60)
         ctrl_frame.pack(fill='x', padx=10, pady=10)
@@ -1165,11 +1103,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         update_branchsite_table()
     
     def _render_branchsite_class_table(self, parent, gene_idx: int):
-        """Renderiza tabela estruturada de classes de Branch-site"""
+        """Branch-site class table."""
         row = self.df.iloc[gene_idx]
         gene = row['Gene']
         
-        # Header
         header_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card_hover'],
                                    corner_radius=8)
         header_frame.pack(fill='x', padx=8, pady=(8, 12))
@@ -1178,7 +1115,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     font=(FONT_UI, 12, "bold"),
                     text_color=self.COLORS['accent_cyan']).pack(pady=8)
         
-        # Table header
         table_header_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card_hover'],
                                          corner_radius=6)
         table_header_frame.pack(fill='x', padx=8, pady=(0, 4))
@@ -1192,7 +1128,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         text_color=self.COLORS['accent_blue_light'],
                         width=width).pack(side='left', padx=8, pady=8)
         
-        # Dados
         for cls in ['0', '1', '2a', '2b']:
             class_col = f'Branch-site_class{cls}_fg_w'
             prop_col = f'Branch-site_class{cls}_prop'
@@ -1203,16 +1138,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             fg_w = row[class_col]
             prop = row[prop_col]
             
-            # Also get background w from omega values
-            # For Branch-site we can parse from the file, but for now use omega
-            # Note: This is simplified, could be improved with full parsing
             
             row_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'],
                                     corner_radius=4, border_width=1,
                                     border_color=self.COLORS['bg_card_hover'])
             row_frame.pack(fill='x', padx=8, pady=2)
             
-            # Format values
             if isinstance(prop, float):
                 prop_str = f"{prop:.5f}"
             else:
@@ -1223,7 +1154,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             else:
                 fg_w_str = "N/A"
             
-            # Background w (would need full parsing - simplified here)
             bg_w_str = TEXTS["branchsite_classes_bg_w_placeholder"]
             
             cells = [
@@ -1237,7 +1167,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 ctk.CTkLabel(row_frame, text=cell_text, font=(FONT_UI, 11),
                            text_color=self.COLORS['text_secondary'], width=width).pack(side='left', padx=8, pady=8)
         
-        # Footer with interpretation
         footer_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card_hover'],
                                    corner_radius=6)
         footer_frame.pack(fill='x', padx=8, pady=(12, 8))
@@ -1248,7 +1177,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     wraplength=400).pack(pady=8, padx=8)
     
     def _create_tree_tab(self, parent):
-        """Branch Analysis — Cladograma vertical com ramos coloridos por dN/dS."""
+        """Branch analysis tab: cladogram with branches coloured by dN/dS."""
         has_branch_omega = ('Branch_omega' in self.df.columns and
                             self.df['Branch_omega'].notna().any())
         has_branchsite   = ('Branch-site_omega' in self.df.columns and
@@ -1472,8 +1401,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 lrt_val = row.get(lrt_col, np.nan)
                 if pd.notna(lrt_val):
                     # df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
-                    # Correção necessária porque M0 usa árvore não-enraizada (ntime=2n-3)
-                    # enquanto Branch usa a árvore rotulada/enraizada (ntime=2n-2).
+                    # M0 uses the unrooted tree (ntime = 2n-3), Branch the labelled rooted one (2n-2)
                     m0_np_val        = row.get('M0_np', np.nan)
                     branch_np_val    = row.get('Branch_np', np.nan)
                     m0_ntime_val     = row.get('M0_ntime', np.nan)
@@ -1513,7 +1441,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
             species_map = _parse_species_map(results_file)
 
-            # Refresh outgroup combo values
             sp_names = [TEXTS["branch_outgroup_none"]] + sorted(species_map.values())
             outgroup_combo.configure(values=sp_names)
             if outgroup_name not in sp_names:
@@ -1625,12 +1552,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                          else float(depth_fr.get(n, 0))
                       for n in all_nodes}
 
-            # Store positions for click detection
             state['node_pos']  = {n: (node_x.get(n, 0), node_y.get(n, 0))
                                   for n in all_nodes}
             state['internals'] = {n for n, kids in children_map.items() if kids}
 
-            # Color map
             all_omegas = list(branch_omega_map.values())
             vmax = max(max(all_omegas, default=2.0), 2.0)
             cmap = LinearSegmentedColormap.from_list(
@@ -1661,7 +1586,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     cy    = node_y[c_node]
                     omega = branch_omega_map.get((p_node, c_node), 0.5)
                     color = cmap(norm(omega))
-                    ax.plot([px, cx], [cy, cy],       # horizontal branch
+                    ax.plot([px, cx], [cy, cy],
                             color=color, linewidth=LW,
                             solid_capstyle='round', zorder=2)
                 if p_node not in done_vc:
@@ -1674,7 +1599,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     else:
                         conn_color = PALETTE['plot_line']  # root has no incoming branch
                     ax.plot([px, px],
-                            [min(child_ys), max(child_ys)],   # vertical connector
+                            [min(child_ys), max(child_ys)],
                             color=conn_color, linewidth=LW,
                             solid_capstyle='round', zorder=1)
                     done_vc.add(p_node)
@@ -1749,7 +1674,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             cbar.set_ticks(tick_vals)
             cbar.set_ticklabels(tick_fmt)
 
-            # Axis limits and style
             ax.set_xlim(-0.3, max_depth + 4.5)
             ax.set_ylim(-0.5, n_leaves - 0.5)
             ax.set_yticks([])
@@ -1805,7 +1729,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             render_tree()
     
     def _create_export_tab(self, parent):
-        """Aba de exportação: lista neutra (cor semântica fica para os resultados)."""
+        """Export tab."""
         main_frame = ctk.CTkScrollableFrame(parent, fg_color='transparent', corner_radius=0)
         main_frame.pack(fill='both', expand=True, padx=SPACE['md'], pady=SPACE['sm'])
 
@@ -1837,16 +1761,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                           text_color='#ffffff', font=self._font('sm', 'bold'),
                           corner_radius=RADIUS['field'], command=command).pack(side="right")
 
-    # ═══════════════════════════════════════════════════════════
-    # MÉTODOS AUXILIARES
-    # ═══════════════════════════════════════════════════════════
     
     def _detect_positive_selection(self) -> dict:
-        """Genes com LRT de seleção positiva significativo (q < 0,05, BH) em
-        pelo menos um teste (M2a vs M1a, M8 vs M7, M8 vs M8a).
-
-        {gene: {"M8 vs M7": {'omega': ω da classe positiva, 'p_value', 'q_value', 'lrt'}}}
-        (Antes: ω MÉDIO > 1 -- critério que quase nunca é atendido e contradizia o LRT.)"""
+        """{gene: {test: {omega, p_value, q_value, lrt}}} for genes with q < 0.05 in at
+        least one positive-selection test; omega is the positive class ω."""
         out = {}
         for null, alt in self._positive_tests():
             for gene, (lrt, p, q) in (self._pair_values(null, alt) or {}).items():
@@ -1860,13 +1778,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         return int((self.df['status'] == 'failed').sum()) if 'status' in self.df.columns else 0
 
     def _count_models(self) -> str:
-        """Conta modelos únicos"""
+        """Number of models in the summary."""
         model_cols = [col for col in self.df.columns if '_lnL' in col or '_omega' in col]
         unique_models = set()
         
         for col in model_cols:
-            # Extrair nome do modelo removendo sufixos (lnL, omega, np, time, stops)
-            # Ex: M8_omega -> M8, Branch-site_omega -> Branch-site, Branch_lnL -> Branch
             model_name = col
             for suffix in ['_lnL', '_omega', '_np', '_time', '_stops']:
                 if suffix in model_name:
@@ -1887,7 +1803,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             'lrt_M0_vs_M1a': (
                 'M0 → M1a   (neutralidade)',
                 'H₀  M0 — taxa ω única para todos os sítios  ·  '
-                'H₁  M1a — ω₀ < 1 e ω₁ = 1 (neutralidade quase-neutra)   ·   df = 2   ·  '
+                'H₁  M1a — ω₀ < 1 e ω₁ = 1   ·   df = 1   ·  '
                 'Pré-teste; M1a vs M2a é o teste principal de seleção positiva',
             ),
             'lrt_M1a_vs_M2a': (
@@ -1913,27 +1829,24 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 'H₀  M0 — uma única taxa ω para todos os ramos  ·  '
                 'H₁  Branch — ω independente por grupo marcado   ·  '
                 'df = n° de grupos foreground marcados (#1, #2 …)   ·  '
-                'Ex: 1 marca → df=1 (χ²crit=3.84)  |  5 marcas → df=5 (χ²crit=11.07)   ·  '
-                '[!]  Requer > 200 pb',
+                'Ex: 1 marca → df=1 (χ²crit=3.84)  |  5 marcas → df=5 (χ²crit=11.07)',
             ),
             'lrt_Branch-site_null_vs_Branch-site': (
                 'Branch-site null → Branch-site   (seleção episódica)',
                 'H₀  Branch-site null — ω ≤ 1 no foreground  ·  '
-                'H₁  Branch-site — sítios com ω > 1 no foreground   ·   df = 1   ·  '
-                '[!]  Requer > 200 pb',
+                'H₁  Branch-site — sítios com ω > 1 no foreground   ·   df = 1',
             ),
             'lrt_M0_vs_Branch-site': (
                 'M0 → Branch-site   (seleção episódica alt.)',
                 'H₀  M0 — taxa única  ·  '
-                'H₁  Branch-site — seleção episódica no foreground   ·   df = 2   ·  '
-                '[!]  Requer > 200 pb',
+                'H₁  Branch-site — seleção episódica no foreground   ·   df = 2',
             ),
         }
 
         if get_language() == 'en':
             KNOWN = {
                 'lrt_M0_vs_M1a': ('M0 → M1a   (neutrality)',
-                                  'H₀ M0 — one ω for all sites  ·  H₁ M1a — ω₀ < 1 and ω₁ = 1  ·  df = 2'),
+                                  'H₀ M0 — one ω for all sites  ·  H₁ M1a — ω₀ < 1 and ω₁ = 1  ·  df = 1'),
                 'lrt_M1a_vs_M2a': ('M1a → M2a   (positive sites)',
                                    'H₀ M1a — purifying/neutral only (ω ≤ 1)  ·  H₁ M2a — sites with ω > 1  ·  df = 2'),
                 'lrt_M7_vs_M8': ('M7 → M8   (Beta + ω > 1)',
@@ -1944,14 +1857,14 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                                   'df = 1 (χ²₁)  ·  Swanson et al. 2003'),
                 'lrt_M0_vs_Branch': ('M0 → Branch   (free branches)',
                                      'H₀ M0 — one ω for all branches  ·  H₁ Branch — ω per labelled group  ·  '
-                                     'df = number of foreground groups  ·  [!] requires > 200 bp'),
+                                     'df = number of foreground groups'),
                 'lrt_Branch-site_null_vs_Branch-site': ('Branch-site null → Branch-site   (episodic selection)',
                                                         'H₀ ω ≤ 1 in the foreground  ·  H₁ sites with ω > 1 in the '
-                                                        'foreground  ·  df = 1 (χ²₁)  ·  [!] requires > 200 bp'),
+                                                        'foreground  ·  df = 1 (χ²₁)'),
             }
 
-        comparisons  = {}   # label → col
-        descriptions = {}   # col   → description text
+        comparisons  = {}
+        descriptions = {}
 
         for col in self.df.columns:
             if not col.startswith('lrt_'):
@@ -1974,12 +1887,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         return comparisons, descriptions
     
     def _render_pair_table(self, parent, null: str, alt: str):
-        """Tabela de um LRT de modelos de sítio: lnL de cada modelo, 2Δℓ,
-        p (notação científica), q (BH), ω e p₁ da classe positiva.
-        Ordem visual: gene → veredito → p → q → efeito → 2Δℓ → lnL."""
+        """Site-model LRT table: verdict, p, q, positive class, 2Δℓ and lnL."""
         vals = self._pair_values(null, alt) or {}
-        hd = TEXTS["lrt_headers"]   # Gene, lnL0, lnL1, 2Δℓ, p, q, ω(p₁), Sig.
-        # (índice no cabeçalho original, largura, alinhamento)
+        hd = TEXTS["lrt_headers"]
         cols = [(0, 330, 'w'), (7, 70, 'w'), (4, 100, 'e'), (5, 100, 'e'), (6, 170, 'e'),
                 (3, 90, 'e'), (1, 110, 'e'), (2, 130, 'e')]
         cell_pad = (SPACE['xs'], SPACE['xs'])
@@ -2015,13 +1925,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                      f"{row.get(f'{alt}_lnL'):.3f}" if pd.notna(row.get(f'{alt}_lnL')) else "NA",
                      f"{max(0.0, lrt):.3f}", lrt_stats.format_p(p), lrt_stats.format_p(q), wtxt,
                      TEXTS["lrt_sig_yes"] if sig else TEXTS["lrt_sig_no"]]
-            # zebra suave; nada de borda por linha nem linha inteira verde
             fr = ctk.CTkFrame(parent, fg_color=PALETTE['row_alt'] if k % 2 else PALETTE['bg_panel'],
                               corner_radius=RADIUS['field'])
             fr.pack(fill='x', padx=0, pady=0)
             for c, (i, wd, anchor) in enumerate(cols):
                 if i == 7:
-                    # célula de largura fixa: o rótulo curto não desloca as colunas seguintes
                     box = ctk.CTkFrame(fr, fg_color='transparent', width=wd, height=28)
                     box.pack_propagate(False)
                     box.grid(row=0, column=c, padx=cell_pad, pady=SPACE['xs'], sticky='w')
@@ -2050,8 +1958,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                                                           padx=SPACE['sm'])
 
     def _render_lrt_table(self, parent, lrt_col: str, comparison_name: str):
-        """Renderiza tabela LRT com estatísticas e omegas recuperados
-        Para Branch/BranchSite, exibe múltiplos omegas por tag"""
+        """LRT table for Branch and Branch-site, with ω per label."""
         # Parse model names reliably from lrt_col (e.g. lrt_M0_vs_Branch),
         # not from comparison_name (which may use → and extra text).
         col_parts = lrt_col.replace('lrt_', '').split('_vs_')
@@ -2064,11 +1971,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         model1_raw = col_parts[0].lower()
         model2_raw = col_parts[1].lower()
         
-        # Identificar qual é o modelo alternativo (com mais parâmetros)
-        # M0 vs M1a -> M1a é alternativo
-        # M1a vs M2a -> M2a é alternativo
-        # M7 vs M8 -> M8 é alternativo
-        # M0 vs Branch -> Branch é alternativo
         
         model_hierarchy = {
             'm0': 0, 'm1a': 1, 'm2a': 2, 'm7': 1, 'm8': 2, 'branch': 1
@@ -2079,8 +1981,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         else:
             alternative_model = model1_raw
         
-        # Capitalizar corretamente
-        # Para Branch-site usar nomes padronizados
         if alternative_model == 'branch':
             alt_display = 'Branch'
         elif alternative_model.lower() == 'branch-site':
@@ -2092,20 +1992,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         
         is_branch_model = alternative_model == 'branch'
         is_branchsite_model = 'branch-site' in alternative_model.lower()
-
-        # ── 200 bp notice (Branch / Branch-site) ──────────────────────
-        if is_branch_model or is_branchsite_model:
-            notice = ctk.CTkFrame(parent, fg_color=PALETTE['warning_subtle'],
-                                  corner_radius=RADIUS['card'])
-            notice.pack(fill='x', padx=8, pady=(4, 8))
-            ctk.CTkLabel(
-                notice,
-                text=TEXTS["lrt_branch_warning"],
-                font=self._font('sm'),
-                text_color=PALETTE['warning_fg'],
-                wraplength=1100,
-                justify='left',
-            ).pack(padx=14, pady=8, anchor='w')
 
         # ── Table header ──────────────────────────────────────────────
         header_frame = ctk.CTkFrame(parent, fg_color='transparent', corner_radius=0)
@@ -2126,7 +2012,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                          text_color=PALETTE['text_secondary'], width=width, anchor='w').grid(
                              row=0, column=i, padx=5, pady=9, sticky="w")
         
-        # Rows
         row_count = 0
         for idx, (_, row) in enumerate(self.df.iterrows()):
             lrt_val = row[lrt_col]
@@ -2136,7 +2021,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             
             gene = row['Gene']
             
-            # Para Branch/BranchSite, extrair múltiplos omegas por tag
             if is_branch_model:
                 try:
                     from src.backend.sites_parser import SitesParser
@@ -2146,11 +2030,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     if results_file:
                         omegas_by_tag = SitesParser.extract_omega_by_tags(results_file)
                         if omegas_by_tag:
-                            # Mapear tags para nomes mais informativos
-                            # background -> "Background", #1 -> "#1", foreground -> "Foreground"
                             omega_items = []
                             
-                            # Ordenar: background primeiro, depois #1, #2, etc., depois foreground
                             def sort_tags(item):
                                 tag, val = item
                                 if tag == 'background':
@@ -2166,16 +2047,14 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                                     return (3, tag)
                             
                             for tag, val in sorted(omegas_by_tag.items(), key=sort_tags):
-                                # Formatar com indicador de placeholder
                                 if val == 999.0:
-                                    # 999 é placeholder do CODEML (sem dados para essa tag)
+                                    # 999 is codeml's placeholder for a label without data
                                     display_val = "N/A"
                                     display_tag = tag.replace('background', 'Background').replace('foreground', 'Foreground')
                                     if tag.startswith('#'):
                                         display_tag = tag
                                     omega_items.append(f"{display_tag}: {display_val}")
                                 else:
-                                    # Valor real
                                     if tag == 'background':
                                         display_tag = 'Background'
                                     elif tag == 'foreground':
@@ -2187,13 +2066,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                                     
                                     omega_items.append(f"{display_tag}: {val:.4f}")
                             
-                            # Formatar com quebra de linha se houver muitos valores
                             if len(omega_items) <= 2:
                                 omega_str = " | ".join(omega_items)
                             else:
                                 omega_str = "\n".join(omega_items)
                         else:
-                            # Fallback para omega global
                             omega = SitesParser.extract_omega_robust(results_file)
                             omega_str = f"{omega:.4f}" if omega else "N/A"
                     else:
@@ -2201,7 +2078,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 except Exception as e:
                     omega_str = "N/A"
                     
-                # Para cálculo de p-valor, usar omega global
                 omega = None
                 try:
                     results_file = self._find_results_file(gene, alt_display)
@@ -2210,17 +2086,14 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 except Exception:
                     pass
             else:
-                # Buscar omega do modelo alternativo - com fallback para arquivo
                 omega_col = f"{alt_display}_omega"
                 omega = row.get(omega_col, np.nan)
                 
-                # Se omega está faltando, tentar extrair do arquivo
                 if pd.isna(omega):
                     try:
                         from src.backend.sites_parser import SitesParser
                         from pathlib import Path
                         
-                        # Procurar arquivo de resultados com suporte a múltiplas variações
                         results_file = self._find_results_file(gene, alt_display)
                         if results_file:
                             omega = SitesParser.extract_omega_robust(results_file)
@@ -2229,7 +2102,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
                 omega_str = f"{omega:.4f}" if pd.notna(omega) else "N/A"
             
-            # Para Branch-site, preparar dados de site classes
             branchsite_class_data = None
             if is_branchsite_model:
                 try:
@@ -2252,17 +2124,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 except Exception:
                     branchsite_class_data = None
             
-            # Calcular p-valor com df correto por tipo de comparação:
-            #   M2a / M8        : chi2(df=2)
-            #   Branch          : chi2(df = n_grupos = abs(np_Branch - np_M0))
-            #   Branch-site     : mistura 50:50 chi2(0)+chi2(1) → p = 0.5*chi2.sf(x, 1)
-            #   demais (M1a etc): chi2(df=1)  [M0 vs M1a nunca chega aqui; já é tratado]
             if alternative_model in ['m2a', 'm8']:
                 df_chi2 = 2
                 p_val = stats.chi2.sf(lrt_val, df=2) if lrt_val > 0 else 1.0
             elif is_branch_model:
                 # df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
-                # Necessário pois M0 usa árvore não-enraizada e Branch usa enraizada.
+                # M0 uses the unrooted tree, Branch the rooted one
                 m0_np_val        = row.get('M0_np', np.nan)
                 branch_np_val    = row.get('Branch_np', np.nan)
                 m0_ntime_val     = row.get('M0_ntime', np.nan)
@@ -2277,10 +2144,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     df_chi2 = 1
                 p_val = stats.chi2.sf(lrt_val, df=df_chi2) if lrt_val > 0 else 1.0
             elif is_branchsite_model:
-                # Distribuição nula: mistura 50:50 chi2(0)+chi2(1)
-                # P(2Δl > x) = 0.5 * P(chi2(1) > x)  para x > 0
-                # Valor crítico α=0.05: 2.706   α=0.01: 5.412
-                # χ²₁ puro (igual ao backend / LRT_results.txt); mistura só referência
+                # χ²₁, as in LRT_results.txt; the mixture is only a reference
                 p_val = lrt_stats.p_value(lrt_val, 1, boundary=True)
                 df_chi2 = 1
             else:
@@ -2290,15 +2154,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             
             p_val_str = self._fmt_pval(p_val)
             
-            # ── Row color based on significance + omega ───────────────
             is_strong = is_sig and pd.notna(omega) and omega > 1.0 if not (is_branch_model or is_branchsite_model) else False
-            row_idx = row_count  # for alternating
+            row_idx = row_count
 
-            # zebra suave em todas as linhas; o destaque fica só em p e Sig.
             bg_color = PALETTE['bg_panel'] if row_idx % 2 == 0 else PALETTE['row_alt']
             border_color = bg_color
             
-            # Para Branch-site, renderizar uma linha por site class
             if is_branchsite_model and branchsite_class_data:
                 for class_idx, class_name in enumerate(['0', '1', '2a', '2b']):
                     if class_name not in branchsite_class_data:
@@ -2342,13 +2203,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
                 row_count += 1
             else:
-                # Renderização padrão para outros modelos
                 row_frame = ctk.CTkFrame(parent,
                                         fg_color=bg_color,
                                         corner_radius=RADIUS['field'], border_width=0)
                 row_frame.pack(fill='x', padx=SPACE['sm'], pady=0)
 
-                # Destaque especial para omega > 1 E significante (apenas para não-Branch)
                 if is_strong:
                     sig_text = "** pos"
                 elif is_sig:
@@ -2356,8 +2215,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 else:
                     sig_text = "—"
 
-                # Para Branch: mostrar df calculado na célula 2Δℓ para facilitar
-                # leitura do threshold (ex: "12.345 (df=5)")
                 lrt_display = (f"{lrt_val:.4f} (df={df_chi2})"
                                if is_branch_model else f"{lrt_val:.4f}")
                 vals = [gene, omega_str, lrt_display, p_val_str, sig_text]
@@ -2390,11 +2247,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         font=(FONT_UI, 11),
                         text_color=self.COLORS['warning']).pack(pady=30)
         else:
-            # ── Footer ───────────────────────────────────────────────
             footer = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_sidebar'], corner_radius=6)
             footer.pack(fill='x', padx=8, pady=(10, 8))
 
-            # Recalcular sig_count com a mesma distribuição usada nas linhas
             def _footer_pval(x):
                 if not (pd.notna(x) and x > 0):
                     return 1.0
@@ -2413,16 +2268,13 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             ctk.CTkLabel(footer, text=footer_text, font=(FONT_UI, 11),
                          text_color=self.COLORS['text_tertiary']).pack(pady=8, padx=12)
     
-    # ═══════════════════════════════════════════════════════════
-    # EXPORTAÇÃO
-    # ═══════════════════════════════════════════════════════════
 
     # ── df_chi2 per comparison ────────────────────────────────
     _DF_CHI2 = {
         'lrt_M0_vs_M1a':                           2,
         'lrt_M1a_vs_M2a':                          2,
         'lrt_M7_vs_M8':                            2,
-        'lrt_M0_vs_Branch':                        1,   # approximation
+        'lrt_M0_vs_Branch':                        1,
         'lrt_Branch-site_null_vs_Branch-site':     1,
         'lrt_M0_vs_Branch-site':                   2,
     }
@@ -2431,10 +2283,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         """Build a clean, filtered DataFrame for one LRT comparison.
 
         • Only genes where the LRT value is not NaN (model was run).
-        • Shows Gene, relevant ω columns, 2Δℓ, p-valor, Sig.
+        • Shows Gene, relevant ω columns, 2Δℓ, p, Sig.
         • No internal columns (_np, _time, _stops, _lnL).
         """
-        # Filter: only rows that ran this model
         lrt_series = pd.to_numeric(self.df[lrt_col], errors='coerce')
         mask = lrt_series.notna()
         if not mask.any():
@@ -2442,10 +2293,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         df_f = self.df[mask].copy()
         lrt_vals = lrt_series[mask]
 
-        # df for chi2
         df_chi2 = self._DF_CHI2.get(lrt_col, 1)
 
-        # Para M0 vs Branch: df per-row via ntime correction
         # df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
         branch_df_series = None
         if 'vs_Branch' in lrt_col and 'site' not in lrt_col.lower():
@@ -2473,7 +2322,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 lambda x: float(stats.chi2.sf(x, df=df_chi2)) if pd.notna(x) and x > 0 else 1.0
             )
 
-        # Build output columns
         out = pd.DataFrame({'Gene': df_f['Gene'].values})
 
         parts = lrt_col.replace('lrt_', '').split('_vs_')
@@ -2556,7 +2404,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         pd.to_numeric(df_f[col].values, errors='coerce').round(4)
                     )
 
-        # p/q iguais aos do LRT_results.txt (χ²₁ nos testes de fronteira; BH no par)
+        # same p and q as LRT_results.txt
         _pair = tuple(lrt_col.replace('lrt_', '').split('_vs_'))
         _pv = self._pair_values(*_pair) if len(_pair) == 2 and _pair in lrt_stats.PAIRS \
             and _pair[1] not in ('Branch',) else None
@@ -2607,7 +2455,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     for _, sr in sig.iterrows():
                         star = sr['significance'] if sr['significance'] else (
                             '**' if sr['pr_w_gt_1'] >= 0.99 else '*')
-                        # numeração do alinhamento do usuário (codeml entre colchetes se diferente)
+                        # alignment numbering, with the codeml number in brackets when different
                         pos_o = int(sr['position_original']) if pd.notna(sr.get('position_original')) else int(sr['position'])
                         pos_c = int(sr['position'])
                         pos_txt = f"{pos_o}" if pos_o == pos_c else f"{pos_o} [codeml {pos_c}]"
@@ -2623,7 +2471,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         return out.reset_index(drop=True)
 
     def _export_excel(self):
-        """Exporta para Excel — uma aba por modelo LRT, genes sem dados omitidos"""
+        """Export to Excel, one sheet per test."""
         filepath = filedialog.asksaveasfilename(
             parent=self,
             defaultextension=".xlsx",
@@ -2668,10 +2516,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         }
 
         # Style helpers — clean light-background professional theme
-        HEADER_FILL   = PatternFill('solid', fgColor='1F3864')  # deep navy
-        SIG01_FILL    = PatternFill('solid', fgColor='D6F0E8')  # pale teal  (p<0.01)
-        SIG05_FILL    = PatternFill('solid', fgColor='EBF5E0')  # pale green (p<0.05 only)
-        ALT_FILL      = PatternFill('solid', fgColor='F5F7FB')  # very light blue-gray
+        HEADER_FILL   = PatternFill('solid', fgColor='1F3864')
+        SIG01_FILL    = PatternFill('solid', fgColor='D6F0E8')
+        SIG05_FILL    = PatternFill('solid', fgColor='EBF5E0')
+        ALT_FILL      = PatternFill('solid', fgColor='F5F7FB')
         HEADER_FONT   = Font(bold=True, color='FFFFFF', size=11)
         SIG01_FONT    = Font(color='0E5E4A', size=10, bold=True)
         SIG05_FONT    = Font(color='2D6A1F', size=10)
@@ -2801,7 +2649,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_excel_err"].format(error=e), parent=self)
 
     def _export_csv(self):
-        """Exporta para CSV — um arquivo por modelo LRT, genes sem dados omitidos"""
+        """Export to CSV, one file per test."""
         lrt_cols = [c for c in self.df.columns if c.startswith('lrt_')]
         if not lrt_cols:
             messagebox.showwarning(TEXTS["msg_warning"], TEXTS["msg_no_lrt"], parent=self)
@@ -2827,7 +2675,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             return
 
         from pathlib import Path as _P
-        base = _P(base_path).with_suffix('')   # strip .csv if added
+        base = _P(base_path).with_suffix('')
         files_written = []
         try:
             for lrt_col in lrt_cols:
@@ -2850,7 +2698,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_csv_err"].format(error=e), parent=self)
 
     def _export_charts(self):
-        """Exporta gráficos"""
+        """Export charts."""
         filepath = filedialog.asksaveasfilename(
             parent=self,
             defaultextension=".png",
@@ -2863,7 +2711,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             fig, axes = plt.subplots(2, 2, figsize=(14, 10))
             fig.patch.set_facecolor('#0f0f0f')
             
-            # Gráfico 1: Distribuição de ω
             omega_cols = [col for col in self.df.columns if '_omega' in col]
             if omega_cols:
                 omega_data = []
@@ -2879,7 +2726,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     axes[0, 0].set_facecolor('#1e1e1e')
                     axes[0, 0].tick_params(colors='white')
             
-            # Gráfico 2: LRT values
             lrt_cols = [col for col in self.df.columns if col.startswith('lrt_')]
             if lrt_cols:
                 lrt_data = pd.to_numeric(self.df[lrt_cols[0]], errors='coerce').dropna()
@@ -2891,26 +2737,24 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     axes[0, 1].set_facecolor('#1e1e1e')
                     axes[0, 1].tick_params(colors='white')
             
-            # Gráfico 3: Genes com seleção positiva
             positive_genes = self._detect_positive_selection()
             if positive_genes:
                 gene_names = list(positive_genes.keys())[:10]
                 gene_counts = [len(positive_genes[g]) for g in gene_names]
                 axes[1, 0].barh(gene_names, gene_counts, color='#10b981', alpha=0.8)
-                axes[1, 0].set_title('Top 10 Genes com Seleção Positiva', color='white', fontsize=12)
-                axes[1, 0].set_xlabel('Nº de Sinais', color='white')
+                axes[1, 0].set_title('Top 10 genes with positive selection', color='white', fontsize=12)
+                axes[1, 0].set_xlabel('Significant tests', color='white')
                 axes[1, 0].set_facecolor('#1e1e1e')
                 axes[1, 0].tick_params(colors='white')
             
-            # Texto de resumo
             axes[1, 1].axis('off')
             summary_text = f"""
-            RESUMO DA ANALISE
+            SUMMARY
 
             Genes: {len(self.df)}
-            LRT significativo (q < 0.05): {len(positive_genes)}
-            Falharam / failed: {self._n_failed()}
-            Modelos / models: {self._count_models()}
+            Significant LRT (q < 0.05): {len(positive_genes)}
+            Failed: {self._n_failed()}
+            Models: {self._count_models()}
             """
             axes[1, 1].text(0.1, 0.5, summary_text, color='white', fontsize=11,
                           verticalalignment='center', family='monospace',
@@ -2925,7 +2769,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_export_err"].format(error=e), parent=self)
     
     def _export_html(self):
-        """Exporta relatório HTML — uma seção por modelo LRT, genes sem dados omitidos"""
+        """Export an HTML report, one section per test."""
         filepath = filedialog.asksaveasfilename(
             parent=self,
             defaultextension=".html",
@@ -2936,17 +2780,13 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         SHEET_LABELS = {
             'lrt_M0_vs_M1a':                       ('M0 → M1a',  'Nearly neutral pre-test (M1a vs M0)'),
-            'lrt_M1a_vs_M2a':                      ('M1a → M2a', 'Sítios positivos (M2a vs M1a)'),
+            'lrt_M1a_vs_M2a':                      ('M1a → M2a', 'Positive sites (M2a vs M1a)'),
             'lrt_M7_vs_M8':                        ('M7 → M8',   'Beta + ω > 1 (M8 vs M7)'),
-            'lrt_M8a_vs_M8':                       ('M8a → M8',  'ω > 1 além de sítios neutros (M8 vs M8a)'),
-            'lrt_M0_vs_Branch':                    ('M0 → Branch','Ramos livres (Branch vs M0)'),
-            'lrt_Branch-site_null_vs_Branch-site': ('Branch-site','Seleção episódica no foreground'),
-            'lrt_M0_vs_Branch-site':               ('M0 → Branch-site','Seleção episódica alt.'),
+            'lrt_M8a_vs_M8':                       ('M8a → M8',  'ω > 1 beyond neutral sites (M8 vs M8a)'),
+            'lrt_M0_vs_Branch':                    ('M0 → Branch','Free branches (Branch vs M0)'),
+            'lrt_Branch-site_null_vs_Branch-site': ('Branch-site','Episodic selection on the foreground'),
+            'lrt_M0_vs_Branch-site':               ('M0 → Branch-site','Episodic selection (alt.)'),
         }
-        BRANCH_WARNING = (
-            '<div class="warn">[!] Branch e Branch-site requerem sequencias &gt; 200 pb '
-            'para estimativas confiaveis de ω.</div>'
-        )
 
         try:
             positive_genes = self._detect_positive_selection()
@@ -2960,11 +2800,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 if df_out.empty:
                     continue
                 label, subtitle = SHEET_LABELS.get(lrt_col, (lrt_col, ''))
-                is_branch = 'branch' in lrt_col.lower()
 
-                # table header
                 th_cells = ''.join(f'<th>{c}</th>' for c in df_out.columns)
-                # table rows
                 tr_rows = ''
                 for _, row in df_out.iterrows():
                     sig = row.get('Sig. p<0.05', '—') == 'sim'
@@ -2984,13 +2821,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     tr_rows += f'<tr{row_cls}>{cells}</tr>\n'
 
                 n_sig = (df_out['Sig. p<0.05'] == 'sim').sum() if 'Sig. p<0.05' in df_out.columns else 0
-                warn_html = BRANCH_WARNING if is_branch else ''
 
                 sections_html += f"""
         <section>
           <h2>{label}</h2>
           <p class="subtitle">{subtitle}</p>
-          {warn_html}
           <p class="meta">{len(df_out)} genes analisados &nbsp;·&nbsp; {n_sig} significantes (p &lt; 0.05)</p>
           <div style="overflow-x:auto">
           <table>
@@ -3008,7 +2843,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     signals_inner = ''.join(
                         f'<div class="signal">{st}: p = {self._fmt_pval(sd["p_value"])}, '
                         f'q = {self._fmt_pval(sd["q_value"])}'
-                        + (f', ω (classe positiva) = {sd["omega"]:.3f}' if pd.notna(sd["omega"]) else '')
+                        + (f', ω (positive class) = {sd["omega"]:.3f}' if pd.notna(sd["omega"]) else '')
                         + '</div>'
                         for st, sd in signals.items()
                     )
@@ -3017,14 +2852,14 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                                  f'{signals_inner}</div>\n')
             else:
                 pos_html = ('<p style="color:#f59e0b;text-align:center;padding:20px">'
-                            'Nenhum gene com LRT significativo (q &lt; 0,05)</p>')
+                            'No gene with a significant LRT (q &lt; 0.05)</p>')
 
             html_content = f"""<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EasyPAML — Relatório de Análise</title>
+<title>EasyPAML report</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
 body{{font-family:'Segoe UI',sans-serif;background:#0c0c0f;color:#e0e0e0;padding:36px 20px}}
@@ -3056,29 +2891,29 @@ section{{margin-bottom:48px}}
 </head>
 <body>
 <div class="container">
-  <h1>Relatorio de Analise — EasyPAML</h1>
-  <p style="text-align:center;color:#8e8ea4;margin-top:6px">Gerado em {now_str}</p>
+  <h1>EasyPAML report</h1>
+  <p style="text-align:center;color:#8e8ea4;margin-top:6px">Generated {now_str}</p>
 
-  <h2 style="margin-top:28px">Estatisticas Gerais</h2>
+  <h2 style="margin-top:28px">Summary</h2>
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-label">Total de Genes</div>
+    <div class="stat-card"><div class="stat-label">Genes</div>
       <div class="stat-value">{len(self.df)}</div></div>
-    <div class="stat-card"><div class="stat-label">Modelos Rodados</div>
+    <div class="stat-card"><div class="stat-label">Models</div>
       <div class="stat-value">{self._count_models()}</div></div>
-    <div class="stat-card"><div class="stat-label">LRT significativo (q &lt; 0,05)</div>
+    <div class="stat-card"><div class="stat-label">Significant LRT (q &lt; 0.05)</div>
       <div class="stat-value">{len(positive_genes)}</div></div>
-    <div class="stat-card"><div class="stat-label">Genes que falharam</div>
+    <div class="stat-card"><div class="stat-label">Failed genes</div>
       <div class="stat-value">{self._n_failed()}</div></div>
   </div>
 
-  <h2>Genes com LRT de seleção positiva significativo (q &lt; 0,05)</h2>
+  <h2>Genes with a significant positive-selection LRT (q &lt; 0.05)</h2>
   {pos_html}
 
-  <h2>Resultados por Modelo</h2>
+  <h2>Results by test</h2>
   {sections_html}
 
   <div class="footer">
-    <p>Relatorio gerado pelo <strong>EasyPAML</strong> — Pipeline CODEML / PAML</p>
+    <p>Generated by EasyPAML (PAML/codeml)</p>
   </div>
 </div>
 </body>

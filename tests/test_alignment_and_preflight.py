@@ -1,4 +1,4 @@
-"""Itens 1c e 3 -- leitura de alinhamentos, mapa de sítios, validação."""
+"""Alignment reading, site map and the data check."""
 import json
 from pathlib import Path
 
@@ -54,7 +54,7 @@ def test_stop_codon_position_in_problematic_data():
 def test_cleandata_kept_codons_rule():
     names = ['a', 'b', 'c']
     seqs = {'a': 'ATGAAACCCGGGTTT', 'b': 'ATG---CCCTGATTT', 'c': 'ATGAAANCCGGGTTT'}
-    # códon 2: gap em b; códon 3: N em c; códon 4: stop em b -> saem
+    # codon 2: gap in b; codon 3: N in c; codon 4: stop in b -> removed
     assert cleandata_kept_codons(names, seqs) == [1, 5]
 
 
@@ -68,7 +68,7 @@ def test_sitemap_maps_codeml_positions_back(tmp_path):
                   kept_codons=kept, sequences=aln.names, codeml_sites=299)
     sm = json.loads((tmp_path / 'g_M8_sitemap.json').read_text())
     assert sm['verified'] is True
-    # codeml diz 220 -> no alinhamento do usuário é 221 (coluna 150 removida antes)
+    # codeml site 220 is alignment codon 221 (column 150 was removed)
     assert to_original(220, sm) == 221
     assert to_original(65, sm) == 65
     df = attach_original_positions(pd.DataFrame({'position': [65, 220, 280]}), results)
@@ -121,7 +121,7 @@ def test_preflight_duplicates_and_length(tmp_path):
     by = {(i.gene, i.kind) for i in rep.issues}
     assert ('g1', 'duplicate_gene') in by
     assert ('g2', 'not_multiple_of_3') in by
-    assert rep.files['g1'].suffix == '.fasta'          # FASTA tem preferência
+    assert rep.files['g1'].suffix == '.fasta'          # FASTA wins
 
 
 def test_preflight_clean_data_has_no_problems(tmp_path):

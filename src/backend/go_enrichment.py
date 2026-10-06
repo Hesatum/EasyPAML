@@ -1,7 +1,6 @@
-"""Enriquecimento de GO: candidatos (LRT significativo) vs background (todos
-os genes testados). Fisher exato por termo -- scipy ja e dependencia, nada
-novo. Le direto o TSV de anotacao no formato "descricao [GO:XXXXXXX]; ..."
-por coluna de categoria (biological_process/cellular_component/molecular_function).
+"""GO enrichment: candidates (significant LRT) against all tested genes, with
+Fisher's exact test per term. The annotation TSV has one column per GO
+category with entries like "description [GO:XXXXXXX]; ...".
 """
 import re
 from pathlib import Path
@@ -14,9 +13,7 @@ GO_COLUMNS = ('go_biological_process', 'go_cellular_component', 'go_molecular_fu
 
 
 def load_gene_to_go(annotation_file: Path, gene_id_col: str = 'gene_id_full') -> dict:
-    """gene_id -> {go_id: description}. Junta as 3 categorias GO numa coisa so
-    (biological_process/cellular_component/molecular_function) -- pra
-    enriquecimento por termo, a categoria so importa como rotulo de exibicao."""
+    """gene_id -> {go_id: description}, merging the three GO categories."""
     df = pd.read_csv(annotation_file, sep='\t', dtype=str)
     gene_to_go = {}
     for _, row in df.iterrows():
@@ -35,15 +32,9 @@ _ENRICH_COLUMNS = ['go_id', 'description', 'n_candidates', 'n_background', 'odds
 
 def enrich(candidate_genes: set, background_genes: set, gene_to_go: dict,
            min_candidates: int = 2) -> pd.DataFrame:
-    """Fisher exato (2x2: no termo / fora do termo  x  candidato / background)
-    por termo GO. Retorna DataFrame ordenado por p-valor, uma linha por termo
-    que aparece em pelo menos `min_candidates` genes candidatos (termos
-    presentes numa unica amostra nao sao informativos e so inflam o teste).
-
-    q_value = Benjamini-Hochberg sobre a familia de termos testados aqui --
-    sem isso, "enriquecimento" vira so p bruto com N testes simultaneos (um
-    por termo GO), o mesmo erro de multipla comparacao que o resto deste
-    projeto corrige em todo outro teste em lote."""
+    """Fisher's exact test (term / not term x candidate / background) for each GO
+    term present in at least `min_candidates` candidates. Returns a DataFrame
+    sorted by p-value; q_value is Benjamini-Hochberg across the tested terms."""
     n_cand = len(candidate_genes)
     n_bg = len(background_genes)
     if n_cand == 0 or n_bg == 0:
@@ -66,10 +57,10 @@ def enrich(candidate_genes: set, background_genes: set, gene_to_go: dict,
         if len(cand_set) < min_candidates:
             continue
         bg_set = term_background.get(go_id, set())
-        a = len(cand_set)                      # candidatos com o termo
-        b = n_cand - a                         # candidatos sem o termo
-        c = len(bg_set) - a                    # background (nao-candidato) com o termo
-        d = (n_bg - n_cand) - c                # background (nao-candidato) sem o termo
+        a = len(cand_set)                      # candidates with the term
+        b = n_cand - a                         # candidates without the term
+        c = len(bg_set) - a                    # background with the term
+        d = (n_bg - n_cand) - c                # background without the term
         odds_ratio, p_value = stats.fisher_exact([[a, b], [max(c, 0), max(d, 0)]], alternative='greater')
         rows.append({
             'go_id': go_id, 'description': term_desc[go_id],
@@ -83,21 +74,19 @@ def enrich(candidate_genes: set, background_genes: set, gene_to_go: dict,
     return table.sort_values('p_value')
 
 
-# Testes de seleção positiva usados para escolher candidatos. M7×M8 só conta
-# quando o M8a×M8 não rodou: M8 pode vencer o M7 só por sítios neutros
-# (ω = 1), e o M8a×M8 é o teste que separa os dois (ver METODOS.md).
+# Tests used to pick candidates. M7 vs M8 counts only when M8a vs M8 was not
+# run: M8 can beat M7 through neutral sites alone (see METHODS.md).
 CANDIDATE_TESTS = (('M1a', 'M2a'), ('M8a', 'M8'), ('M7', 'M8'))
 
 
 def rank_candidates(lrt_summary_tsv: Path, annotation_file: Path,
                     sig_threshold: float = 0.05) -> tuple:
-    """Le o analysis_summary.tsv do EasyPAML + o TSV de anotacao GO, devolve
-    (tabela de candidatos, tabela de enriquecimento GO).
+    """Read analysis_summary.tsv and the GO annotation TSV; return (candidates,
+    GO enrichment table).
 
-    Candidato = gene com q < sig_threshold em M1a×M2a ou em M8a×M8 (ou em
-    M7×M8, se o M8a×M8 nao rodou). Usa os mesmos p e q (BH dentro de cada
-    teste) do LRT_results.txt e do painel; genes que falharam ficam fora.
-    Colunas: Gene, test, p_value, q_value, go_terms."""
+    A candidate has q < sig_threshold in M1a vs M2a or M8a vs M8 (or M7 vs M8
+    when M8a vs M8 was not run), with the same p and q as LRT_results.txt.
+    Failed genes are left out. Columns: Gene, test, p_value, q_value, go_terms."""
     summary = pd.read_csv(lrt_summary_tsv, sep='\t')
     gene_to_go = load_gene_to_go(annotation_file)
     if 'status' in summary.columns:
@@ -119,7 +108,7 @@ def rank_candidates(lrt_summary_tsv: Path, annotation_file: Path,
     summary = summary.assign(test=[b[0] for b in best], p_value=[b[1] for b in best],
                              q_value=[b[2] for b in best])
     summary['go_terms'] = summary['Gene'].map(
-        lambda g: '; '.join(sorted(gene_to_go.get(g, {}).values())) or 'sem anotacao'
+        lambda g: '; '.join(sorted(gene_to_go.get(g, {}).values())) or 'no annotation'
     )
 
     all_genes = set(summary['Gene'])

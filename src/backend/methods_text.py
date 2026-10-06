@@ -1,11 +1,8 @@
 """
-Parágrafo de Métodos (em inglês, para manuscritos) gerado a partir do que a
-execução realmente fez: versão e commit do EasyPAML, versão do codeml,
-modelos, parâmetros do .ctl, testes LRT com df e distribuição, e quantos
-genes entraram na correção de Benjamini-Hochberg de cada teste.
-
-Gravado em methods_text.txt na pasta de resultados. É um ponto de partida:
-o usuário revisa antes de usar.
+Methods paragraph built from what a run did: EasyPAML version and commit,
+codeml version, models, .ctl parameters, each LRT with df and null
+distribution, and the number of genes in each Benjamini-Hochberg correction.
+Written to methods_text.txt in the output folder for the user to review.
 """
 
 from typing import Dict, List, Optional, Sequence, Tuple

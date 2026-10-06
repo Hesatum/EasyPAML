@@ -48,7 +48,7 @@ class LRTVisualizer:
         }
     }
     
-    # Atributo não utilizado — mantido para referência futura
+    # not used
     # ALPHA_LEVELS = {
     #     0.05: {'name': 'α = 0.05', 'color': 'darkgray', 'label': 'χ²_{df,0.05}'},
     #     0.01: {'name': 'α = 0.01', 'color': 'brown', 'label': 'χ²_{df,0.01}'}
