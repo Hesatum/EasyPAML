@@ -505,8 +505,9 @@ TEXTS_PT: dict[str, object] = {
     "summary_explain": (
         "Para cada teste: p do LRT, q (p corrigido por Benjamini-Hochberg entre os genes), "
         "ω e proporção (p₁) da classe de sítios que pode ter ω > 1, e quantos sítios têm "
-        "Pr(ω>1) ≥ 0,95 no BEB. O ω médio do gene NÃO é critério de seleção positiva: ele "
-        "fica abaixo de 1 mesmo quando poucos sítios estão sob seleção forte."
+        "Pr(ω>1) ≥ 0,95 no BEB. Nem o ω médio do gene nem o ω da classe positiva decidem sozinhos: "
+        "o ω médio fica abaixo de 1 mesmo com poucos sítios sob seleção forte, e a classe positiva "
+        "pode ter ω > 1 sem que o teste seja significativo. Quem decide é o q."
     ),
     "summary_sig": "{test}: significativo (p = {p}, q = {q}) — {sites} sítio(s) com Pr(ω>1) ≥ 0,95",
     "summary_nonsig": "{test}: não significativo (p = {p}, q = {q})",
@@ -1076,8 +1077,9 @@ TEXTS_EN: dict[str, object] = {
     "summary_explain": (
         "For each test: LRT p, q (p corrected by Benjamini-Hochberg across genes), ω and "
         "proportion (p₁) of the site class that can have ω > 1, and how many sites have "
-        "Pr(ω>1) ≥ 0.95 in BEB. The gene's mean ω is NOT a positive selection criterion: it "
-        "stays below 1 even when a few sites are under strong selection."
+        "Pr(ω>1) ≥ 0.95 in BEB. Neither the gene's mean ω nor the positive-class ω decides on its "
+        "own: the mean stays below 1 even when a few sites are under strong selection, and the "
+        "positive class can have ω > 1 while the test is not significant. The q decides."
     ),
     "summary_sig": "{test}: significant (p = {p}, q = {q}) — {sites} site(s) with Pr(ω>1) ≥ 0.95",
     "summary_nonsig": "{test}: not significant (p = {p}, q = {q})",
