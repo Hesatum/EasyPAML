@@ -140,7 +140,7 @@ TEXTS_PT: dict[str, object] = {
     "log_header_subtitle": "uma mensagem por linha",
 
     "log_welcome": (
-        "EasyPAML -- análise de seleção positiva com PAML/codeml\n"
+        "EasyPAML -- análise de seleção com PAML/codeml\n"
         "1. Escolha a pasta de alinhamentos (.fasta, .fas, .phy, .phylip)\n"
         "2. Escolha o arquivo de árvore (.nwk, .tree, .tre, .txt)\n"
         "3. Escolha (ou crie) a pasta de resultados\n"
@@ -389,13 +389,6 @@ TEXTS_PT: dict[str, object] = {
         "parâmetros) -- se usar, descreva assim nos métodos."
     ),
     "label_ncatg": "Categorias da beta (ncatG, M7/M8):",
-    "label_include_m8a": "Incluir M8a (nulo do M8)",
-    "label_include_m8a_hint": (
-        "Ligado (padrão): ao escolher M8 com 'Modelos nulos automáticos',\n"
-        "o EasyPAML roda também o M8a e faz o teste M8a vs M8, além do\n"
-        "M7 vs M8. O M8a vs M8 não é enganado por sítios neutros (ω = 1).\n"
-        "Desligue para economizar tempo (cerca de 1/3 a mais por gene)."
-    ),
     "label_found_alignments": "{n} alinhamento(s) encontrado(s): {names}",
     "label_no_alignments": "Nenhum alinhamento (.fasta, .fas, .phy, .phylip) nesta pasta",
     "label_per_gene_trees": "{n} de {total} gene(s) com árvore própria (GENE.nwk) -- usada no lugar do arquivo de árvore",
@@ -570,12 +563,8 @@ TEXTS_PT: dict[str, object] = {
     "run_tests_label":     "Testes LRT: {tests}",
     "run_tests_none":      ("Nenhum teste LRT será feito: cada teste precisa de um par nulo + "
                             "alternativo (ex.: M1a e M2a, M7 e M8)."),
-    "tile_auto":           "Entra automaticamente como nulo do {alt}.",
-    "tile_auto_title":     "{null}: incluído automaticamente",
-    "tile_auto_help":      ("{null} entra na análise automaticamente porque “Modelos nulos automáticos” "
-                            "está ligado e {alt} foi escolhido: o teste LRT compara o alternativo com "
-                            "o seu modelo nulo.\n\nPara não rodar {null}, desligue “Modelos nulos "
-                            "automáticos” (ou, no caso do M8a, “Incluir M8a”)."),
+    "tile_auto":           "Entra automaticamente como nulo do {alt}. Clique para deixá-lo de fora.",
+    "tile_auto_off":       "Deixado de fora: o teste {alt} vs {null} não roda. Clique para incluí-lo.",
 }
 
 
@@ -719,7 +708,7 @@ TEXTS_EN: dict[str, object] = {
     "log_header_subtitle": "one message per line",
 
     "log_welcome": (
-        "EasyPAML -- positive selection analysis with PAML/codeml\n"
+        "EasyPAML -- selection analysis with PAML/codeml\n"
         "1. Choose the alignments folder (.fasta, .fas, .phy, .phylip)\n"
         "2. Choose the tree file (.nwk, .tree, .tre, .txt)\n"
         "3. Choose (or create) the results folder\n"
@@ -968,13 +957,6 @@ TEXTS_EN: dict[str, object] = {
         "(more parameters) -- if you use it, say so in Methods."
     ),
     "label_ncatg": "Beta categories (ncatG, M7/M8):",
-    "label_include_m8a": "Include M8a (null of M8)",
-    "label_include_m8a_hint": (
-        "On (default): when M8 is chosen with 'Automatic null models',\n"
-        "EasyPAML also runs M8a and the M8a vs M8 test, besides\n"
-        "M7 vs M8. M8a vs M8 is not fooled by neutral sites (ω = 1).\n"
-        "Turn off to save time (about 1/3 more per gene)."
-    ),
     "label_found_alignments": "{n} alignment(s) found: {names}",
     "label_no_alignments": "No alignment (.fasta, .fas, .phy, .phylip) in this folder",
     "label_per_gene_trees": "{n} of {total} gene(s) with their own tree (GENE.nwk) -- used instead of the tree file",
@@ -1148,12 +1130,8 @@ TEXTS_EN: dict[str, object] = {
     "run_tests_label":     "LRT tests: {tests}",
     "run_tests_none":      ("No LRT test will be run: each test needs a null + alternative pair "
                             "(e.g. M1a and M2a, M7 and M8)."),
-    "tile_auto":           "Included automatically as the null of {alt}.",
-    "tile_auto_title":     "{null}: included automatically",
-    "tile_auto_help":      ("{null} is added to the analysis automatically because “Automatic null "
-                            "models” is on and {alt} was chosen: the LRT compares the alternative "
-                            "with its null model.\n\nTo not run {null}, switch “Automatic null "
-                            "models” off (or, for M8a, “Include M8a”)."),
+    "tile_auto":           "Included automatically as the null of {alt}. Click to leave it out.",
+    "tile_auto_off":       "Left out: the {alt} vs {null} test will not run. Click to include it.",
 }
 
 

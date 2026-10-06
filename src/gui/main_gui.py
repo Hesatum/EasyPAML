@@ -808,7 +808,7 @@ class App(ctk.CTk):
         self.stop_event = threading.Event()
         
         self.include_neutral_models = ctk.BooleanVar(value=True)
-        self.include_m8a_var = ctk.BooleanVar(value=True)
+        self._excluded_nulls = set()     # automatic nulls the user switched off
 
         _max_cores = CodemlBatchAnalysis.available_cores()
         # default: half the cores, so the computer stays usable
@@ -825,6 +825,7 @@ class App(ctk.CTk):
         self._tiles = {}
         self._tile_parts = {}
         self._auto_nulls = {}
+        self._off_nulls = {}
 
         C = self.COLORS
         sp = SPACE
@@ -1093,11 +1094,6 @@ class App(ctk.CTk):
         self.cb_ignore_stops = _switch(ci, self.ignore_stop_codons_var, C['accent_cyan'])
         _place_ctrl(self.cb_ignore_stops, sp['md'])
         _place_help(_help(ci, "label_ignore_stops", "label_ignore_stops_hint"), sp['md'])
-
-        _row[0] += 1
-        _setting_label("label_include_m8a", sp['md'])
-        _place_ctrl(_switch(ci, self.include_m8a_var, C['accent_cyan']), sp['md'])
-        _place_help(_help(ci, "label_include_m8a", "label_include_m8a_hint"), sp['md'])
 
         _row[0] += 1
         _setting_label("label_auto_prune", sp['md'])
@@ -1376,20 +1372,29 @@ class App(ctk.CTk):
             pass
 
     def _on_model_switch(self, code):
-        alt = self._auto_nulls.get(code)
-        self._update_models_state()
-        self._paint_tile(code)
-        if alt and not self.model_vars[code].get():
-            self._show_help(TEXTS["tile_auto_title"].format(null=code),
-                            TEXTS["tile_auto_help"].format(null=code, alt=alt))
+        var = self.model_vars[code]
+        if code in self._auto_nulls and not var.get():
+            self._excluded_nulls.add(code)       # automatic null switched off
+        elif code in self._off_nulls and var.get():
+            var.set(False)                       # back to automatic
+            self._excluded_nulls.discard(code)
+        elif var.get():
+            self._excluded_nulls.discard(code)
+        self._models_changed()
 
     def _tile_click(self, code, switch):
-        alt = self._auto_nulls.get(code)
-        if alt and not self.model_vars[code].get():
-            self._show_help(TEXTS["tile_auto_title"].format(null=code),
-                            TEXTS["tile_auto_help"].format(null=code, alt=alt))
+        if code in self._auto_nulls:
+            self._excluded_nulls.add(code)
+            self._models_changed()
+        elif code in self._off_nulls:
+            self._excluded_nulls.discard(code)
+            self._models_changed()
         else:
             switch.toggle()
+
+    def _models_changed(self):
+        self._update_models_state()
+        self._apply_visual_state(force=True)
 
     def _paint_tile(self, code):
         """Card colours: on, added automatically as a null, or off."""
@@ -1401,6 +1406,7 @@ class App(ctk.CTk):
                                                p['accent'], p['bg'])
         on = bool(p['var'].get())
         alt = None if on else self._auto_nulls.get(code)
+        left_out = None if on or alt else self._off_nulls.get(code)
         try:
             if on:
                 fill, border = mix(bg, accent, 0.16), mix(bg, accent, 0.7)
@@ -1410,11 +1416,19 @@ class App(ctk.CTk):
                 fill, border = bg, C['border']
             card._base_fg = fill
             card.configure(fg_color=fill, border_color=border)
-            if alt:
-                cb.configure(progress_color=mix(bg, accent, 0.55),
-                             button_color=mix(PALETTE['switch_knob'], bg, 0.25))
-                cb.select(from_variable_callback=True)
-                auto_lbl.configure(text=TEXTS["tile_auto"].format(alt=alt))
+            if alt or left_out:
+                if alt:
+                    cb.configure(progress_color=mix(bg, accent, 0.55),
+                                 button_color=mix(PALETTE['switch_knob'], bg, 0.25))
+                    cb.select(from_variable_callback=True)
+                    auto_lbl.configure(text=TEXTS["tile_auto"].format(alt=alt),
+                                       text_color=C['text_secondary'])
+                else:
+                    cb.configure(progress_color=accent, fg_color=PALETTE['switch_track'],
+                                 button_color=PALETTE['switch_knob'])
+                    cb.deselect(from_variable_callback=True)
+                    auto_lbl.configure(text=TEXTS["tile_auto_off"].format(alt=left_out, null=code),
+                                       text_color=C['warning'])
                 if lbl.winfo_manager():
                     lbl.pack_forget()
                 if not auto_lbl.winfo_manager():
@@ -1464,7 +1478,7 @@ class App(ctk.CTk):
             sig = (str(self.input_folder), str(self.tree_file), len(self.per_gene_trees),
                    str(self.output_folder),
                    tuple(k for k, v in self.model_vars.items() if v.get()),
-                   bool(self.include_neutral_models.get()), bool(self.include_m8a_var.get()),
+                   bool(self.include_neutral_models.get()), tuple(sorted(self._excluded_nulls)),
                    int(self.cores_var.get()), str(self.status_indicator.cget('text_color')),
                    str(self.stop_label.cget('text')),
                    self.codonfreq_var.get(), self.entry_omega.get(), self.entry_ncatg.get(),
@@ -1530,19 +1544,20 @@ class App(ctk.CTk):
         models = self._selected_models() if chosen else []
         order = list(self.model_vars)
         models = sorted(models, key=lambda m: order.index(m) if m in order else len(order))
-        auto = {}
-        for m in models:
-            if m in chosen:
-                continue
+        def _alt_of(m):
             for alt in chosen:
                 nulls = CodemlBatchAnalysis.NULL_MODEL_PAIRS.get(alt, [])
                 nulls = [nulls] if isinstance(nulls, str) else list(nulls)
                 if m in nulls:
-                    auto[m] = alt
-                    break
-            else:
-                auto[m] = ", ".join(chosen)
-        self._auto_nulls = auto
+                    return alt
+            return ", ".join(chosen)
+
+        auto = {m: _alt_of(m) for m in models if m not in chosen}
+        off = {}
+        if chosen and self.include_neutral_models.get():
+            every = CodemlBatchAnalysis.auto_complete_null_models(chosen, include_neutral=True)
+            off = {m: _alt_of(m) for m in every if m not in chosen and m in self._excluded_nulls}
+        self._auto_nulls, self._off_nulls = auto, off
         for code in self._tile_parts:
             self._paint_tile(code)
         if auto:
@@ -2055,7 +2070,8 @@ class App(ctk.CTk):
         import subprocess
         state = {'input': str(self.input_folder or ''), 'tree': str(self.tree_file or ''),
                  'output': str(self.output_folder or ''),
-                 'models': [k for k, v in self.model_vars.items() if v.get()]}
+                 'models': [k for k, v in self.model_vars.items() if v.get()],
+                 'excluded': sorted(self._excluded_nulls)}
         env = dict(os.environ, **{self._RESTORE_ENV: json.dumps(state)})
         try:
             subprocess.Popen([sys.executable] + sys.argv, env=env)
@@ -2078,6 +2094,7 @@ class App(ctk.CTk):
         for name in state.get('models', []):
             if name in self.model_vars:
                 self.model_vars[name].set(True)
+        self._excluded_nulls = set(state.get('excluded', []))
         self._update_models_state()
 
     def _analysis_running(self) -> bool:
@@ -2356,8 +2373,9 @@ class App(ctk.CTk):
     def _selected_models(self):
         selected = [k for k, v in self.model_vars.items() if v.get()]
         if self.include_neutral_models.get():
-            selected = CodemlBatchAnalysis.auto_complete_null_models(
-                selected, include_neutral=True, include_m8a=bool(self.include_m8a_var.get()))
+            chosen = set(selected)
+            selected = [m for m in CodemlBatchAnalysis.auto_complete_null_models(selected, include_neutral=True)
+                        if m in chosen or m not in self._excluded_nulls]
         return selected
 
     def start_analysis(self):

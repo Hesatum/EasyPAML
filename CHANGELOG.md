@@ -22,7 +22,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - M8a and the M8a vs M8 test. With automatic null models, M8 adds M7 and M8a
-  (`--no-m8a` or "Include M8a" turns M8a off).
+  (`--no-m8a`, or a click on the card of an added null, leaves it out).
 - Data check before running: stop codons with their position, names missing from
   the tree with the closest match, pruned taxa, duplicate files, lengths that are
   not a multiple of 3.

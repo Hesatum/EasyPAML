@@ -88,7 +88,8 @@ at the bottom left change them, and the choice is kept for the next session.
    every gene has its own tree you do not need a tree file at all.
 3. Output folder: choose a folder, or create one with "New folder".
 4. Switch the models on. With "Automatic null models" on, the null model of each
-   test is added for you (M8 adds M7 and M8a; M2a adds M1a).
+   test is added for you (M8 adds M7 and M8a; M2a adds M1a). Click the card of an
+   added null to leave it out.
 5. Click Run. Before running, EasyPAML checks the data and lists what it found:
    stop codons (sequence and codon position), alignment names that are not in the
    tree (with the closest name), taxa that will be pruned, duplicate files for the
@@ -145,7 +146,7 @@ Main options (`--help` lists all of them):
 | Option | Default | Meaning |
 |---|---|---|
 | `--models` | `M1a,M2a,M7,M8,M8a` | models to run |
-| `--no-m8a` | | do not run M8a (no M8a vs M8 test); in the window: Advanced settings › "Include M8a" |
+| `--no-m8a` | | do not run M8a (no M8a vs M8 test); in the window, click the M8a card |
 | `--tree-folder` | | folder with one tree per gene (`GENE.nwk`), matched by name; `GENE.nwk` in the alignments folder also works |
 | `--codonfreq` | `2` (F3x4) | codeml CodonFreq (0 Fequal, 1 F1x4, 2 F3x4, 3 F61, 7 FMutSel …) |
 | `--ncatg` | `10` | beta categories (M7/M8/M8a) |
