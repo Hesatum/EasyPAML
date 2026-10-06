@@ -1,4 +1,4 @@
-"""Excel and HTML exports of the results panel, on a run with a fake codeml."""
+"""Results panel: Excel and HTML exports (on a fake-codeml run) and the per-gene conclusion."""
 import platform
 import re
 
@@ -49,3 +49,16 @@ def test_html_export_is_english_and_counts_like_the_table(viewer, tmp_path, monk
     for meta, table in re.findall(r'<p class="meta">\d+ gene\(s\) tested &nbsp;·&nbsp; (\d+) significant'
                                   r'.*?<tbody>(.*?)</tbody>', html, re.S):
         assert int(meta) == table.count('<tr class="sig">')
+
+
+def test_m8_vs_m7_alone_is_not_called_positive_selection():
+    W = rv.ResultsViewerWindow
+    rows = [('M8 vs M7', True, '1e-5', '1e-5', '', 0)]
+    text, _ = W._conclusion({('M7', 'M8'): True}, rows)
+    assert text.startswith('⚠') and 'M8a' in text
+    text, _ = W._conclusion({('M7', 'M8'): True, ('M8a', 'M8'): False},
+                            rows + [('M8 vs M8a', False, '0.2', '0.2', '', None)])
+    assert text.startswith('⚠')
+    text, _ = W._conclusion({('M7', 'M8'): True, ('M8a', 'M8'): True},
+                            rows + [('M8 vs M8a', True, '1e-4', '1e-4', '', 3)])
+    assert text.startswith('Positive selection')

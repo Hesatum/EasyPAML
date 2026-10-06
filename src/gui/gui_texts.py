@@ -517,6 +517,10 @@ TEXTS_PT: dict[str, object] = {
         "de sítios neutros (ω = 1)."
     ),
     "conclusion_none": "Sem seleção positiva detectada (nenhum teste com q < 0,05).",
+    "conclusion_no_m8a": (
+        "Possível seleção positiva: só M8 vs M7 é significativo e o M8a não rodou, então sítios "
+        "neutros (ω = 1) não foram descartados. Rode o M8a para conferir."
+    ),
     "summary_failed": "FALHOU: {reason}",
     "summary_no_tests": "Nenhum teste de seleção positiva (M1a/M2a, M7/M8, M8a/M8) neste resultado.",
     "sites_legend": "* Pr(ω>1) ≥ 0,95   ** Pr(ω>1) ≥ 0,99   (Pr = probabilidade posterior de o sítio estar na classe com ω > 1)",
@@ -1084,6 +1088,10 @@ TEXTS_EN: dict[str, object] = {
         "come from neutral sites (ω = 1)."
     ),
     "conclusion_none": "No positive selection detected (no test with q < 0.05).",
+    "conclusion_no_m8a": (
+        "Possible positive selection: only M8 vs M7 is significant and M8a was not run, so "
+        "neutral sites (ω = 1) are not ruled out. Run M8a to check."
+    ),
     "summary_failed": "FAILED: {reason}",
     "summary_no_tests": "No positive selection test (M1a/M2a, M7/M8, M8a/M8) in this result.",
     "sites_legend": "* Pr(ω>1) ≥ 0.95   ** Pr(ω>1) ≥ 0.99   (Pr = posterior probability that the site is in the ω > 1 class)",

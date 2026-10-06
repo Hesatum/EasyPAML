@@ -669,6 +669,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         if sig_by_pair.get(('M7', 'M8')) and sig_by_pair.get(('M8a', 'M8')) is False \
                 and not sig_by_pair.get(('M1a', 'M2a')):
             return "⚠ " + TEXTS["conclusion_neutral"], PALETTE['warning_fg']
+        if sig_by_pair.get(('M7', 'M8')) and ('M8a', 'M8') not in sig_by_pair \
+                and not sig_by_pair.get(('M1a', 'M2a')):
+            return "⚠ " + TEXTS["conclusion_no_m8a"], PALETTE['warning_fg']
         sig_tests = [t for t, sig, *_ in test_rows if sig]
         if not sig_tests:
             return TEXTS["conclusion_none"], PALETTE['text_secondary']
