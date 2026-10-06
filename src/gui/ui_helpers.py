@@ -381,6 +381,31 @@ def os_error_text(exc: OSError) -> str:
     return str(exc)
 
 
+def add_tooltip(widget, text: str, wraplength: int = 320) -> None:
+    """Small box with text while the mouse is over widget."""
+    tip = {}
+
+    def _show(event):
+        if tip or not text:
+            return
+        w = ctk.CTkToplevel(widget)
+        w.overrideredirect(True)
+        w.attributes('-topmost', True)
+        ctk.CTkLabel(w, text=text, font=(FONT_UI, FONT_SIZE['sm']), wraplength=wraplength,
+                     justify='left', fg_color=PALETTE['bg_elevated'], corner_radius=6,
+                     text_color=PALETTE['text_primary'], padx=SPACE['sm'], pady=SPACE['xs']).pack()
+        w.geometry(f"+{event.x_root + 12}+{event.y_root + 16}")
+        tip['w'] = w
+
+    def _hide(_event=None):
+        w = tip.pop('w', None)
+        if w is not None:
+            w.destroy()
+
+    widget.bind('<Enter>', _show, add='+')
+    widget.bind('<Leave>', _hide, add='+')
+
+
 def ask_string(parent, title: str, prompt: str, initial: str = '') -> Optional[str]:
     """One-line text input in the program's theme."""
     dlg = _Modal(parent, title, 440, 200)

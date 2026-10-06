@@ -543,6 +543,24 @@ TEXTS_PT: dict[str, object] = {
     "sites_btn_export": "Exportar TSV…",
     "sites_copied": "{n} sítio(s) copiado(s) para a área de transferência.",
     "lrt_headers": ["Gene", "lnL nulo", "lnL alternativo", "2Δℓ", "p", "q (BH)", "ω classe + (p₁)", "Sig."],
+    "lrt_plain": (
+        "Cada linha compara dois modelos do mesmo gene. Um q pequeno (< 0,05) quer dizer que o "
+        "modelo com seleção positiva explica os dados claramente melhor. Passe o mouse nos "
+        "títulos das colunas para ver o que cada uma significa."
+    ),
+    "lrt_header_hints": [
+        "Nome do gene (arquivo de alinhamento).",
+        "lnL do modelo nulo (sem seleção positiva). lnL é o log da verossimilhança: quanto maior "
+        "(menos negativo), melhor o modelo explica os dados.",
+        "lnL do modelo alternativo (com uma classe que pode ter ω > 1).",
+        "2Δℓ = 2 × (lnL alternativo − lnL nulo): quanto o modelo alternativo melhora o ajuste. "
+        "É a estatística do teste (LRT).",
+        "p: probabilidade de uma melhora assim aparecer sem seleção positiva, pela distribuição χ².",
+        "q: o p corrigido para os muitos genes testados (Benjamini-Hochberg). É o número que "
+        "decide: q < 0,05 é significativo.",
+        "ω e proporção (p₁) da classe de sítios que pode estar sob seleção positiva.",
+        "Significativo (q < 0,05)?",
+    ],
     "lrt_sig_yes": "sim",
     "lrt_sig_no": "não",
     "summary_verdict_sig": "significativo",
@@ -1120,6 +1138,25 @@ TEXTS_EN: dict[str, object] = {
     "sites_btn_export": "Export TSV…",
     "sites_copied": "{n} site(s) copied to the clipboard.",
     "lrt_headers": ["Gene", "lnL null", "lnL alternative", "2Δℓ", "p", "q (BH)", "positive-class ω (p₁)", "Sig."],
+    "lrt_plain": (
+        "Each line compares two models of the same gene. A small q (< 0.05) means the model "
+        "with positive selection explains the data clearly better. Move the mouse over a column "
+        "title to see what it means."
+    ),
+    "lrt_header_hints": [
+        "Gene name (alignment file).",
+        "lnL of the null model (no positive selection). lnL is the log-likelihood: the higher "
+        "(less negative), the better the model explains the data.",
+        "lnL of the alternative model (with a class of sites that may have ω > 1).",
+        "2Δℓ = 2 × (alternative lnL − null lnL): how much the alternative model improves the "
+        "fit. It is the test statistic (LRT).",
+        "p: the chance of an improvement this large without positive selection, from the χ² "
+        "distribution.",
+        "q: p corrected for the many genes tested (Benjamini-Hochberg). This is the number that "
+        "decides: q < 0.05 is significant.",
+        "ω and proportion (p₁) of the class of sites that may be under positive selection.",
+        "Significant (q < 0.05)?",
+    ],
     "lrt_sig_yes": "yes",
     "lrt_sig_no": "no",
     "summary_verdict_sig": "significant",

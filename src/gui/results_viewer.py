@@ -21,7 +21,7 @@ from src.backend.version import version_string
 from . import charts
 from .gui_texts import TEXTS, get_language, tr
 from .ui_helpers import (CURRENT_THEME, FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE, fit_to_screen,
-                         ask_open_file, ask_save_file, hover_tint, mix, open_folder,
+                         add_tooltip, ask_open_file, ask_save_file, hover_tint, mix, open_folder,
                          show_message)
 
 
@@ -869,6 +869,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         comp_combo.set(list(comparisons.keys())[0])
 
         # dynamic null-hypothesis description
+        ctk.CTkLabel(ctrl_frame, text=TEXTS["lrt_plain"], font=self._font('sm'),
+                     text_color=PALETTE['text_primary'], anchor='w', justify='left',
+                     wraplength=1180).pack(fill='x', pady=(SPACE['xs'], 0))
         desc_lbl = ctk.CTkLabel(ctrl_frame, text="",
                                 font=self._font('xs'),
                                 text_color=PALETTE['text_tertiary'],
@@ -2073,8 +2076,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         hdr = ctk.CTkFrame(hdr_parent, fg_color='transparent', corner_radius=0)
         hdr.pack(fill='x', padx=(SPACE['sm'], 0), pady=(SPACE['xs'], SPACE['xs']))
         for c, (i, w, anchor) in enumerate(cols):
-            ctk.CTkLabel(hdr, text=hd[i], font=self._font('xs', 'bold'), width=w, anchor=anchor,
-                         text_color=PALETTE['text_secondary']).grid(row=0, column=c, padx=cell_pad, sticky='w')
+            head_lbl = ctk.CTkLabel(hdr, text=hd[i], font=self._font('xs', 'bold'), width=w, anchor=anchor,
+                                    text_color=PALETTE['text_secondary'])
+            head_lbl.grid(row=0, column=c, padx=cell_pad, sticky='w')
+            add_tooltip(head_lbl, TEXTS["lrt_header_hints"][i])
         ctk.CTkFrame(hdr_parent, fg_color=PALETTE['divider'], height=1, corner_radius=0).pack(fill='x')
 
         gene_font, mono = self._font('sm', 'bold'), self._mono('sm')
