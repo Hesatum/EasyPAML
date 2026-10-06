@@ -852,9 +852,6 @@ class App(ctk.CTk):
         ctk.CTkLabel(title_col, text=TEXTS["app_sidebar_title"],
                      font=(_FONT_UI, fs['lg'], "bold"), height=20,
                      text_color=C['text_primary']).pack(anchor='w')
-        ctk.CTkLabel(title_col, text=TEXTS["app_sidebar_subtitle"],
-                     font=(_FONT_UI, fs['xs']), height=16,
-                     text_color=C['text_tertiary']).pack(anchor='w')
         ctk.CTkLabel(logo_frame, text=f"v{__version__}", font=(_FONT_UI, fs['xs']),
                      fg_color=C['bg_card_hover'], corner_radius=RADIUS['field'], height=20,
                      text_color=C['text_secondary']).pack(side='right', ipadx=sp['xs'])

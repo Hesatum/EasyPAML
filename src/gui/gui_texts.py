@@ -35,7 +35,6 @@ TEXTS_PT: dict[str, object] = {
 
     # ── App (main window) ────────────────────────────────────
     "app_sidebar_title":    "EasyPAML",
-    "app_sidebar_subtitle": "Seleção Positiva",
 
     "section_files":   "ARQUIVOS",
     "section_results": "RESULTADOS",
@@ -548,8 +547,8 @@ TEXTS_PT: dict[str, object] = {
     "summary_verdict_warning": "AVISO",
     "summary_sites_n": "{n} sítio(s) com Pr(ω>1) ≥ 0,95",
     # ── Main window: steps, cards, summary ──
-    "app_main_title":     "Análise de seleção positiva",
-    "app_main_subtitle":  "Modelos de códons do PAML/codeml para vários genes de uma vez",
+    "app_main_title":     "Análise de seleção",
+    "app_main_subtitle":  "Processamento do codeml em lote",
     "step_data":          "Dados",
     "step_models":        "Modelos",
     "step_settings":      "Configurações avançadas",
@@ -614,7 +613,6 @@ TEXTS_EN: dict[str, object] = {
 
     # ── Section 3 — App (main window) ───────────────────────────────────────
     "app_sidebar_title":    "EasyPAML",
-    "app_sidebar_subtitle": "Positive Selection",
 
     "section_files":   "FILES",
     "section_results": "RESULTS",
@@ -1127,8 +1125,8 @@ TEXTS_EN: dict[str, object] = {
     "summary_verdict_warning": "WARNING",
     "summary_sites_n": "{n} site(s) with Pr(ω>1) ≥ 0.95",
     # ── Main window (2nd visual pass): steps, tiles, summary ──
-    "app_main_title":     "Positive selection analysis",
-    "app_main_subtitle":  "PAML/codeml codon models for many genes at once",
+    "app_main_title":     "Selection Analysis",
+    "app_main_subtitle":  "codeml batch processing",
     "step_data":          "Data",
     "step_models":        "Models",
     "step_settings":      "Advanced settings",
