@@ -1,6 +1,5 @@
 import customtkinter as ctk
-from tkinter import filedialog
-from tkinter import simpledialog, Canvas
+from tkinter import Canvas
 from pathlib import Path
 import threading
 import time
@@ -30,7 +29,7 @@ from backend.preflight import discover_per_gene_trees, group_by_gene, list_align
 from .results_viewer import ResultsViewerWindow
 from .gui_texts import TEXTS, set_language, get_language, tr
 from .ui_helpers import (CURRENT_THEME, FONT_SIZE, PALETTE, RADIUS, SPACE, THEME_CHOICES, PreflightDialog,
-                         ask_directory, ask_yes_no, save_theme_pref, system_theme,
+                         ask_directory, ask_open_file, ask_string, ask_yes_no, save_theme_pref, system_theme,
                          disable_mouse_wheel, fit_to_screen, hover_tint, mix, open_folder,
                          show_about, show_message)
 
@@ -558,15 +557,12 @@ class TreeLabelWindow(ctk.CTkToplevel):
             clade_name = self._get_clade_name(clade)
             
             if current_tag:
-                response = simpledialog.askstring(
-                    TEXTS["tag_dialog_edit_title"],
-                    TEXTS["tag_dialog_edit_prompt"].format(tag=current_tag),
-                    parent=self
-                )
+                response = ask_string(self, TEXTS["tag_dialog_edit_title"],
+                                      TEXTS["tag_dialog_edit_prompt"].format(tag=current_tag))
                 
                 if response:
                     response = response.strip().lower()
-                    if response == 'remover':
+                    if response in ('remove', 'remover'):
                         self._remove_tag_recursively(clade)
                         self.parent.append_log(tr(f"Marca {current_tag} removida de {clade_name}", f"Tag {current_tag} removed from {clade_name}") + "\n")
                     elif response.isdigit():
@@ -576,11 +572,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
                         self.marked_clades[clade] = new_tag
                         self.parent.append_log(tr(f"Marca alterada para {new_tag} em {clade_name}", f"Tag changed to {new_tag} on {clade_name}") + "\n")
             else:
-                response = simpledialog.askstring(
-                    TEXTS["tag_dialog_new_title"],
-                    TEXTS["tag_dialog_new_prompt"],
-                    parent=self
-                )
+                response = ask_string(self, TEXTS["tag_dialog_new_title"], TEXTS["tag_dialog_new_prompt"])
                 
                 if response and response.strip().isdigit():
                     new_tag = f"#{response.strip()}"
@@ -1832,9 +1824,8 @@ class App(ctk.CTk):
     def select_tree_file(self):
         start = str(self.tree_file.parent) if self.tree_file else (
             str(self.input_folder) if self.input_folder else str(Path.home()))
-        path = filedialog.askopenfilename(
-            initialdir=start, title=TEXTS["btn_tree_file"],
-            filetypes=[('Newick', '*.nwk *.tree *.tre *.newick *.txt'), ('*', '*.*')])
+        path = ask_open_file(self, TEXTS["btn_tree_file"], start,
+                             filetypes=[('Newick', '*.nwk *.tree *.tre *.newick *.nh *.txt')])
         if path:
             self.tree_file = Path(path)
             self.label_tree.configure(text=str(self.tree_file.name),

@@ -11,7 +11,6 @@ import matplotlib.patches as mpatches
 from matplotlib.colors import TwoSlopeNorm, LinearSegmentedColormap
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from scipy import stats
-from tkinter import filedialog, messagebox
 import re
 import sys
 from src.backend.branch_extractor import BranchExtractor
@@ -19,7 +18,8 @@ from src.backend import lrt_stats
 from src.backend.site_map import attach_original_positions
 from .gui_texts import TEXTS, get_language, tr
 from .ui_helpers import (FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE, fit_to_screen,
-                         hover_tint, mix, open_folder, show_message)
+                         ask_open_file, ask_save_file, hover_tint, mix, open_folder,
+                         show_message)
 
 
 class ResultsViewerWindow(ctk.CTkToplevel):
@@ -810,8 +810,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                              text_color=PALETTE['success_fg'], wraplength=850, justify='left').pack(anchor='w', pady=(3, 0))
 
         def pick_file():
-            path = filedialog.askopenfilename(title=TEXTS["go_tab_load_button"],
-                                               filetypes=[("TSV", "*.tsv"), ("All files", "*.*")])
+            path = ask_open_file(self, TEXTS["go_tab_load_button"], self.output_folder,
+                                 filetypes=[("TSV", "*.tsv *.txt *.csv")])
             if path:
                 render(Path(path))
 
@@ -872,10 +872,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             df = state['df']
             if df is None or df.empty:
                 return
-            path = filedialog.asksaveasfilename(
-                parent=self, defaultextension='.tsv', filetypes=[('TSV', '*.tsv')],
-                initialdir=str(self.output_folder),
-                initialfile=f"{state['gene']}_{state['model']}_sites.tsv")
+            path = ask_save_file(self, TEXTS["sites_btn_export"], self.output_folder,
+                                 initialfile=f"{state['gene']}_{state['model']}_sites.tsv",
+                                 defaultextension='.tsv', filetypes=[('TSV', '*.tsv')])
             if path:
                 Path(path).write_text(_tsv(df), encoding='utf-8')
                 show_message(self, TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=path))
@@ -1255,20 +1254,18 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         def _export_png():
             if current_fig[0] is None:
-                messagebox.showwarning(TEXTS["msg_warning"], TEXTS["msg_no_figure"])
+                show_message(self, TEXTS["msg_warning"], TEXTS["msg_no_figure"], 'warning')
                 return
-            fp = filedialog.asksaveasfilename(
-                title=TEXTS["dialog_export_cladogram"],
-                defaultextension=".png",
-                filetypes=[("PNG", "*.png"), ("Todos os arquivos", "*.*")]
-            )
+            fp = ask_save_file(self, TEXTS["dialog_export_cladogram"], self.output_folder,
+                               initialfile="cladogram.png", defaultextension=".png",
+                               filetypes=[("PNG", "*.png *.pdf *.svg")])
             if fp:
                 try:
                     current_fig[0].savefig(fp, dpi=200, bbox_inches='tight',
                                            facecolor=PALETTE['plot_bg'])
-                    messagebox.showinfo(TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=fp))
+                    show_message(self, TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=fp))
                 except Exception as e:
-                    messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_export_err"].format(error=e))
+                    show_message(self, TEXTS["msg_error"], TEXTS["msg_export_err"].format(error=e), 'error')
 
         btn_bar = ctk.CTkFrame(parent, fg_color='transparent')
         btn_bar.pack(fill='x', padx=10, pady=(0, 4))
@@ -2480,11 +2477,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
     def _export_excel(self):
         """Export to Excel, one sheet per test."""
-        filepath = filedialog.asksaveasfilename(
-            parent=self,
-            defaultextension=".xlsx",
-            filetypes=[("Excel", "*.xlsx")]
-        )
+        filepath = ask_save_file(self, TEXTS["dialog_save_as"], self.output_folder,
+                                 initialfile="EasyPAML_results.xlsx", defaultextension=".xlsx",
+                                 filetypes=[("Excel", "*.xlsx")])
         if not filepath:
             return
         try:
@@ -2495,7 +2490,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             # fallback: plain pandas export (no formatting)
             lrt_cols = [c for c in self.df.columns if c.startswith('lrt_')]
             if not lrt_cols:
-                messagebox.showwarning(TEXTS["msg_warning"], TEXTS["msg_no_lrt"], parent=self)
+                show_message(self, TEXTS["msg_warning"], TEXTS["msg_no_lrt"], 'warning')
                 return
             with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
                 for lrt_col in lrt_cols:
@@ -2505,12 +2500,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     df_out = self._build_export_df(lrt_col)
                     if not df_out.empty:
                         df_out.to_excel(writer, sheet_name=sheet_name, index=False)
-            messagebox.showinfo(TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=filepath), parent=self)
+            show_message(self, TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=filepath))
             return
 
         lrt_cols = [c for c in self.df.columns if c.startswith('lrt_')]
         if not lrt_cols:
-            messagebox.showwarning(TEXTS["msg_warning"], TEXTS["msg_no_lrt"], parent=self)
+            show_message(self, TEXTS["msg_warning"], TEXTS["msg_no_lrt"], 'warning')
             return
 
         # ── known sheet labels ──────────────────────────────────────────
@@ -2650,17 +2645,16 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                             get_column_letter(col_cells[0].column)
                         ].width = min(max_len + 4, 30)
 
-            messagebox.showinfo(TEXTS["msg_success"],
-                TEXTS["msg_excel_exported"].format(n=sheets_written, path=filepath),
-                parent=self)
+            show_message(self, TEXTS["msg_success"],
+                         TEXTS["msg_excel_exported"].format(n=sheets_written, path=filepath))
         except Exception as e:
-            messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_excel_err"].format(error=e), parent=self)
+            show_message(self, TEXTS["msg_error"], TEXTS["msg_excel_err"].format(error=e), 'error')
 
     def _export_csv(self):
         """Export to CSV, one file per test."""
         lrt_cols = [c for c in self.df.columns if c.startswith('lrt_')]
         if not lrt_cols:
-            messagebox.showwarning(TEXTS["msg_warning"], TEXTS["msg_no_lrt"], parent=self)
+            show_message(self, TEXTS["msg_warning"], TEXTS["msg_no_lrt"], 'warning')
             return
 
         SHEET_LABELS = {
@@ -2673,12 +2667,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         }
 
         # Ask for base path (files will be named <base>_<model>.csv)
-        base_path = filedialog.asksaveasfilename(
-            parent=self,
-            title=TEXTS["dialog_save_csv"],
-            defaultextension=".csv",
-            filetypes=[("CSV", "*.csv")]
-        )
+        base_path = ask_save_file(self, TEXTS["dialog_save_csv"], self.output_folder,
+                                  initialfile="EasyPAML_LRT.csv", defaultextension=".csv",
+                                  filetypes=[("CSV", "*.csv")])
         if not base_path:
             return
 
@@ -2697,21 +2688,18 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 files_written.append(out_path)
 
             if files_written:
-                messagebox.showinfo(TEXTS["msg_success"],
-                    TEXTS["msg_csv_exported"].format(n=len(files_written), files="\n".join(files_written)),
-                    parent=self)
+                show_message(self, TEXTS["msg_success"], TEXTS["msg_csv_exported"].format(
+                    n=len(files_written), files="\n".join(files_written)))
             else:
-                messagebox.showwarning(TEXTS["msg_warning"], TEXTS["msg_no_csv_data"], parent=self)
+                show_message(self, TEXTS["msg_warning"], TEXTS["msg_no_csv_data"], 'warning')
         except Exception as e:
-            messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_csv_err"].format(error=e), parent=self)
+            show_message(self, TEXTS["msg_error"], TEXTS["msg_csv_err"].format(error=e), 'error')
 
     def _export_charts(self):
         """Export charts."""
-        filepath = filedialog.asksaveasfilename(
-            parent=self,
-            defaultextension=".png",
-            filetypes=[("PNG", "*.png"), ("PDF", "*.pdf")]
-        )
+        filepath = ask_save_file(self, TEXTS["dialog_save_as"], self.output_folder,
+                                 initialfile="EasyPAML_charts.png", defaultextension=".png",
+                                 filetypes=[("PNG / PDF", "*.png *.pdf")])
         if not filepath:
             return
         
@@ -2772,17 +2760,15 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             plt.savefig(filepath, dpi=300, facecolor='#0f0f0f')
             plt.close()
             
-            messagebox.showinfo(TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=filepath), parent=self)
+            show_message(self, TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=filepath))
         except Exception as e:
-            messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_export_err"].format(error=e), parent=self)
+            show_message(self, TEXTS["msg_error"], TEXTS["msg_export_err"].format(error=e), 'error')
     
     def _export_html(self):
         """Export an HTML report, one section per test."""
-        filepath = filedialog.asksaveasfilename(
-            parent=self,
-            defaultextension=".html",
-            filetypes=[("HTML", "*.html")]
-        )
+        filepath = ask_save_file(self, TEXTS["dialog_save_as"], self.output_folder,
+                                 initialfile="EasyPAML_report.html", defaultextension=".html",
+                                 filetypes=[("HTML", "*.html")])
         if not filepath:
             return
 
@@ -2929,6 +2915,6 @@ section{{margin-bottom:48px}}
 """
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(html_content)
-            messagebox.showinfo(TEXTS["msg_success"], TEXTS["msg_html_exported"].format(path=filepath), parent=self)
+            show_message(self, TEXTS["msg_success"], TEXTS["msg_html_exported"].format(path=filepath))
         except Exception as e:
-            messagebox.showerror(TEXTS["msg_error"], TEXTS["msg_html_err"].format(error=e), parent=self)
+            show_message(self, TEXTS["msg_error"], TEXTS["msg_html_err"].format(error=e), 'error')

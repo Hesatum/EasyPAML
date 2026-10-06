@@ -1,11 +1,13 @@
 """Interface pieces shared by the main window and the results panel: palettes and
-theme, dialogs, folder picker, window sizing."""
+theme, dialogs, file and folder picker, window sizing."""
 
+import fnmatch
 import os
 import platform
 import subprocess
 import sys
 from pathlib import Path
+from typing import List, Optional
 
 import customtkinter as ctk
 
@@ -356,14 +358,57 @@ def show_about(parent) -> None:
     show_message(parent, TEXTS['about_title'], text)
 
 
-class FolderPicker(_Modal):
-    """Themed folder picker, used on Linux instead of Tk's dialog. Files are
-    shown greyed out, and the button names the folder that will be chosen."""
+def _select_all_binding(entry) -> None:
+    """Ctrl+A selects the whole field (Tk's default moves to the line start)."""
+    def _sel(event):
+        event.widget.select_range(0, 'end')
+        event.widget.icursor('end')
+        return 'break'
+    inner = getattr(entry, '_entry', entry)
+    inner.bind('<Control-a>', _sel)
+    inner.bind('<Control-A>', _sel)
 
-    def __init__(self, parent, title: str, initialdir=None, allow_new: bool = False,
-                 must_exist: bool = True):
-        super().__init__(parent, title, 720, 520)
-        self.allow_new, self.must_exist = allow_new, must_exist
+
+def ask_string(parent, title: str, prompt: str, initial: str = '') -> Optional[str]:
+    """One-line text input in the program's theme."""
+    dlg = _Modal(parent, title, 440, 200)
+    ctk.CTkLabel(dlg, text=prompt, font=(FONT_UI, FONT_SIZE['md']), wraplength=390, justify='left',
+                 text_color=PALETTE['text_primary']).pack(padx=SPACE['xl'], pady=(SPACE['xl'], SPACE['sm']),
+                                                          anchor='w')
+    var = ctk.StringVar(value=initial)
+    entry = ctk.CTkEntry(dlg, textvariable=var, height=32, fg_color=PALETTE['bg_inset'],
+                         border_color=PALETTE['control_border'], text_color=PALETTE['text_primary'],
+                         corner_radius=RADIUS['field'], font=(FONT_UI, FONT_SIZE['md']))
+    entry.pack(fill='x', padx=SPACE['xl'])
+    _select_all_binding(entry)
+    row = ctk.CTkFrame(dlg, fg_color='transparent')
+    row.pack(fill='x', padx=SPACE['xl'], pady=(SPACE['md'], SPACE['xl']), side='bottom')
+    _button(row, "OK", lambda: dlg._close(var.get()), PALETTE['accent_fill'], width=90).pack(side='right')
+    _button(row, TEXTS['picker_cancel'], lambda: dlg._close(None), PALETTE['neutral_fill']).pack(
+        side='right', padx=(0, SPACE['sm']))
+    entry.bind('<Return>', lambda e: dlg._close(var.get()))
+    dlg.after(80, entry.focus_set)
+    return dlg.show()
+
+
+def _patterns(filetypes) -> List[str]:
+    pats = []
+    for _, spec in (filetypes or []):
+        pats += spec.split()
+    return [p for p in pats if p not in ('*', '*.*')] if pats else []
+
+
+class FilePicker(_Modal):
+    """Themed folder and file chooser, used on Linux instead of Tk's dialogs.
+    mode 'dir' picks a folder, 'open' an existing file, 'save' a new file name."""
+
+    def __init__(self, parent, title: str, initialdir=None, mode: str = 'dir',
+                 allow_new: bool = False, must_exist: bool = True, filetypes=None,
+                 initialfile: str = '', defaultextension: str = ''):
+        super().__init__(parent, title, 720, 540)
+        self.mode, self.allow_new, self.must_exist = mode, allow_new, must_exist
+        self.patterns = _patterns(filetypes)
+        self.defaultextension = defaultextension
         start = Path(initialdir).expanduser() if initialdir else Path.home()
         while not start.is_dir() and start != start.parent:
             start = start.parent
@@ -387,6 +432,9 @@ class FolderPicker(_Modal):
                                        font=(FONT_UI, FONT_SIZE['sm']))
         self.path_entry.pack(side='left', fill='x', expand=True, padx=(SPACE['sm'], 0))
         self.path_entry.bind('<Return>', lambda e: self._typed_path())
+        _select_all_binding(self.path_entry)
+        self.path_error = ctk.CTkLabel(self, text='', font=(FONT_UI, FONT_SIZE['xs']), anchor='w',
+                                       text_color=PALETTE['danger_text'], height=0)
 
         import tkinter as tk
         frame = ctk.CTkFrame(self, fg_color=PALETTE['bg_inset'], corner_radius=RADIUS['card'])
@@ -401,14 +449,28 @@ class FolderPicker(_Modal):
         self.listbox.pack(side='left', fill='both', expand=True, padx=SPACE['sm'], pady=SPACE['sm'])
         self.listbox.bind('<Double-Button-1>', lambda e: self._open_selected())
         self.listbox.bind('<Return>', lambda e: self._open_selected())
-        self.listbox.bind('<<ListboxSelect>>', lambda e: self._refresh_choose())
+        self.listbox.bind('<<ListboxSelect>>', lambda e: self._on_select())
 
-        ctk.CTkLabel(self, text=TEXTS['picker_hint'], font=(FONT_UI, FONT_SIZE['xs']), anchor='w',
+        self.name_var = ctk.StringVar(value=initialfile)
+        if mode == 'save':
+            name_row = ctk.CTkFrame(self, fg_color='transparent')
+            name_row.pack(fill='x', padx=pad, pady=(0, SPACE['xs']))
+            ctk.CTkLabel(name_row, text=TEXTS['picker_file_name'], font=(FONT_UI, FONT_SIZE['sm'], 'bold'),
+                         text_color=PALETTE['text_primary']).pack(side='left', padx=(0, SPACE['sm']))
+            self.name_entry = ctk.CTkEntry(name_row, textvariable=self.name_var, height=30,
+                                           fg_color=PALETTE['bg_inset'], border_color=PALETTE['control_border'],
+                                           text_color=PALETTE['text_primary'], corner_radius=RADIUS['field'],
+                                           font=(FONT_UI, FONT_SIZE['sm']))
+            self.name_entry.pack(side='left', fill='x', expand=True)
+            self.name_entry.bind('<Return>', lambda e: self._choose())
+            _select_all_binding(self.name_entry)
+        hint = {'dir': 'picker_hint', 'open': 'picker_hint_open', 'save': 'picker_hint_save'}[mode]
+        ctk.CTkLabel(self, text=TEXTS[hint], font=(FONT_UI, FONT_SIZE['xs']), anchor='w',
                      justify='left', wraplength=660, text_color=PALETTE['text_secondary']
                      ).pack(fill='x', padx=pad)
         row = ctk.CTkFrame(self, fg_color='transparent')
         row.pack(fill='x', padx=pad, pady=(SPACE['sm'], pad))
-        if allow_new:
+        if allow_new or mode == 'save':
             _button(row, TEXTS['picker_new_folder'], self._new_folder, PALETTE['neutral_fill']).pack(side='left')
         self.choose_btn = _button(row, TEXTS['picker_choose'], self._choose, PALETTE['accent_fill'])
         self.choose_btn.pack(side='right')
@@ -416,8 +478,15 @@ class FolderPicker(_Modal):
             side='right', padx=(0, SPACE['sm']))
         self._load()
 
+    def _matches(self, p: Path) -> bool:
+        if not self.patterns:
+            return True
+        return any(fnmatch.fnmatch(p.name.lower(), pat.lower()) for pat in self.patterns)
+
     def _load(self):
         self.path_var.set(str(self.cwd))
+        self.path_entry.configure(border_color=PALETTE['control_border'])
+        self.path_error.pack_forget()
         self.listbox.delete(0, 'end')
         self._entries = []
         try:
@@ -428,53 +497,83 @@ class FolderPicker(_Modal):
             if p.name.startswith('.'):
                 continue
             is_dir = p.is_dir()
+            pickable = is_dir if self.mode == 'dir' else (is_dir or self._matches(p))
             self.listbox.insert('end', (p.name + '/') if is_dir else '    ' + p.name)
-            if not is_dir:
+            if not pickable:
                 self.listbox.itemconfig('end', fg=PALETTE['text_tertiary'],
                                         selectbackground=PALETTE['bg_inset'],
                                         selectforeground=PALETTE['text_tertiary'])
-            self._entries.append((p, is_dir))
+            self._entries.append((p, is_dir, pickable))
             if len(self._entries) >= 2000:
                 break
         self._refresh_choose()
 
-    def _selected_dir(self):
+    def _selected(self):
         sel = self.listbox.curselection()
-        if sel and self._entries[sel[0]][1]:
-            return self._entries[sel[0]][0]
-        return None
+        return self._entries[sel[0]] if sel else None
 
-    def _target(self) -> Path:
-        return self._selected_dir() or self.cwd
+    def _selected_dir(self):
+        e = self._selected()
+        return e[0] if e and e[1] else None
+
+    def _selected_file(self):
+        e = self._selected()
+        return e[0] if e and not e[1] and e[2] else None
+
+    def _on_select(self):
+        f = self._selected_file()
+        if f is not None and self.mode == 'save':
+            self.name_var.set(f.name)
+        self._refresh_choose()
 
     def _refresh_choose(self):
-        name = self._target().name or str(self._target())
-        self.choose_btn.configure(text=TEXTS['picker_choose_named'].format(name=name))
+        if self.mode == 'dir':
+            target = self._selected_dir() or self.cwd
+            name = target.name or str(target)
+            self.choose_btn.configure(text=TEXTS['picker_choose_named'].format(name=name))
+        elif self.mode == 'open':
+            f = self._selected_file()
+            self.choose_btn.configure(text=TEXTS['picker_choose_named'].format(name=f.name) if f
+                                      else TEXTS['picker_open'], state='normal' if f else 'disabled')
+        else:
+            self.choose_btn.configure(text=TEXTS['picker_save'])
 
     def _open_selected(self):
-        d = self._selected_dir()
-        if d is not None:
-            self.cwd = d.resolve()
+        e = self._selected()
+        if e is None:
+            return
+        if e[1]:
+            self.cwd = e[0].resolve()
             self._load()
+        elif self.mode == 'open' and e[2]:
+            self._close(str(e[0].resolve()))
+        elif self.mode == 'save':
+            self._choose()
 
     def _up(self):
         if self.cwd.parent != self.cwd:
             self.cwd = self.cwd.parent
             self._load()
 
+    def _show_path_error(self, text: str):
+        self.path_entry.configure(border_color=PALETTE['danger_fg'])
+        self.path_error.configure(text=text)
+        self.path_error.pack(fill='x', padx=SPACE['lg'], after=self.path_entry.master)
+
     def _typed_path(self):
         p = Path(self.path_var.get().strip()).expanduser()
         if p.is_dir():
             self.cwd = p.resolve()
             self._load()
-        elif not self.must_exist and p.is_absolute() and p.parent.is_dir():
+        elif self.mode == 'open' and p.is_file():
+            self._close(str(p.resolve()))
+        elif self.mode == 'dir' and not self.must_exist and p.is_absolute() and p.parent.is_dir():
             self._close(str(p))
         else:
-            self.path_entry.configure(border_color=PALETTE['danger_fg'])
+            self._show_path_error(TEXTS['picker_path_missing'].format(path=p))
 
     def _new_folder(self):
-        dlg = ctk.CTkInputDialog(text=TEXTS['picker_new_folder_prompt'], title=TEXTS['picker_new_folder'])
-        name = (dlg.get_input() or '').strip()
+        name = (ask_string(self, TEXTS['picker_new_folder'], TEXTS['picker_new_folder_prompt']) or '').strip()
         if not name or '/' in name or name in ('.', '..'):
             return
         new = self.cwd / name
@@ -487,21 +586,60 @@ class FolderPicker(_Modal):
         self._load()
 
     def _choose(self):
+        if self.mode == 'open':
+            f = self._selected_file()
+            if f is not None:
+                self._close(str(f.resolve()))
+            return
+        if self.mode == 'save':
+            name = self.name_var.get().strip()
+            if not name or '/' in name:
+                return
+            if self.defaultextension and not Path(name).suffix:
+                name += self.defaultextension
+            target = self.cwd / name
+            if target.exists() and not ask_yes_no(self, TEXTS['picker_save'],
+                                                  TEXTS['picker_overwrite'].format(name=name)):
+                return
+            self._close(str(target))
+            return
         typed = Path(self.path_var.get().strip()).expanduser()
         if typed != self.cwd and typed.is_absolute() and not self._selected_dir():
             if typed.is_dir() or (not self.must_exist and typed.parent.is_dir()):
                 self._close(str(typed))
                 return
-        self._close(str(self._target().resolve()))
+        self._close(str((self._selected_dir() or self.cwd).resolve()))
 
 
 def ask_directory(parent, title: str, initialdir=None, allow_new: bool = False,
                   must_exist: bool = True):
-    """Absolute path of the chosen folder, or None. FolderPicker on Linux, the
+    """Absolute path of the chosen folder, or None. FilePicker on Linux, the
     native dialog on Windows and macOS."""
     if platform.system() == 'Linux':
-        return FolderPicker(parent, title, initialdir, allow_new, must_exist).show()
+        return FilePicker(parent, title, initialdir, 'dir', allow_new, must_exist).show()
     from tkinter import filedialog
     path = filedialog.askdirectory(parent=parent, initialdir=str(initialdir or Path.home()),
                                    title=title, mustexist=must_exist)
     return str(Path(path).resolve()) if path else None
+
+
+def ask_open_file(parent, title: str, initialdir=None, filetypes=None):
+    if platform.system() == 'Linux':
+        return FilePicker(parent, title, initialdir, 'open', filetypes=filetypes).show()
+    from tkinter import filedialog
+    path = filedialog.askopenfilename(parent=parent, initialdir=str(initialdir or Path.home()),
+                                      title=title, filetypes=filetypes or [('*', '*.*')])
+    return path or None
+
+
+def ask_save_file(parent, title: str, initialdir=None, initialfile: str = '',
+                  defaultextension: str = '', filetypes=None):
+    if platform.system() == 'Linux':
+        return FilePicker(parent, title, initialdir, 'save', filetypes=filetypes,
+                          initialfile=initialfile, defaultextension=defaultextension).show()
+    from tkinter import filedialog
+    path = filedialog.asksaveasfilename(parent=parent, initialdir=str(initialdir or Path.home()),
+                                        title=title, initialfile=initialfile,
+                                        defaultextension=defaultextension,
+                                        filetypes=filetypes or [('*', '*.*')])
+    return path or None

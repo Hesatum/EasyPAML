@@ -345,7 +345,8 @@ TEXTS_PT: dict[str, object] = {
 
     # ── ResultsViewerWindow file dialogs ────────────────────────
     "dialog_export_cladogram":  "Exportar cladograma",
-    "dialog_save_csv":          "Salvar CSVs — escolha o nome base (sem extensão)",
+    "dialog_save_csv":          "Salvar CSVs (um por teste; o nome do teste é acrescentado ao nome)",
+    "dialog_save_as":           "Salvar como",
 
     # ── Charts (matplotlib) ─────────────────────────────────────────────
     "chart_omega_dist":         "Distribuição de ω",
@@ -358,6 +359,13 @@ TEXTS_PT: dict[str, object] = {
     "picker_cancel": "Cancelar",
     "picker_new_folder": "Nova pasta",
     "picker_new_folder_prompt": "Nome da nova pasta:",
+    "picker_file_name": "Nome:",
+    "picker_open": "Abrir",
+    "picker_save": "Salvar",
+    "picker_overwrite": "\u201c{name}\u201d já existe. Substituir?",
+    "picker_path_missing": "Não existe: {path}",
+    "picker_hint_open": "Clique duas vezes numa pasta para abrir e num arquivo para escolhê-lo. Arquivos de outro tipo aparecem em cinza. Também dá para digitar o caminho acima e apertar Enter.",
+    "picker_hint_save": "Escolha a pasta (clique duas vezes para abrir) e confira o nome do arquivo.",
     "picker_hint": "Clique duas vezes numa pasta para abrir; um clique a marca para escolher. Os arquivos aparecem em cinza só para você conferir o conteúdo. Também dá para digitar o caminho acima e apertar Enter.",
     "btn_yes": "Sim",
     "btn_no": "Não",
@@ -911,7 +919,8 @@ TEXTS_EN: dict[str, object] = {
 
     # ── ResultsViewerWindow — file dialogs ───────────────────────────────
     "dialog_export_cladogram":  "Export cladogram",
-    "dialog_save_csv":          "Save CSVs — choose base name (no extension)",
+    "dialog_save_csv":          "Save CSV files (one per test; the test name is added to the name)",
+    "dialog_save_as":           "Save as",
 
     # ── Charts (matplotlib) ───────────────────────────────────────────────
     "chart_omega_dist":         "ω Distribution",
@@ -924,6 +933,13 @@ TEXTS_EN: dict[str, object] = {
     "picker_cancel": "Cancel",
     "picker_new_folder": "New folder",
     "picker_new_folder_prompt": "Name of the new folder:",
+    "picker_file_name": "Name:",
+    "picker_open": "Open",
+    "picker_save": "Save",
+    "picker_overwrite": "\u201c{name}\u201d already exists. Replace it?",
+    "picker_path_missing": "Not found: {path}",
+    "picker_hint_open": "Double-click a folder to open it and a file to choose it. Files of other types are shown in grey. You can also type a path above and press Enter.",
+    "picker_hint_save": "Choose the folder (double-click to open it) and check the file name.",
     "picker_hint": "Double-click a folder to open it; one click marks it to choose. Files are shown in grey only so you can check the contents. You can also type a path above and press Enter.",
     "btn_yes": "Yes",
     "btn_no": "No",
