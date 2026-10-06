@@ -50,3 +50,11 @@ def test_interpretation_candidates_use_panel_q_and_m8a(tmp_path):
     cand, _ = rank_candidates(tsv, ann)
     assert list(cand['Gene']) == ['gA']
     assert cand.iloc[0]['test'] == 'M8 vs M8a' and abs(cand.iloc[0]['q_value'] - 1e-7) < 1e-12
+
+
+def test_go_enrichment_q_values(tmp_path):
+    from src.backend.go_enrichment import enrich
+    gene_to_go = {f"g{i}": ({'GO:1': 'term one'} if i < 10 else {'GO:2': 'term two'}) for i in range(40)}
+    table = enrich({f"g{i}" for i in range(8)}, set(gene_to_go), gene_to_go)
+    assert list(table['go_id'])[0] == 'GO:1'
+    assert ((table['q_value'] >= table['p_value']) & (table['p_value'] <= 1)).all()

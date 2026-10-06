@@ -1,87 +1,37 @@
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
 *.egg-info/
 dist/
 build/
-.eggs/
-*.egg
-.env
 .venv/
 venv/
-env/
 
-# PAML / CODEML output files
+# codeml output written to the working folder
 *.ctl
-*.txt.bak
-2ML.dS
-2ML.dN
-2ML.t
-2NG.dS
-2NG.dN
-2NG.t
-4fold.nuc
-codeml.log
 rst
 rst1
 rub
 lnf
+2ML.*
+2NG.*
+4fold.nuc
+codeml.log
 
-# Analysis outputs (keep examples, ignore user runs)
+# Results (generate them as described in the README)
 outputs/
 resultados/
+examples/results/
 
-# Runtime logs
-app_log.txt
-app_err.txt
+# codeml downloaded by install.sh
+bin/codeml
 
-# Development / benchmark directories
-_test_warmstart_tmp/
-benchmark_standard/
-benchmark_heuristic/
-timing_test_output/
-timing_test.py
-
-# Pendrive-specific distribution files
-COMECE_AQUI.txt
-INSTALACAO.txt
-GARANTIA_PENDRIVE.txt
-VERIFICACAO_PENDRIVE.bat
-SETUP.bat
-RUN_EASYPML.bat
-TESTE_INSTALACAO.bat
-
-# Heuristic mode test results (mode removed)
-exemplos_teste/resultados kappa fixo/
-
-# Transient test-export files inside exemplos_teste root
-exemplos_teste/teste.*
-exemplos_teste/resultados/t.csv
-exemplos_teste/resultados/tabela.csv
-exemplos_teste/resultados/teste.*
-
-# OS
+# OS and editors
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# Editor
 .vscode/
 .idea/
 *.swp
 *~
-
-# Claude Code session data
-.claude/
-
-# Temporary files
 *.tmp
-*.temp
-tmp/
-temp/
-bin/codeml
-
-# Resultados do exemplo (gerados localmente, ver README)
-exemplos_teste/resultados/

@@ -31,7 +31,7 @@ def test_default_codonfreq_is_f3x4_everywhere():
 def test_no_wrong_codonfreq_label_left_in_sources():
     """O rótulo '7=F3×4' (errado) não pode voltar em nenhum lugar."""
     bad = re.compile(r'7\s*=\s*F3\s*[x×]\s*4', re.IGNORECASE)
-    for path in list((ROOT / 'src').rglob('*.py')) + [ROOT / 'README.md', ROOT / 'README.pt.md']:
+    for path in list((ROOT / 'src').rglob('*.py')) + [ROOT / 'README.md', ROOT / 'METHODS.md']:
         assert not bad.search(path.read_text(encoding='utf-8')), path
 
 

@@ -91,7 +91,7 @@ TEXTS_PT: dict[str, object] = {
         "Ex.: M8 com 30 táxons × 500 códons ≈ 33 min medidos → limite de 2,7 h.\n\n"
         "Preencha só se quiser um limite fixo (por exemplo, numa máquina muito\n"
         "lenta). Um codeml que pare de usar CPU por 5 min é encerrado de qualquer\n"
-        "forma. Tabela das medições: docs/benchmark_tempos.md."
+        "forma. Tabela das medições: docs/timing_benchmark.md."
     ),
     "label_remove_gaps":      "Remover colunas com gaps (cleandata = 1)",
     "label_remove_gaps_hint": (
@@ -406,7 +406,7 @@ TEXTS_PT: dict[str, object] = {
         "Python: {python}\n"
         "Sistema: {platform}\n\n"
         "Código e documentação: https://github.com/Hesatum/EasyPAML\n"
-        "Métodos (parâmetros do codeml, LRT, correção BH): METODOS.md"
+        "Métodos (parâmetros do codeml, LRT, correção BH): METHODS.md"
     ),
     "about_codeml_missing": "não encontrado (Linux: sudo apt install paml)",
     "label_codonfreq": "Frequências de códons (CodonFreq):",
@@ -646,7 +646,7 @@ TEXTS_EN: dict[str, object] = {
         "E.g. M8 with 30 taxa × 500 codons ≈ 33 min measured → 2.7 h limit.\n\n"
         "Fill it in only if you want a fixed limit (e.g. on a very slow\n"
         "machine). A codeml that stops using CPU for 5 min is stopped anyway.\n"
-        "Measurements: docs/benchmark_tempos.md."
+        "Measurements: docs/timing_benchmark.md."
     ),
     "label_remove_gaps":      "Remove gap columns (cleandata = 1)",
     "label_remove_gaps_hint": (
@@ -962,7 +962,7 @@ TEXTS_EN: dict[str, object] = {
         "Python: {python}\n"
         "System: {platform}\n\n"
         "Code and documentation: https://github.com/Hesatum/EasyPAML\n"
-        "Methods (codeml parameters, LRT, BH correction): METODOS.md"
+        "Methods (codeml parameters, LRT, BH correction): METHODS.md"
     ),
     "about_codeml_missing": "not found (Linux: sudo apt install paml)",
     "label_codonfreq": "Codon frequencies (CodonFreq):",

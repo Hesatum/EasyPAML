@@ -152,7 +152,7 @@ echo    - Duplo-clique em "EasyPAML" na area de trabalho
 echo    - OU duplo-clique em EasyPAML.bat nesta pasta
 echo    - OU execute: .venv\Scripts\python.exe EasyPAML.py
 echo.
-echo  Dados de exemplo em: exemplos_teste\
+echo  Dados de exemplo em: examples\
 echo.
 pause
 endlocal

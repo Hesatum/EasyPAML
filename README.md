@@ -5,10 +5,8 @@ analysis with PAML/codeml. It runs the site models (M0, M1a, M2a, M7, M8, M8a), 
 branch model and the branch-site model, computes the likelihood ratio tests (LRT)
 with Benjamini-Hochberg correction, and lists the sites under selection (BEB).
 
-*Versão em português: [README.pt.md](README.pt.md).*
-
-- Methods (codeml parameters, LRT, BH correction): [METODOS.md](METODOS.md), in Portuguese
-- Changes in each version: [CHANGELOG.md](CHANGELOG.md), in Portuguese
+- Methods (codeml parameters, LRT, BH correction): [METHODS.md](METHODS.md)
+- Changes in each version: [CHANGELOG.md](CHANGELOG.md)
 
 ## Installation
 
@@ -71,7 +69,7 @@ version 0.2.0, which has a different installer and different defaults.
   Ubuntu 24.04). `install.sh` tries to install it if it is missing; if there is no
   package, it downloads the official PAML 4.10.10 binary to `bin/codeml`.
 - Tested versions: PAML 4.9j and 4.10.10. Every parameter is written to the `.ctl`
-  file, so nothing is left to codeml's internal defaults (see METODOS.md).
+  file, so nothing is left to codeml's internal defaults (see METHODS.md).
 - To use another codeml, set `EASYPAML_CODEML=/path/to/codeml` or pass `--codeml`
   in command-line mode.
 - The codeml version used is shown under About and in `run_config.json`.
@@ -151,8 +149,8 @@ Main options (`--help` lists all of them):
 | `--cleandata` | `1` | remove columns with gaps, ambiguities or stop codons |
 | `--ignore-stop-codons` | off | without it, genes with an internal stop codon fail and the stop position is reported |
 | `--workers` | `4` | genes run in parallel |
-| `--timeout` / `--idle-timeout` | automatic / 300 s | time limit per run ([how it is calculated](docs/benchmark_tempos.md), in Portuguese) / codeml not using CPU |
-| `--skip-beb`, `--two-pass` | | for thousands of genes (see METODOS.md) |
+| `--timeout` / `--idle-timeout` | automatic / 300 s | time limit per run ([how it is calculated](docs/timing_benchmark.md)) / codeml not using CPU |
+| `--skip-beb`, `--two-pass` | | for thousands of genes (see METHODS.md) |
 | `--codeml` | | path to codeml |
 | `--strict` | | run nothing if the initial check finds problems |
 | `--lang pt\|en` | system language | language of the messages |
@@ -185,11 +183,11 @@ To repeat a run by hand: `cd OUT/M8 && codeml GENE_M8.ctl`.
 
 ## Example data
 
-`exemplos_teste/` has 25 *Cereus* (cactus) genes, with 8 to 21 sequences each, and a
+`examples/` has 25 *Cereus* (cactus) genes, with 8 to 21 sequences each, and a
 21-taxon tree whose names match the alignments exactly:
 
-1. Alignments folder: `exemplos_teste/amostras/`
-2. Tree file: `exemplos_teste/arvore_amostras.nwk`
+1. Alignments folder: `examples/alignments/`
+2. Tree file: `examples/tree.nwk`
 3. Output folder: a new folder
 4. Switch M8 on and click Run
 
@@ -197,8 +195,8 @@ The example results are not in the repository. To generate them (about 1 hour wi
 12 processes):
 
 ```bash
-.venv/bin/python easypaml_cli.py --input exemplos_teste/amostras \
-    --tree exemplos_teste/arvore_amostras.nwk --output exemplos_teste/resultados --workers 8
+.venv/bin/python easypaml_cli.py --input examples/alignments \
+    --tree examples/tree.nwk --output examples/results --workers 8
 ```
 
 `tests/data` has a simulated data set with a known answer.
@@ -238,9 +236,12 @@ EasyPAML/
 ├── bin/codeml.exe        codeml for Windows (PAML 4.9j)
 ├── src/                  code
 ├── tests/                tests (pytest) and simulated data
-├── exemplos_teste/       example data
-├── METODOS.md            detailed methods (Portuguese)
-└── CHANGELOG.md          version history (Portuguese)
+├── examples/             example data
+├── tools/                developer tools
+├── docs/                 timing benchmark
+├── METHODS.md            detailed methods
+├── CONTRIBUTING.md       notes for developers
+└── CHANGELOG.md          version history
 ```
 
 ## License and citation
@@ -249,4 +250,4 @@ MIT. Cite PAML: Yang Z (2007) *PAML 4: Phylogenetic Analysis by Maximum Likeliho
 Mol Biol Evol 24:1586–1591. When you publish, report the EasyPAML version and commit
 (under About or with `--version`), the codeml version and the parameters. The
 `methods_text.txt` file of each run puts all of this in one paragraph for you to review
-(see METODOS.md).
+(see METHODS.md).

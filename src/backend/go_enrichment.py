@@ -128,30 +128,3 @@ def rank_candidates(lrt_summary_tsv: Path, annotation_file: Path,
     candidates = summary.loc[summary['Gene'].isin(sig_genes)].sort_values('q_value')
     go_table = enrich(sig_genes, all_genes, gene_to_go)
     return candidates, go_table
-
-
-def _self_check():
-    """python3 -m src.backend.go_enrichment -- roda com dado real do projeto,
-    falha alto se a logica quebrar."""
-    ann = Path('/home/user/Desktop/projetos/matheus_wgs/resultados_analises/13_te_contamination/go_annotation/final_5725_annotation.tsv')
-    if not ann.exists():
-        print('SKIP: arquivo de anotacao real nao encontrado neste ambiente.')
-        return
-    gene_to_go = load_gene_to_go(ann)
-    assert len(gene_to_go) > 5000, f'esperava ~5725 genes, achou {len(gene_to_go)}'
-    assert gene_to_go['C1_41851674_g1001']['GO:0015995'] == 'chlorophyll biosynthetic process'
-
-    import random
-    random.seed(0)
-    all_genes = set(gene_to_go)
-    candidates = set(random.sample(sorted(all_genes), 50))
-    go_table = enrich(candidates, all_genes, gene_to_go)
-    assert not go_table.empty, 'esperava pelo menos um termo GO com >=2 candidatos numa amostra de 50 genes reais'
-    assert (go_table['p_value'] >= 0).all() and (go_table['p_value'] <= 1).all()
-    assert 'q_value' in go_table.columns, 'enrich() deve devolver q_value (BH), nao so p bruto'
-    assert (go_table['q_value'] >= go_table['p_value']).all(), 'q-valor BH nunca deve ser menor que o p bruto'
-    print(f'OK: {len(gene_to_go)} genes anotados, {len(go_table)} termos GO testados na amostra de checagem.')
-
-
-if __name__ == '__main__':
-    _self_check()
