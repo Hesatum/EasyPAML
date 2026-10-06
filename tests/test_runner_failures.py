@@ -83,10 +83,10 @@ def wrapped_codeml(tmp_path, fake_codeml):
 def _app(tmp_path, codeml, models=('M7', 'M8'), **extra):
     inp = tmp_path / 'in'
     inp.mkdir(parents=True, exist_ok=True)
-    (inp / 'gene.fasta').write_text((DATA / 'gene_exemplo.fasta').read_text())
+    (inp / 'gene.fasta').write_text((DATA / 'gene_example.fasta').read_text())
     app = CodemlBatchAnalysis()
     app.config = {
-        'input_folder': inp, 'tree_file': DATA / 'gene_exemplo.nwk',
+        'input_folder': inp, 'tree_file': DATA / 'gene_example.nwk',
         'output_folder': tmp_path / 'out', 'models': list(models), 'n_workers': 1,
         'run_lrt': True, 'codeml_path': codeml, 'timeout': 30, 'idle_timeout': 3,
         'log_callback': lambda level, text: app._test_log.append((level, text)),
@@ -240,7 +240,7 @@ def test_tree_without_branch_lengths_is_not_given_zeros(tmp_path, fake_codeml, m
     import re
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     app = _app(tmp_path, fake_codeml, models=('M7',))
-    plain = re.sub(r':[0-9.eE+-]+', '', (DATA / 'gene_exemplo.nwk').read_text())
+    plain = re.sub(r':[0-9.eE+-]+', '', (DATA / 'gene_example.nwk').read_text())
     (tmp_path / 'plain.nwk').write_text(plain)
     app.config['tree_file'] = tmp_path / 'plain.nwk'
     assert app.run_batch_analysis()['ok'] == 1
@@ -316,7 +316,7 @@ def test_stop_button_marks_genes_stopped_not_failed(tmp_path, fake_codeml, monke
 def test_internal_stop_codon_fails_fast_with_position(tmp_path, fake_codeml, monkeypatch):
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     app = _app(tmp_path, fake_codeml)
-    (app.config['input_folder'] / 'gene.fasta').write_text((DATA / 'gene_problematico.fasta').read_text())
+    (app.config['input_folder'] / 'gene.fasta').write_text((DATA / 'gene_problematic.fasta').read_text())
     summary = app.run_batch_analysis()
     reason = summary['failures']['gene']
     assert 'Gorilla_gorilla codon 150 (TGA)' in reason
@@ -326,7 +326,7 @@ def test_ignore_stop_codons_runs_and_warns_about_excluded_taxon(tmp_path, fake_c
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     app = _app(tmp_path, fake_codeml)
     app.config['ignore_stop_codons'] = True
-    (app.config['input_folder'] / 'gene.fasta').write_text((DATA / 'gene_problematico.fasta').read_text())
+    (app.config['input_folder'] / 'gene.fasta').write_text((DATA / 'gene_problematic.fasta').read_text())
     summary = app.run_batch_analysis()
     assert summary['ok'] == 1
     warns = [t for level, t in app._test_log if level == 'warn']
@@ -345,7 +345,7 @@ def test_real_codeml_problematic_data_never_hangs(tmp_path):
     app.config['ignore_stop_codons'] = True
     app.config['timeout'] = 600
     app.config['idle_timeout'] = 120
-    (app.config['input_folder'] / 'gene.fasta').write_text((DATA / 'gene_problematico.fasta').read_text())
+    (app.config['input_folder'] / 'gene.fasta').write_text((DATA / 'gene_problematic.fasta').read_text())
     t0 = time.time()
     summary = app.run_batch_analysis()
     assert summary['ok'] == 1 and time.time() - t0 < 300
@@ -359,7 +359,7 @@ def test_per_gene_tree_is_paired_by_file_name(tmp_path, fake_codeml, monkeypatch
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     app = _app(tmp_path, fake_codeml, models=('M7',))
     inp = app.config['input_folder']
-    (inp / 'g2.fasta').write_text((DATA / 'gene_exemplo.fasta').read_text())
+    (inp / 'g2.fasta').write_text((DATA / 'gene_example.fasta').read_text())
     # the gene's own tree has 6 taxa -> 4 sequences excluded
     (inp / 'gene.nwk').write_text(
         "((Homo_sapiens,Pan_troglodytes),Gorilla_gorilla,(Macaca_mulatta,(Papio_anubis,Aotus_nancymaae)));\n")
@@ -374,7 +374,7 @@ def test_per_gene_tree_is_paired_by_file_name(tmp_path, fake_codeml, monkeypatch
     app2 = _app(tmp_path / 'second', fake_codeml, models=('M7',))
     (app2.config['input_folder'] / 'gene.nwk').write_text(
         "((Homo_sapiens,Pan_troglodytes),Gorilla_gorilla,(Macaca_mulatta,(Papio_anubis,Aotus_nancymaae)));\n")
-    (app2.config['input_folder'] / 'g2.fasta').write_text((DATA / 'gene_exemplo.fasta').read_text())
+    (app2.config['input_folder'] / 'g2.fasta').write_text((DATA / 'gene_example.fasta').read_text())
     summary2 = app2.run_batch_analysis()          # with a general tree, g2 uses it
     assert summary2['ok'] == 2
     assert (tmp_path / 'second' / 'out' / 'M7' / 'g2_M7_tree.nwk').read_text().startswith('10  1')
@@ -396,7 +396,7 @@ def test_branch_site_uses_labeled_tree(tmp_path, fake_codeml, monkeypatch):
     lengths; the null uses fix_omega = 1."""
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     app = _app(tmp_path, fake_codeml, models=('Branch-site_null', 'Branch-site'))
-    (app.config['input_folder'] / 'gene.fasta').write_text((DATA / 'gene_problematico.fasta').read_text())
+    (app.config['input_folder'] / 'gene.fasta').write_text((DATA / 'gene_problematic.fasta').read_text())
     app.config['ignore_stop_codons'] = True
     app.config['labeled_tree_branchsite'] = (
         "((((Homo_sapiens:0.1,Pan_troglodytes:0.1)#1,Gorilla_gorilla),(Pongo_abelii,Hylobates_lar)),"

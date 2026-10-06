@@ -46,7 +46,7 @@ def test_phylip_with_sequence_split_over_lines():
 # ── Stops e cleandata ────────────────────────────────────────────────────────
 
 def test_stop_codon_position_in_problematic_data():
-    aln = read_alignment(DATA / 'gene_problematico.fasta')
+    aln = read_alignment(DATA / 'gene_problematic.fasta')
     stops = find_stop_codons(aln.names, aln.seqs)
     assert stops == [('Gorilla_gorilla', 150, 'TGA')]
 
@@ -59,7 +59,7 @@ def test_cleandata_kept_codons_rule():
 
 
 def test_sitemap_maps_codeml_positions_back(tmp_path):
-    aln = read_alignment(DATA / 'gene_problematico.fasta')
+    aln = read_alignment(DATA / 'gene_problematic.fasta')
     kept = cleandata_kept_codons(aln.names, aln.seqs)
     assert len(kept) == 299 and 150 not in kept
     results = tmp_path / 'g_M8_results.txt'
@@ -92,8 +92,8 @@ def _folder_with(tmp_path, files):
 
 
 def test_preflight_problematic_data(tmp_path):
-    d = _folder_with(tmp_path, {'meu_gene.fasta': DATA / 'gene_problematico.fasta'})
-    rep = run_preflight(d, DATA / 'gene_exemplo.nwk')
+    d = _folder_with(tmp_path, {'meu_gene.fasta': DATA / 'gene_problematic.fasta'})
+    rep = run_preflight(d, DATA / 'gene_example.nwk')
     kinds = {i.kind: i for i in rep.issues}
     stop = kinds['stop_codon']
     assert stop.data['sequence'] == 'Gorilla_gorilla'
@@ -110,14 +110,14 @@ def test_preflight_problematic_data(tmp_path):
 
 
 def test_preflight_duplicates_and_length(tmp_path):
-    good = (DATA / 'gene_exemplo.fasta').read_text()
+    good = (DATA / 'gene_example.fasta').read_text()
     phy_names = [l[1:].strip() for l in good.splitlines() if l.startswith('>')]
     d = _folder_with(tmp_path, {
-        'g1.fasta': DATA / 'gene_exemplo.fasta',
+        'g1.fasta': DATA / 'gene_example.fasta',
         'g1.phy': " 3 6\n" + "\n".join(f"{n}  ATGAAA" for n in phy_names[:3]) + "\n",
         'g2.fasta': ">Homo_sapiens\nATGAA\n>Pan_troglodytes\nATGAG\n>Gorilla_gorilla\nATGAC\n",
     })
-    rep = run_preflight(d, DATA / 'gene_exemplo.nwk')
+    rep = run_preflight(d, DATA / 'gene_example.nwk')
     by = {(i.gene, i.kind) for i in rep.issues}
     assert ('g1', 'duplicate_gene') in by
     assert ('g2', 'not_multiple_of_3') in by
@@ -125,14 +125,14 @@ def test_preflight_duplicates_and_length(tmp_path):
 
 
 def test_preflight_clean_data_has_no_problems(tmp_path):
-    d = _folder_with(tmp_path, {'g.fasta': DATA / 'gene_exemplo.fasta'})
-    rep = run_preflight(d, DATA / 'gene_exemplo.nwk')
+    d = _folder_with(tmp_path, {'g.fasta': DATA / 'gene_example.fasta'})
+    rep = run_preflight(d, DATA / 'gene_example.nwk')
     assert not rep.has_problems
 
 
 def test_preflight_ignore_stop_codons_downgrades_to_info(tmp_path):
-    d = _folder_with(tmp_path, {'g.fasta': DATA / 'gene_problematico.fasta'})
-    rep = run_preflight(d, DATA / 'gene_exemplo.nwk', ignore_stop_codons=True)
+    d = _folder_with(tmp_path, {'g.fasta': DATA / 'gene_problematic.fasta'})
+    rep = run_preflight(d, DATA / 'gene_example.nwk', ignore_stop_codons=True)
     assert [i.severity for i in rep.issues if i.kind == 'stop_codon'] == ['info']
 
 
