@@ -68,6 +68,9 @@ def parse_args():
                                                 "or codeml on PATH)")
     ap.add_argument('--idle-timeout', type=int, default=300,
                     help="stop codeml after N s without CPU use (default: 300; 0 turns it off)")
+    ap.add_argument('--rerun-all', action='store_true',
+                    help="run every model again, even those already in OUTPUT with the same "
+                         "alignment, tree and .ctl (by default their results are reused)")
     ap.add_argument('--strict', action='store_true',
                     help="run nothing if the data check finds errors or warnings")
     ap.add_argument('--lang', choices=('pt', 'en'), help="language of the messages (default: system language)")
@@ -151,6 +154,7 @@ def parse_args():
         'omega': args.omega,
         'cleandata': args.cleandata,
         'ignore_stop_codons': args.ignore_stop_codons,
+        'reuse_results': not args.rerun_all,
         'codeml': str(args.codeml) if args.codeml else None,
         'idle_timeout': args.idle_timeout,
         'strict': args.strict,

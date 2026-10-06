@@ -156,6 +156,7 @@ Main options (`--help` lists all of them):
 | `--timeout` / `--idle-timeout` | automatic / 300 s | time limit per run ([how it is calculated](docs/timing_benchmark.md)) / codeml not using CPU |
 | `--skip-beb`, `--two-pass` | | for thousands of genes (see METHODS.md) |
 | `--codeml` | | path to codeml |
+| `--rerun-all` | | run every model again; by default runs already in OUTPUT with the same alignment, tree and `.ctl` are reused |
 | `--strict` | | run nothing if the initial check finds problems |
 | `--lang pt\|en` | system language | language of the messages |
 | `--config file.json` | | the same options as JSON |

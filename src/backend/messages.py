@@ -39,6 +39,10 @@ MESSAGES = {
         'pt': "    {gene} · {model}: lnL = {lnl:.4f}  ({t:.1f} s)",
         'en': "    {gene} · {model}: lnL = {lnl:.4f}  ({t:.1f} s)",
     },
+    'model_reused': {
+        'pt': "    {gene} · {model}: lnL = {lnl:.4f}  (reaproveitado: mesmos dados e parâmetros da execução salva)",
+        'en': "    {gene} · {model}: lnL = {lnl:.4f}  (reused: same data and settings as the saved run)",
+    },
     'model_failed': {
         'pt': "FALHOU: {gene} · {model}: {reason}",
         'en': "FAILED: {gene} · {model}: {reason}",

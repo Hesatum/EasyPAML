@@ -98,6 +98,10 @@ A gene fails if any requested model exits with an error, writes no output, repor
 no lnL, or is stopped by a limit. The partial output of a failed run is kept as
 `*_results_FAILED.txt` and does not enter any test.
 
+When the output folder already holds a finished run whose `.ctl`, alignment and
+tree are byte-for-byte the ones about to be used, codeml is not run again and that
+output is reused; the log says so. `--rerun-all` runs everything again.
+
 ## Likelihood ratio tests
 
 2Δℓ = 2(lnL_alternative − lnL_null). A negative value (the alternative did not

@@ -2400,6 +2400,11 @@ class App(ctk.CTk):
                             'error')
             return
         selected = self._selected_models()
+        if self.output_folder and (Path(self.output_folder) / 'analysis_summary.tsv').exists() \
+                and not ask_yes_no(self, TEXTS["overwrite_title"], TEXTS["overwrite_text"],
+                                   yes=TEXTS["overwrite_yes"], no=TEXTS["overwrite_no"]):
+            self.select_output_folder()
+            return
         added = sorted(set(selected) - set(original))
         if added:
             self.append_log(("Modelos nulos adicionados automaticamente: " if get_language() == 'pt'

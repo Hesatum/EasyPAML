@@ -918,8 +918,12 @@ class CodemlBatchAnalysis:
             if result.get('status') != 'stopped':
                 _run_finished()
             if result.get('status') == 'success':
-                self._emit('ok', self._t('model_ok', gene=gene, model=model_name,
-                                         lnl=result['lnL'], t=result.get('execution_time') or 0))
+                if result.get('reused'):
+                    self._emit('ok', self._t('model_reused', gene=gene, model=model_name,
+                                             lnl=result['lnL']))
+                else:
+                    self._emit('ok', self._t('model_ok', gene=gene, model=model_name,
+                                             lnl=result['lnL'], t=result.get('execution_time') or 0))
                 if model_name == 'M0' and result.get('output_file'):
                     out_path = Path(result['output_file'])
                     k = self._extract_kappa(out_path)
@@ -1148,6 +1152,136 @@ class CodemlBatchAnalysis:
         d.update(extra)
         return d
 
+    def _execute_codeml(self, codeml_path, ctl_filename, temp_dir, model_name, base_name,
+                        names, seqs_used):
+        """Run codeml in temp_dir with a time limit, an idle check and Stop.
+        Returns (returncode, stdout lines, fail reason, stopped, BEB skipped)."""
+        cfg = self.config
+        pause_event = cfg.get('pause_event')
+        stop_event = cfg.get('stop_event')
+        cmd = [codeml_path, ctl_filename]
+        self._log(f"[{model_name}] {base_name}: Running command: {cmd} in {temp_dir}")
+        popen_kw = {}
+        if platform.system() == 'Windows':
+            popen_kw['creationflags'] = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+        else:
+            popen_kw['start_new_session'] = True   # see _terminate
+        # stdin closed: after a stop codon codeml waits for "Press Enter";
+        # with stdin closed it continues at once
+        process = subprocess.Popen(
+            cmd, cwd=temp_dir, stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, encoding='utf-8', errors='replace', bufsize=1, **popen_kw)
+
+        stdout_lines: List[str] = []
+        skip_beb = bool(cfg.get('skip_beb', False)) and model_name in ('M2a', 'M8')
+        beb_was_skipped = [False]
+
+        def read_stream(stream):
+            try:
+                for line in iter(stream.readline, ''):
+                    text_line = line.rstrip()
+                    stdout_lines.append(text_line)
+                    # skip_beb: lnL, np and ω are already written when BEB starts
+                    if skip_beb and 'BEBing' in text_line and not beb_was_skipped[0]:
+                        beb_was_skipped[0] = True
+                        self._log(f"[{model_name}] {base_name}: skip_beb -- stopping before BEB")
+                        try:
+                            self._terminate(process)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+        reader = Thread(target=read_stream, args=(process.stdout,), daemon=True)
+        reader.start()
+        with self._processes_lock:
+            self._active_processes.add(process)
+            self.current_process = process
+
+        n_codons = max((len(sq) for sq in seqs_used.values()), default=0) // 3
+        timeout_s = float(resolve_timeout(cfg.get('timeout'), model_name, len(names), n_codons))
+        self._log(f"[{model_name}] {base_name}: time limit {int(timeout_s)} s "
+                  f"({len(names)} taxa × {n_codons} codons"
+                  f"{', user value' if user_timeout(cfg.get('timeout')) else ', automatic'})")
+        idle_s = float(cfg.get('idle_timeout', 300) or 0)
+        deadline = time.time() + timeout_s
+        last_cpu = None
+        last_progress = time.time()
+        fail_reason = None
+        stopped = False
+        try:
+            while process.poll() is None:
+                if stop_event is not None and stop_event.is_set():
+                    stopped = True
+                    self._terminate(process)
+                    break
+                paused = pause_event is not None and not pause_event.is_set()
+                now = time.time()
+                if paused:
+                    # paused time counts neither for the limit nor the idle check
+                    deadline += 0.25
+                    last_progress = now
+                elif now > deadline:
+                    fail_reason = self._t('reason_timeout', s=int(timeout_s))
+                    self._terminate(process)
+                    break
+                elif idle_s > 0:
+                    cpu = self._process_cpu_seconds(process.pid)
+                    if cpu is not None:
+                        if last_cpu is None or cpu > last_cpu + 0.01:
+                            last_cpu = cpu
+                            last_progress = now
+                        elif now - last_progress > idle_s:
+                            last_line = next((l for l in reversed(stdout_lines) if l.strip()), '')
+                            fail_reason = self._t('reason_idle', s=int(idle_s), line=last_line[:200])
+                            self._terminate(process)
+                            break
+                time.sleep(0.25)
+        finally:
+            with self._processes_lock:
+                self._active_processes.discard(process)
+                if self.current_process is process:
+                    self.current_process = None
+        reader.join(timeout=5)
+        try:
+            process.wait(timeout=5)
+        except Exception:
+            self._terminate(process)
+        try:
+            if process.stdout:
+                process.stdout.close()
+        except Exception:
+            pass
+
+        rc = process.returncode
+        self._log(f"[{model_name}] {base_name}: process returncode={rc}")
+        if stdout_lines:
+            self._log("  codeml stdout (last 60 lines):\n" + "\n".join(stdout_lines[-60:]))
+        return rc, stdout_lines, fail_reason, stopped, beb_was_skipped[0]
+
+    def _reuse_saved_run(self, model_output_dir: Path, temp_dir: Path, ctl_filename: str,
+                         seq_filename: str, tree_filename: str, output_filename: str,
+                         codeml_outfile: str, prefix: str) -> bool:
+        """True when MODEL/ already holds a finished run with the same .ctl,
+        alignment and tree; its output is then copied into temp_dir in place of
+        running codeml again."""
+        saved_out = model_output_dir / output_filename
+        try:
+            for fname in (ctl_filename, seq_filename, tree_filename):
+                saved = model_output_dir / fname
+                if not saved.is_file() or saved.read_bytes() != (temp_dir / fname).read_bytes():
+                    return False
+            if not saved_out.is_file() or self._extract_model_stats(saved_out)['lnL'] is None:
+                return False
+            shutil.copy2(saved_out, temp_dir / codeml_outfile)
+            rst = model_output_dir / f"{prefix}_rst.txt"
+            if rst.is_file():
+                shutil.copy2(rst, temp_dir / 'rst')
+            return True
+        except OSError:
+            return False
+
     def _run_single_analysis(self, fas_file: Path, model_name: str,
                              log_file: Path = None,
                              warm_start_kappa: float = None,
@@ -1334,105 +1468,17 @@ class CodemlBatchAnalysis:
                     model_name=model_name, kappa=warm_start_kappa, fix_blength=fix_bl)
             (temp_dir / ctl_filename).write_text(ctl_content, encoding='utf-8')
 
-            cmd = [codeml_path, ctl_filename]
-            self._log(f"[{model_name}] {base_name}: Running command: {cmd} in {temp_dir}")
-            popen_kw = {}
-            if platform.system() == 'Windows':
-                popen_kw['creationflags'] = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+            reused = save_outputs and cfg.get('reuse_results', True) and self._reuse_saved_run(
+                model_output_dir, temp_dir, ctl_filename, seq_filename, tree_filename,
+                output_filename, codeml_outfile, prefix)
+            if reused:
+                self._log(f"[{model_name}] {base_name}: same .ctl, alignment and tree as the saved "
+                          f"run; its output is reused")
+                rc, stdout_lines, fail_reason, stopped, beb_skipped = 0, [], None, False, False
             else:
-                popen_kw['start_new_session'] = True   # see _terminate
-            # stdin closed: after a stop codon codeml waits for "Press Enter";
-            # with stdin closed it continues at once
-            process = subprocess.Popen(
-                cmd, cwd=temp_dir, stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, encoding='utf-8', errors='replace', bufsize=1, **popen_kw)
-
-            stdout_lines: List[str] = []
-            skip_beb = bool(cfg.get('skip_beb', False)) and model_name in ('M2a', 'M8')
-            beb_was_skipped = [False]
-
-            def read_stream(stream):
-                try:
-                    for line in iter(stream.readline, ''):
-                        text_line = line.rstrip()
-                        stdout_lines.append(text_line)
-                        # skip_beb: lnL, np and ω are already written when BEB starts
-                        if skip_beb and 'BEBing' in text_line and not beb_was_skipped[0]:
-                            beb_was_skipped[0] = True
-                            self._log(f"[{model_name}] {base_name}: skip_beb -- stopping before BEB")
-                            try:
-                                self._terminate(process)
-                            except Exception:
-                                pass
-                except Exception:
-                    pass
-
-            reader = Thread(target=read_stream, args=(process.stdout,), daemon=True)
-            reader.start()
-            with self._processes_lock:
-                self._active_processes.add(process)
-                self.current_process = process
-
-            n_codons = max((len(sq) for sq in seqs_used.values()), default=0) // 3
-            timeout_s = float(resolve_timeout(cfg.get('timeout'), model_name, len(names), n_codons))
-            self._log(f"[{model_name}] {base_name}: time limit {int(timeout_s)} s "
-                      f"({len(names)} taxa × {n_codons} codons"
-                      f"{', user value' if user_timeout(cfg.get('timeout')) else ', automatic'})")
-            idle_s = float(cfg.get('idle_timeout', 300) or 0)
-            deadline = time.time() + timeout_s
-            last_cpu = None
-            last_progress = time.time()
-            fail_reason = None
-            stopped = False
-            try:
-                while process.poll() is None:
-                    if stop_event is not None and stop_event.is_set():
-                        stopped = True
-                        self._terminate(process)
-                        break
-                    paused = pause_event is not None and not pause_event.is_set()
-                    now = time.time()
-                    if paused:
-                        # paused time counts neither for the limit nor the idle check
-                        deadline += 0.25
-                        last_progress = now
-                    elif now > deadline:
-                        fail_reason = self._t('reason_timeout', s=int(timeout_s))
-                        self._terminate(process)
-                        break
-                    elif idle_s > 0:
-                        cpu = self._process_cpu_seconds(process.pid)
-                        if cpu is not None:
-                            if last_cpu is None or cpu > last_cpu + 0.01:
-                                last_cpu = cpu
-                                last_progress = now
-                            elif now - last_progress > idle_s:
-                                last_line = next((l for l in reversed(stdout_lines) if l.strip()), '')
-                                fail_reason = self._t('reason_idle', s=int(idle_s), line=last_line[:200])
-                                self._terminate(process)
-                                break
-                    time.sleep(0.25)
-            finally:
-                with self._processes_lock:
-                    self._active_processes.discard(process)
-                    if self.current_process is process:
-                        self.current_process = None
-            reader.join(timeout=5)
-            try:
-                process.wait(timeout=5)
-            except Exception:
-                self._terminate(process)
-            try:
-                if process.stdout:
-                    process.stdout.close()
-            except Exception:
-                pass
-
-            rc = process.returncode
-            self._log(f"[{model_name}] {base_name}: process returncode={rc}")
-            if stdout_lines:
-                self._log("  codeml stdout (last 60 lines):\n" + "\n".join(stdout_lines[-60:]))
+                rc, stdout_lines, fail_reason, stopped, beb_skipped = self._execute_codeml(
+                    codeml_path, ctl_filename, temp_dir, model_name, base_name, names, seqs_used)
+            beb_was_skipped = [beb_skipped]
 
             # Stop may end codeml before the loop above sees stop_event
             if not stopped and stop_event is not None and stop_event.is_set() and rc != 0:
@@ -1539,6 +1585,7 @@ class CodemlBatchAnalysis:
                 'stop_count': 0,
                 'beb_skipped': beb_was_skipped[0],
                 'excluded_sequences': excluded,
+                'reused': bool(reused),
             }
 
         except Exception as e:

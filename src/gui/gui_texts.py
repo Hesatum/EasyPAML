@@ -403,6 +403,13 @@ TEXTS_PT: dict[str, object] = {
     "progress_model_gene": "{model} em 1 gene",
     "progress_left": " · faltam cerca de {left}",
     "progress_stopped": "Parada por você · {ok} de {total} genes concluídos",
+    "overwrite_title": "Pasta com resultados",
+    "overwrite_text": (
+        "Esta pasta já tem resultados. Genes e modelos com os mesmos dados e parâmetros são "
+        "reaproveitados; os outros são rodados e substituem o que havia."
+    ),
+    "overwrite_yes": "Continuar",
+    "overwrite_no": "Escolher outra pasta",
     "stop_confirm_title": "Parar a análise?",
     "stop_confirm_text": (
         "Os modelos em execução serão interrompidos e os genes que ainda não terminaram "
@@ -975,6 +982,13 @@ TEXTS_EN: dict[str, object] = {
     "progress_model_gene": "{model} on 1 gene",
     "progress_left": " · about {left} left",
     "progress_stopped": "Stopped by you · {ok} of {total} genes completed",
+    "overwrite_title": "Folder with results",
+    "overwrite_text": (
+        "This folder already has results. Genes and models with the same data and settings "
+        "are reused; the others run and replace what was there."
+    ),
+    "overwrite_yes": "Continue",
+    "overwrite_no": "Choose another folder",
     "stop_confirm_title": "Stop the analysis?",
     "stop_confirm_text": (
         "The models that are running will be interrupted and genes that have not finished "

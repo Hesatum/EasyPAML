@@ -430,3 +430,21 @@ def test_pruning_keeps_branch_labels():
     io = StringIO()
     Phylo.write(tree, io, 'newick')
     assert 'Pan#1' in io.getvalue()
+
+
+def test_rerun_reuses_saved_runs_and_only_runs_new_models(tmp_path, fake_codeml, monkeypatch):
+    """Adding M8a to a finished M7/M8 run reuses M7 and M8 instead of running them again."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))
+    app.run_batch_analysis()
+    app2 = _app(tmp_path, fake_codeml, models=('M7', 'M8', 'M8a'))
+    summary = app2.run_batch_analysis()
+    assert summary['ok'] == 1
+    reused = {m for m, r in app2.results['gene'].items() if r.get('reused')}
+    assert reused == {'M7', 'M8'}
+    assert any('reused' in t for _, t in app2._test_log)
+
+    app3 = _app(tmp_path, fake_codeml, models=('M7',))
+    app3.config['reuse_results'] = False
+    app3.run_batch_analysis()
+    assert not app3.results['gene']['M7'].get('reused')
