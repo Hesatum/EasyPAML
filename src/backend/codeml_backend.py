@@ -1763,7 +1763,7 @@ class CodemlBatchAnalysis:
                 self._lrt_pvalues[(null_model, alt_model)] = {c['gene']: c['p_value'] for c in collected}
 
                 sig_count_05 = sig_count_01 = sig_count_q05 = 0
-                for c in collected:
+                for c in sorted(collected, key=lambda c: (c['p_value'], c['gene'])):
                     sig_count_05 += c['p_value'] < 0.05
                     sig_count_01 += c['p_value'] < 0.01
                     sig_count_q05 += c['q_value'] < 0.05
@@ -2324,7 +2324,7 @@ class CodemlBatchAnalysis:
                 qvalues[(null_model, alt_model)] = {c['gene']: c['q_value'] for c in collected}
 
                 sig_count_05 = sig_count_01 = sig_count_q05 = 0
-                for c in collected:
+                for c in sorted(collected, key=lambda c: (c['p_value'], c['gene'])):
                     if c['p_value'] < 0.05:
                         sig_count_05 += 1
                     if c['p_value'] < 0.01:

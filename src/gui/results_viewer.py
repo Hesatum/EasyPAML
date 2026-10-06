@@ -145,6 +145,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             return
         
         self._extract_tag_columns()
+        self._sort_by_significance()
         self.setup_ui()
     
     def _load_data(self) -> bool:
@@ -469,6 +470,22 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         out = {g: (l, p, q) for g, l, p, q in zip(genes, lrts, ps, qs)}
         cache[(null, alt)] = out
         return out
+
+    def _sort_by_significance(self) -> None:
+        """Order genes by their smallest q (then p) over the positive-selection tests,
+        or over every test when there is none; failed genes go last."""
+        pairs = self._positive_tests() or [pair for pair in lrt_stats.PAIRS
+                                            if self._pair_values(*pair)]
+        best = {}
+        for pair in pairs:
+            for gene, (_, p, q) in (self._pair_values(*pair) or {}).items():
+                key = (q if pd.notna(q) else 1.0, p if pd.notna(p) else 1.0)
+                best[gene] = min(best.get(gene, key), key)
+        failed = self.df.get('status', pd.Series(index=self.df.index, dtype=object)) == 'failed'
+        order = sorted(range(len(self.df)), key=lambda i: (
+            bool(failed.iloc[i]), best.get(self.df['Gene'].iloc[i], (2.0, 2.0)), str(self.df['Gene'].iloc[i])))
+        self.df = self.df.iloc[order].reset_index(drop=True)
+        self._gene_rank = {g: i for i, g in enumerate(self.df['Gene'])}
 
     def _positive_tests(self):
         return [pair for pair in lrt_stats.POSITIVE_SELECTION_PAIRS if self._pair_values(*pair)]
@@ -913,8 +930,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 folder = self.output_folder / 'BranchSite_A'
             genes = []
             if folder.exists():
+                rank = getattr(self, '_gene_rank', {})
                 genes = sorted({m.group(1) for f in folder.glob('*_results.txt')
-                                for m in [re.match(r'(.+?)_[A-Za-z0-9\-]+_results\.txt', f.name)] if m})
+                                for m in [re.match(r'(.+?)_[A-Za-z0-9\-]+_results\.txt', f.name)] if m},
+                               key=lambda g: (rank.get(g, len(rank)), g))
             gene_combo.configure(values=genes)
             gene_combo.set(genes[0] if genes else '')
             update_sites_table()
@@ -1926,7 +1945,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         gene_font, mono = self._font('sm', 'bold'), self._mono('sm')
         n_sig = 0
-        for k, (gene, (lrt, p, q)) in enumerate(vals.items()):
+        ranked = sorted(vals.items(), key=lambda kv: (kv[1][2] if pd.notna(kv[1][2]) else 1.0, kv[1][1]))
+        for k, (gene, (lrt, p, q)) in enumerate(ranked):
             row = self.df[self.df['Gene'] == gene].iloc[0]
             sig = pd.notna(q) and q < 0.05
             n_sig += sig
