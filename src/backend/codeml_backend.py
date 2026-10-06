@@ -682,6 +682,10 @@ class CodemlBatchAnalysis:
                 cfg['input_folder'], cfg.get('tree_folder'), genes=set(chosen))
         self.current_total_genes = len(genes)
         self.current_processed_genes = 0
+        self.runs_total = len(genes) * len(cfg['models'])
+        self.runs_done = 0
+        self.running: Dict[str, Tuple[str, float]] = {}
+        self.run_start_time = time.time()
         n_workers = max(1, int(cfg.get('n_workers', 1)))
 
         with open(log_file, 'w', encoding='utf-8') as log:
@@ -799,8 +803,17 @@ class CodemlBatchAnalysis:
         pause_event = cfg.get('pause_event')
         stop_event = cfg.get('stop_event')
 
+        runs_counted = [0]
+
+        def _run_finished():
+            with self._results_lock:
+                runs_counted[0] += 1
+                self.runs_done += 1
+
         def _done():
             with self._results_lock:
+                self.runs_done += max(0, len(cfg['models']) - runs_counted[0])
+                self.running.pop(gene, None)
                 self.current_processed_genes += 1
                 done = self.current_processed_genes
             self._progress(done, n_total, gene)
@@ -884,6 +897,8 @@ class CodemlBatchAnalysis:
             kappa_for_this = None if model_name == 'M0' else gene_kappa
             fitted_for_this = None if model_name == 'M0' else gene_fitted_tree
             self._emit('debug', self._t('model_running', gene=gene, model=model_name))
+            with self._results_lock:
+                self.running[gene] = (model_name, time.time())
             if fitted_for_this is not None and cfg.get('warm_start_multistart', True):
                 result = self._run_model_multistart(fas_file, model_name, self._log_path,
                                                     kappa_for_this, fitted_for_this, aln=aln)
@@ -893,6 +908,8 @@ class CodemlBatchAnalysis:
                                                    warm_start_kappa=kappa_for_this,
                                                    fitted_tree=fitted_for_this, aln=aln)
             gene_results[model_name] = result
+            if result.get('status') != 'stopped':
+                _run_finished()
             if result.get('status') == 'success':
                 self._emit('ok', self._t('model_ok', gene=gene, model=model_name,
                                          lnl=result['lnL'], t=result.get('execution_time') or 0))
@@ -1408,6 +1425,9 @@ class CodemlBatchAnalysis:
             if stdout_lines:
                 self._log("  codeml stdout (last 60 lines):\n" + "\n".join(stdout_lines[-60:]))
 
+            # Stop may end codeml before the loop above sees stop_event
+            if not stopped and stop_event is not None and stop_event.is_set() and rc != 0:
+                stopped = True
             if stopped:
                 return self._failed(self._t('reason_stopped'), exec_start, status='stopped')
 

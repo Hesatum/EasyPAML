@@ -285,6 +285,34 @@ def test_stop_kills_codeml_without_orphans(tmp_path, fake_codeml, monkeypatch):
     assert not any('ANALYSIS COMPLETE' in t for _, t in app._test_log)
 
 
+def test_stop_button_marks_genes_stopped_not_failed(tmp_path, fake_codeml, monkeypatch):
+    """The GUI sets stop_event and kills codeml at once; the killed run (exit -15)
+    must count as stopped, not failed."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'slow')
+    app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))
+    app.config['idle_timeout'] = 0
+    stop = threading.Event()
+    app.config['stop_event'] = stop
+
+    def _stopper():
+        for _ in range(100):
+            with app._processes_lock:
+                busy = bool(app._active_processes)
+            if busy:
+                stop.set()
+                app.stop_all_processes()
+                return
+            time.sleep(0.1)
+    th = threading.Thread(target=_stopper)
+    th.start()
+    summary = app.run_batch_analysis()
+    th.join()
+    assert summary['stopped'] is True
+    assert summary['failed'] == 0
+    assert app.gene_status == {'gene': 'stopped'}
+    assert app.runs_done == app.runs_total
+
+
 def test_internal_stop_codon_fails_fast_with_position(tmp_path, fake_codeml, monkeypatch):
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     app = _app(tmp_path, fake_codeml)

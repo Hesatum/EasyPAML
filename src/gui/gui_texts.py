@@ -397,6 +397,16 @@ TEXTS_PT: dict[str, object] = {
     "progress_template": "Gene {done} de {total}",
     "progress_done": "{done} de {total} genes processados",
     "progress_done_failed": "{ok} de {total} genes concluídos · {failed} falharam",
+    "progress_running": "{done} de {total} genes prontos · rodando {what} · {elapsed}",
+    "progress_left": " · faltam cerca de {left}",
+    "progress_stopped": "Parada por você · {ok} de {total} genes concluídos",
+    "stop_confirm_title": "Parar a análise?",
+    "stop_confirm_text": (
+        "Os modelos em execução serão interrompidos e os genes que ainda não terminaram "
+        "ficam sem resultado. Os genes já concluídos são mantidos."
+    ),
+    "stop_confirm_yes": "Parar",
+    "stop_confirm_no": "Continuar rodando",
     "chk_show_details": "Mostrar detalhes técnicos",
     "preflight_title": "Verificação dos dados",
     "preflight_running": "Verificando os alinhamentos e a árvore…",
@@ -953,6 +963,16 @@ TEXTS_EN: dict[str, object] = {
     "progress_template": "Gene {done} of {total}",
     "progress_done": "{done} of {total} genes processed",
     "progress_done_failed": "{ok} of {total} genes completed · {failed} failed",
+    "progress_running": "{done} of {total} genes done · running {what} · {elapsed}",
+    "progress_left": " · about {left} left",
+    "progress_stopped": "Stopped by you · {ok} of {total} genes completed",
+    "stop_confirm_title": "Stop the analysis?",
+    "stop_confirm_text": (
+        "The models that are running will be interrupted and genes that have not finished "
+        "will have no results. Genes already completed are kept."
+    ),
+    "stop_confirm_yes": "Stop",
+    "stop_confirm_no": "Keep running",
     "chk_show_details": "Show technical details",
     "preflight_title": "Data check",
     "preflight_running": "Checking alignments and tree…",

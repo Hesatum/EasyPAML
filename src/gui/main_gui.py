@@ -3,6 +3,7 @@ from tkinter import filedialog
 from tkinter import simpledialog, Canvas
 from pathlib import Path
 import threading
+import time
 import traceback
 import io
 import sys
@@ -2232,10 +2233,9 @@ class App(ctk.CTk):
 
     def _backend_progress(self, done: int, total: int, gene: str = ''):
         def _upd():
-            frac = (done / total) if total else 0
-            self.progress_bar.set(frac)
-            self.progress_label.configure(text=TEXTS["progress_template"].format(
-                done=done, total=total))
+            a = self.analysis_instance
+            if a is not None and getattr(a, 'runs_total', 0) and not self.stop_event.is_set():
+                self._show_live_progress(a)
         self.after(0, _upd)
 
     def _set_pause_button(self, paused: bool):
@@ -2294,6 +2294,9 @@ class App(ctk.CTk):
 
     def _stop_analysis(self):
         if not self.analysis_thread or not self.analysis_thread.is_alive():
+            return
+        if not ask_yes_no(self, TEXTS["stop_confirm_title"], TEXTS["stop_confirm_text"],
+                          yes=TEXTS["stop_confirm_yes"], no=TEXTS["stop_confirm_no"]):
             return
         # stop starting new runs, then end the running codeml processes
         self.stop_event.set()
@@ -2451,7 +2454,11 @@ class App(ctk.CTk):
         if not summary:
             return
         total, done = summary.get('total', 0), summary.get('ok', 0) + summary.get('failed', 0)
-        if summary.get('failed'):
+        if summary.get('stopped'):
+            self.progress_label.configure(text=TEXTS["progress_stopped"].format(
+                ok=summary.get('ok', 0), total=total))
+            self.progress_bar.configure(progress_color=self.COLORS['text_tertiary'])
+        elif summary.get('failed'):
             self.progress_label.configure(text=TEXTS["progress_done_failed"].format(
                 ok=summary.get('ok', 0), total=total, failed=summary['failed']))
             self.progress_bar.configure(progress_color=self.COLORS['warning'])
@@ -2470,11 +2477,48 @@ class App(ctk.CTk):
         if summary.get('ok') and not summary.get('stopped'):
             self._open_results_viewer()
 
+    @staticmethod
+    def _clock(seconds: float) -> str:
+        seconds = int(seconds)
+        h, rest = divmod(seconds, 3600)
+        m, s = divmod(rest, 60)
+        return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
     def _poll_stop_count(self):
-        if self.analysis_instance:
-            cnt = getattr(self.analysis_instance, 'current_stop_count', 0)
+        a = self.analysis_instance
+        if a:
+            cnt = getattr(a, 'current_stop_count', 0)
             self.stop_label.configure(text=TEXTS["status_stops_template"].format(n=cnt))
+            if getattr(a, 'runs_total', 0) and not self.stop_event.is_set():
+                self._show_live_progress(a)
         self.after(1000, self._poll_stop_count)
+
+    def _show_live_progress(self, a):
+        """Bar by model run; label with the model running, elapsed time and, once a
+        gene has finished, a rough estimate of the time left."""
+        running = dict(getattr(a, 'running', {}))
+        now = time.time()
+        elapsed = now - a.run_start_time
+        partial = 0.0
+        if running:
+            # a running model counts as half done
+            partial = 0.5 * len(running)
+        self.progress_bar.set(min(1.0, (a.runs_done + partial) / a.runs_total))
+        if running:
+            what = ", ".join(f"{model} ({gene}, {self._clock(now - t0)})"
+                             for gene, (model, t0) in sorted(running.items())[:2])
+            if len(running) > 2:
+                what += f" +{len(running) - 2}"
+        else:
+            what = "…"
+        text = TEXTS["progress_running"].format(done=a.current_processed_genes,
+                                                total=a.current_total_genes,
+                                                what=what, elapsed=self._clock(elapsed))
+        done_genes = a.current_processed_genes
+        if 0 < done_genes < a.current_total_genes:
+            left = elapsed / done_genes * (a.current_total_genes - done_genes)
+            text += TEXTS["progress_left"].format(left=self._clock(left))
+        self.progress_label.configure(text=text)
 
 
 if __name__ == "__main__":
