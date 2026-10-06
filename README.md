@@ -1,40 +1,38 @@
 # EasyPAML
 
-Interface gráfica (e modo linha de comando) para análise de seleção positiva
-com **PAML/codeml**: modelos de sítio (M0, M1a, M2a, M7, M8, M8a), modelo de
-ramos e branch-site, com teste da razão de verossimilhança (LRT), correção de
-Benjamini-Hochberg e tabela de sítios (BEB).
+EasyPAML is a desktop program (with a command-line mode) for positive selection
+analysis with PAML/codeml. It runs the site models (M0, M1a, M2a, M7, M8, M8a), the
+branch model and the branch-site model, computes the likelihood ratio tests (LRT)
+with Benjamini-Hochberg correction, and lists the sites under selection (BEB).
 
-*English summary at the end.*
+*Versão em português: [README.pt.md](README.pt.md).*
 
-- Métodos (parâmetros do codeml, LRT, correção BH): [METODOS.md](METODOS.md)
-- O que mudou em cada versão: [CHANGELOG.md](CHANGELOG.md)
+- Methods (codeml parameters, LRT, BH correction): [METODOS.md](METODOS.md), in Portuguese
+- Changes in each version: [CHANGELOG.md](CHANGELOG.md), in Portuguese
 
----
+## Installation
 
-## Instalação
+### Download
 
-### Baixar
+This version is on the `correcoes-usabilidade` branch. The `main` branch still has
+version 0.2.0, which has a different installer and different defaults.
 
-Esta versão está na branch `correcoes-usabilidade` (a `main` ainda tem a 0.2.0,
-com outro instalador e outros padrões):
-
-- Com git: `git clone -b correcoes-usabilidade https://github.com/Hesatum/EasyPAML.git`
-- Sem git: [baixe o ZIP](https://github.com/Hesatum/EasyPAML/archive/refs/heads/correcoes-usabilidade.zip)
-  e extraia.
+- With git: `git clone -b correcoes-usabilidade https://github.com/Hesatum/EasyPAML.git`
+- Without git: [download the ZIP](https://github.com/Hesatum/EasyPAML/archive/refs/heads/correcoes-usabilidade.zip)
+  and extract it.
 
 ### Windows
 
-> Pré-requisito: **Python 3.8+** ([python.org/downloads](https://www.python.org/downloads/)) —
-> marque **"Add Python to PATH"** durante a instalação. O `codeml.exe` já vem na pasta `bin/`.
+> Requirement: Python 3.8 or newer ([python.org/downloads](https://www.python.org/downloads/)).
+> Tick "Add Python to PATH" during installation. `codeml.exe` is already in the `bin/` folder.
 
-1. Dentro da pasta do EasyPAML, dê **duplo-clique em `install.bat`**
-   (cria um ambiente `.venv` com as dependências; 1–3 minutos).
-2. Abra pelo atalho **EasyPAML** da Área de Trabalho ou pelo **`EasyPAML.bat`**.
+1. In the EasyPAML folder, double-click `install.bat`. It creates a `.venv`
+   environment with the dependencies, which takes 1 to 3 minutes.
+2. Open EasyPAML from the desktop shortcut or with `EasyPAML.bat`.
 
-### Linux (Ubuntu/Debian) e macOS
+### Linux (Ubuntu/Debian) and macOS
 
-1. Pré-requisitos do sistema (uma vez só):
+1. System requirements (once):
 
    ```bash
    sudo apt update && sudo apt install -y git python3-pip python3-venv python3-tk paml
@@ -42,7 +40,7 @@ com outro instalador e outros padrões):
 
    (Fedora: `sudo dnf install git python3-pip python3-tkinter paml` · macOS: `brew install python-tk brewsci/bio/paml`)
 
-2. Baixar e instalar:
+2. Download and install:
 
    ```bash
    git clone -b correcoes-usabilidade https://github.com/Hesatum/EasyPAML.git
@@ -50,230 +48,205 @@ com outro instalador e outros padrões):
    ./install.sh
    ```
 
-   O `install.sh` cria o ambiente isolado `.venv/` **dentro da pasta do EasyPAML**
-   e instala as dependências nele — não usa `pip --user` nem mexe no Python do
-   sistema (funciona no Ubuntu 23.04+/24.04, que bloqueia `pip` fora de ambientes
-   virtuais). Se faltar algo, ele para e mostra o comando exato a rodar. Pode ser
-   rodado de novo quantas vezes quiser.
+   `install.sh` creates an isolated `.venv/` environment inside the EasyPAML folder
+   and installs the dependencies there. It does not use `pip --user` or touch the
+   system Python, so it works on Ubuntu 23.04 and 24.04, which block `pip` outside
+   virtual environments. If something is missing, it stops and prints the exact
+   command to run. You can run it again as many times as you need.
 
-3. Abrir:
+3. Open:
 
    ```bash
    ./EasyPAML.sh
    ```
 
-   O `EasyPAML.sh` só ativa o `.venv` e abre o programa. Plano B, se ele não
-   funcionar: `.venv/bin/python EasyPAML.py` (sempre `python3`, nunca `python`,
-   no Ubuntu).
+   `EasyPAML.sh` only activates `.venv` and starts the program. If it fails, run
+   `.venv/bin/python EasyPAML.py` instead (on Ubuntu the command is always `python3`,
+   never `python`).
 
-### CODEML (PAML)
+### codeml (PAML)
 
-- **Windows**: `bin/codeml.exe` (PAML 4.9j) já vem no repositório.
-- **Linux**: vem do pacote do sistema, `sudo apt install paml` (Ubuntu 24.04:
-  PAML 4.9j). O `install.sh` tenta instalar se faltar; se não houver pacote,
-  baixa o binário oficial do PAML 4.10.10 para `bin/codeml`.
-- **Versões testadas**: PAML 4.9j e 4.10.10. Todos os parâmetros vão escritos no
-  `.ctl` (nada fica no default interno do codeml); ver METODOS.md.
-- Outro codeml: defina a variável `EASYPAML_CODEML=/caminho/do/codeml` ou use
-  `--codeml` no modo linha de comando.
-- A versão do codeml usada aparece em **Sobre** e em `run_config.json`.
+- Windows: `bin/codeml.exe` (PAML 4.9j) comes with the repository.
+- Linux: codeml comes from the system package, `sudo apt install paml` (PAML 4.9j on
+  Ubuntu 24.04). `install.sh` tries to install it if it is missing; if there is no
+  package, it downloads the official PAML 4.10.10 binary to `bin/codeml`.
+- Tested versions: PAML 4.9j and 4.10.10. Every parameter is written to the `.ctl`
+  file, so nothing is left to codeml's internal defaults (see METODOS.md).
+- To use another codeml, set `EASYPAML_CODEML=/path/to/codeml` or pass `--codeml`
+  in command-line mode.
+- The codeml version used is shown under About and in `run_config.json`.
 
----
+## Using the window
 
-## Como usar (janela)
+The window follows the system language (English or Portuguese). The PT and EN
+buttons at the bottom left switch it.
 
-1. **Pasta de alinhamentos**: uma pasta com um arquivo por gene (`.fasta`, `.fas`,
-   `.phy`, `.phylip`), sequências de códons alinhadas. O programa mostra quantos
-   alinhamentos encontrou.
-2. **Arquivo de árvore**: árvore Newick (`.nwk`, `.tree`, `.tre`, `.txt`), com ou
-   sem raiz; pode ter táxons a mais (são podados em cada gene).
-   **Uma árvore por gene**: ponha `GENE.nwk` (ou `.tree`/`.tre`) ao lado de
-   `GENE.fasta` na pasta de alinhamentos; para esse gene ela substitui o arquivo de
-   árvore (se todos os genes tiverem a sua, o arquivo de árvore é dispensado).
-3. **Pasta de resultados**: escolha ou digite o nome de uma pasta nova (ela é criada).
-4. Ligue os modelos. Com **Modelos nulos automáticos** ligado, o nulo de cada teste
-   entra sozinho (M8 → M7 e M8a; M2a → M1a).
-5. Clique em **Iniciar**. Antes de rodar, o EasyPAML verifica os dados e mostra um
-   diálogo com o que encontrou: stop codons (sequência e posição do códon), nomes do
-   alinhamento que não estão na árvore (com o nome mais parecido), táxons que serão
-   podados, arquivos duplicados do mesmo gene e comprimento que não é múltiplo de 3.
-   Escolha **Corrigir e voltar** ou **Continuar mesmo assim**.
-6. A barra mostra "Gene X de N". Ao terminar, aparece "X de N genes concluídos, Y
-   falharam" (genes que falharam ficam em vermelho, com o motivo) e o painel de
-   resultados abre sozinho.
+1. Alignments folder: a folder with one file per gene (`.fasta`, `.fas`, `.phy`,
+   `.phylip`) containing aligned codon sequences. The program shows how many
+   alignments it found.
+2. Tree file: a Newick tree (`.nwk`, `.tree`, `.tre`, `.txt`), rooted or unrooted.
+   It may contain extra taxa, which are pruned for each gene.
+   To use one tree per gene, put `GENE.nwk` (or `.tree`/`.tre`) next to `GENE.fasta`
+   in the alignments folder. That tree replaces the tree file for that gene, and if
+   every gene has its own tree you do not need a tree file at all.
+3. Output folder: choose a folder, or create one with "New folder".
+4. Switch the models on. With "Automatic null models" on, the null model of each
+   test is added for you (M8 adds M7 and M8a; M2a adds M1a).
+5. Click Run. Before running, EasyPAML checks the data and lists what it found:
+   stop codons (sequence and codon position), alignment names that are not in the
+   tree (with the closest name), taxa that will be pruned, duplicate files for the
+   same gene, and lengths that are not a multiple of 3. Choose "Fix and go back" or
+   "Continue anyway".
+6. The progress bar shows "Gene X of N". At the end you see "X of N genes completed ·
+   Y failed". Genes that failed are listed with the reason, and the results panel
+   opens by itself.
 
-**Painel de resultados**
+The results panel has these tabs:
 
-- **Resumo**: uma frase por gene e por teste, por exemplo
-  "M8 vs M7: significativo (p = 4,7×10⁻²², q = 4,7×10⁻²²) — 20 sítios com Pr(ω>1) ≥ 0,95 ·
-  classe positiva: ω = 3,8, p₁ = 0,11".
-- **LRT e p-valores**: lnL de cada modelo, 2Δℓ, p (notação científica), q (BH),
-  ω e proporção da classe positiva.
-- **Sítios sob seleção**: posição no **seu** alinhamento e posição no arquivo do codeml
-  (diferentes quando colunas com gap/stop são removidas), aminoácido, Pr(ω>1),
-  `*` (≥ 0,95) / `**` (≥ 0,99), ω médio ± EP; botões para copiar/exportar em TSV.
-- **Abrir pasta de resultados** e exportação para Excel, CSV, PNG e HTML.
+- Summary: one line per gene and test, for example
+  "M8 vs M7: significant, p = 4.7×10⁻²², q = 4.7×10⁻²², 20 sites with Pr(ω>1) ≥ 0.95,
+  positive class ω = 3.8, p₁ = 0.11".
+- LRT and p-values: lnL of each model, 2Δℓ, p (in scientific notation), q (BH), and
+  ω and proportion of the positive class.
+- Positive Sites: the position in your alignment and the position in the codeml
+  file (they differ when columns with gaps or stop codons are removed), amino acid,
+  Pr(ω>1), `*` (≥ 0.95) or `**` (≥ 0.99), and mean ω ± SE. Buttons copy or export the
+  table as TSV.
+- Export: Excel, CSV, PNG and HTML. "Open results folder" opens the folder itself.
 
-> O ω médio do gene **não** é critério de seleção positiva: ele fica abaixo de 1
-> mesmo quando poucos sítios estão sob seleção forte. Use o LRT (q) e a tabela de sítios.
+> The mean ω of a gene is not a criterion for positive selection. It stays below 1
+> even when a few sites are under strong selection. Use the LRT (q) and the site table.
 
----
+## Models
 
-## Modelos
-
-| Modelo | Para que serve |
+| Model | Used for |
 |---|---|
-| **M0** | um ω para o gene inteiro (linha de base; nulo do Branch) |
-| **M1a / M2a** | M2a vs M1a: seleção positiva por sítio (df = 2) |
-| **M7 / M8** | M8 vs M7: beta + classe extra (df = 2) |
-| **M8a** | M8 com a classe extra fixa em ω = 1. **M8 vs M8a** (df = 1) não é enganado por sítios neutros, ao contrário do M8 vs M7 |
-| **Branch** | ω por grupo de ramos marcado (vs M0) |
-| **Branch-site** | seleção episódica em sítios do ramo foreground (#1) |
+| M0 | one ω for the whole gene (baseline; null of Branch) |
+| M1a / M2a | M2a vs M1a: site-wise positive selection (df = 2) |
+| M7 / M8 | M8 vs M7: beta plus an extra class (df = 2) |
+| M8a | M8 with the extra class fixed at ω = 1. M8 vs M8a (df = 1) is not fooled by neutral sites, while M8 vs M7 can be |
+| Branch | one ω per group of labelled branches (vs M0) |
+| Branch-site | episodic selection at sites on the foreground branch (#1) |
 
-Recomendação usual para seleção positiva por sítio: rode **M8** (o M7 e o M8a
-entram sozinhos) e confira os dois testes; se só o M8 vs M7 for significativo,
-o sinal pode vir de sítios neutros.
+For site-wise positive selection, the usual choice is to run M8 (M7 and M8a are
+added automatically) and check both tests. If only M8 vs M7 is significant, the
+signal may come from neutral sites.
 
----
-
-## Modo linha de comando (servidor / muitos genes)
+## Command-line mode (servers, many genes)
 
 ```bash
-.venv/bin/python easypaml_cli.py --input PASTA --tree ARVORE.nwk --output SAIDA \
+.venv/bin/python easypaml_cli.py --input FOLDER --tree TREE.nwk --output OUT \
     --models M1a,M2a,M7,M8,M8a --workers 8
 ```
 
-Opções principais (`--help` mostra todas):
+Main options (`--help` lists all of them):
 
-| Opção | Padrão | Significado |
+| Option | Default | Meaning |
 |---|---|---|
-| `--models` | `M1a,M2a,M7,M8,M8a` | modelos a rodar |
-| `--no-m8a` | — | não roda o M8a (sem o teste M8a vs M8); na janela: Configurações › "Incluir M8a" |
-| `--tree-folder` | — | pasta com uma árvore por gene (`GENE.nwk`), pareada pelo nome; também vale `GENE.nwk` na própria pasta de alinhamentos |
-| `--codonfreq` | `2` (F3x4) | CodonFreq do codeml (0 Fequal, 1 F1x4, 2 F3x4, 3 F61, 7 FMutSel …) |
-| `--ncatg` | `10` | categorias da beta (M7/M8/M8a) |
-| `--cleandata` | `1` | remove colunas com gap/ambiguidade/stop |
-| `--ignore-stop-codons` | desligado | sem ela, genes com stop codon interno falham com a posição do stop |
-| `--workers` | `4` | genes em paralelo |
-| `--timeout` / `--idle-timeout` | automático / 300 s | limite por execução ([como é calculado](docs/benchmark_tempos.md)) / codeml sem usar CPU |
-| `--skip-beb`, `--two-pass` | — | para milhares de genes (ver METODOS.md) |
-| `--codeml` | — | caminho do codeml |
-| `--strict` | — | não roda nada se a verificação inicial achar problemas |
-| `--lang pt\|en` | idioma do sistema | idioma das mensagens |
-| `--config arquivo.json` | — | as mesmas opções em JSON |
-| `--version` | — | versão do EasyPAML |
+| `--models` | `M1a,M2a,M7,M8,M8a` | models to run |
+| `--no-m8a` | | do not run M8a (no M8a vs M8 test); in the window: Advanced settings › "Include M8a" |
+| `--tree-folder` | | folder with one tree per gene (`GENE.nwk`), matched by name; `GENE.nwk` in the alignments folder also works |
+| `--codonfreq` | `2` (F3x4) | codeml CodonFreq (0 Fequal, 1 F1x4, 2 F3x4, 3 F61, 7 FMutSel …) |
+| `--ncatg` | `10` | beta categories (M7/M8/M8a) |
+| `--cleandata` | `1` | remove columns with gaps, ambiguities or stop codons |
+| `--ignore-stop-codons` | off | without it, genes with an internal stop codon fail and the stop position is reported |
+| `--workers` | `4` | genes run in parallel |
+| `--timeout` / `--idle-timeout` | automatic / 300 s | time limit per run ([how it is calculated](docs/benchmark_tempos.md), in Portuguese) / codeml not using CPU |
+| `--skip-beb`, `--two-pass` | | for thousands of genes (see METODOS.md) |
+| `--codeml` | | path to codeml |
+| `--strict` | | run nothing if the initial check finds problems |
+| `--lang pt\|en` | system language | language of the messages |
+| `--config file.json` | | the same options as JSON |
+| `--version` | | EasyPAML version and commit |
 
-Código de saída: 0 se todos os genes rodaram, 1 se algum falhou, 2 com `--strict`
-e problemas nos dados.
+Exit code: 0 if every gene ran, 1 if any failed, 2 with `--strict` and problems in
+the data.
 
----
-
-## O que fica na pasta de resultados
+## What the output folder contains
 
 ```
-SAIDA/
-  methods_text.txt         parágrafo de Métodos (inglês) já preenchido com o que esta execução fez
-  run_config.json          versão e commit do EasyPAML, versões do codeml e do Python, parâmetros do .ctl, opções
-  batch_analysis_log.txt   log completo (inclui a saída do codeml)
-  genes_status.tsv         um gene por linha: ok / failed + motivo
-  analysis_summary.tsv     lnL, np, ω por modelo; ω e p₁ da classe positiva; 2Δl, p e q por teste
-  LRT_results.txt          LRT por gene, com a nota metodológica
-  sites_BEB.tsv            sítios do BEB (M2a, M8, Branch-site) de todos os genes, com as duas numerações
-  M8/GENE_M8.ctl           .ctl usado (todos os parâmetros, caminhos relativos)
-  M8/GENE_M8_seq.fasta     alinhamento exatamente como o codeml leu
-  M8/GENE_M8_tree.nwk      árvore exatamente como o codeml leu (podada/desenraizada)
-  M8/GENE_M8_results_FAILED.txt  saída parcial de uma execução que falhou (fica fora do LRT)
-  M8/GENE_M8_results.txt   saída bruta do codeml
-  M8/GENE_M8_sitemap.json  numeração dos sítios: codeml → alinhamento original
+OUT/
+  methods_text.txt         Methods paragraph (English) filled in with what this run did
+  run_config.json          EasyPAML version and commit, codeml and Python versions, .ctl parameters, options
+  batch_analysis_log.txt   full log (includes the codeml output)
+  genes_status.tsv         one gene per line: ok / failed, reason, warnings
+  analysis_summary.tsv     lnL, np, ω per model; ω and p₁ of the positive class; 2Δl, p and q per test
+  LRT_results.txt          LRT per gene, with the methods note
+  sites_BEB.tsv            BEB sites (M2a, M8, Branch-site) of every gene, with both numberings
+  M8/GENE_M8.ctl           the .ctl used (every parameter, relative paths)
+  M8/GENE_M8_seq.fasta     the alignment exactly as codeml read it
+  M8/GENE_M8_tree.nwk      the tree exactly as codeml read it (pruned/unrooted)
+  M8/GENE_M8_results_FAILED.txt  partial output of a run that failed (left out of the LRT)
+  M8/GENE_M8_results.txt   raw codeml output
+  M8/GENE_M8_sitemap.json  site numbering: codeml → original alignment
 ```
 
-Para refazer uma execução à mão: `cd SAIDA/M8 && codeml GENE_M8.ctl`.
+To repeat a run by hand: `cd OUT/M8 && codeml GENE_M8.ctl`.
 
----
+## Example data
 
-## Dados de exemplo
+`exemplos_teste/` has 25 *Cereus* (cactus) genes, with 8 to 21 sequences each, and a
+21-taxon tree whose names match the alignments exactly:
 
-`exemplos_teste/` tem 25 genes de *Cereus* (cactos), com 8 a 21 sequências cada, e
-uma árvore de 21 táxons com exatamente os mesmos nomes dos alinhamentos:
+1. Alignments folder: `exemplos_teste/amostras/`
+2. Tree file: `exemplos_teste/arvore_amostras.nwk`
+3. Output folder: a new folder
+4. Switch M8 on and click Run
 
-1. **Pasta de alinhamentos**: `exemplos_teste/amostras/`
-2. **Arquivo de árvore**: `exemplos_teste/arvore_amostras.nwk`
-3. **Pasta de resultados**: uma pasta nova
-4. Ligue **M8** e clique em **Iniciar**
-
-Os resultados do exemplo não vêm no repositório; para gerá-los (cerca de 1 h com 12 processos):
+The example results are not in the repository. To generate them (about 1 hour with
+12 processes):
 
 ```bash
 .venv/bin/python easypaml_cli.py --input exemplos_teste/amostras \
     --tree exemplos_teste/arvore_amostras.nwk --output exemplos_teste/resultados --workers 8
 ```
 
-`tests/data` tem um conjunto simulado com resposta conhecida.
+`tests/data` has a simulated data set with a known answer.
 
----
+## Troubleshooting
 
-## Solução de problemas
+`./install.sh` says venv or tkinter is missing: run the command it prints
+(`sudo apt install python3-venv python3-tk`) and run `./install.sh` again.
 
-**`./install.sh` diz que falta o venv ou o tkinter** → rode o comando que ele mostra
-(`sudo apt install python3-venv python3-tk`) e rode `./install.sh` de novo.
+`./EasyPAML.sh: No such file or directory`: you are outside the EasyPAML folder
+(`cd EasyPAML`) or you downloaded an old version. Fallback: `.venv/bin/python EasyPAML.py`.
 
-**`./EasyPAML.sh: No such file or directory`** → você está fora da pasta do EasyPAML
-(`cd EasyPAML`) ou baixou uma versão antiga. Plano B: `.venv/bin/python EasyPAML.py`.
+`ModuleNotFoundError: No module named 'tkinter'`: `sudo apt install python3-tk`.
 
-**`ModuleNotFoundError: No module named 'tkinter'`** → `sudo apt install python3-tk`.
+`python: command not found`: on Ubuntu the command is `python3`.
 
-**`python: command not found`** → no Ubuntu o comando é `python3`.
+"codeml not found": on Linux, `sudo apt install paml`. On Windows, check that
+`bin/codeml.exe` exists (reinstall with `install.bat`).
 
-**"codeml não encontrado"** → Linux: `sudo apt install paml`. Windows: confira se
-`bin/codeml.exe` existe (reinstale com `install.bat`).
+A gene shows as FAILED: the reason is in the window, in `genes_status.tsv` and in
+`batch_analysis_log.txt` (with the last line codeml wrote). EasyPAML never stays
+"running" forever: a codeml that uses no CPU for 5 minutes is stopped and reported.
 
-**Um gene aparece como FALHOU** → o motivo está na janela, em `genes_status.tsv` e
-no `batch_analysis_log.txt` (com a última linha que o codeml escreveu). O EasyPAML
-nunca fica "executando" para sempre: codeml parado sem usar CPU por 5 minutos é
-encerrado e reportado.
+Windows, the window opens and closes at once: run `install.bat` first. If it keeps
+happening, open `cmd` in the folder and run `.venv\Scripts\python.exe EasyPAML.py` to
+see the message.
 
-**Windows: a janela abre e fecha rápido** → rode `install.bat` primeiro. Se persistir,
-abra o `cmd` na pasta e rode `.venv\Scripts\python.exe EasyPAML.py` para ver a mensagem.
-
----
-
-## Estrutura
+## Layout of the repository
 
 ```
 EasyPAML/
-├── EasyPAML.py           ponto de entrada (janela)
-├── easypaml_cli.py       modo linha de comando
-├── install.sh / EasyPAML.sh     instalador e lançador Linux/macOS
-├── install.bat / EasyPAML.bat   instalador e lançador Windows
-├── requirements.txt      dependências (versões mínimas); requirements-lock.txt (exatas testadas)
-├── bin/codeml.exe        codeml para Windows (PAML 4.9j)
-├── src/                  código
-├── tests/                testes (pytest) e dados simulados
-├── exemplos_teste/       dados de exemplo
-├── METODOS.md            métodos detalhados
-└── CHANGELOG.md          histórico de versões
+├── EasyPAML.py           entry point (window)
+├── easypaml_cli.py       command-line mode
+├── install.sh / EasyPAML.sh     Linux/macOS installer and launcher
+├── install.bat / EasyPAML.bat   Windows installer and launcher
+├── requirements.txt      dependencies (minimum versions); requirements-lock.txt (exact tested versions)
+├── bin/codeml.exe        codeml for Windows (PAML 4.9j)
+├── src/                  code
+├── tests/                tests (pytest) and simulated data
+├── exemplos_teste/       example data
+├── METODOS.md            detailed methods (Portuguese)
+└── CHANGELOG.md          version history (Portuguese)
 ```
 
----
+## License and citation
 
-## English summary
-
-EasyPAML is a GUI and command-line wrapper for PAML/codeml site, branch and
-branch-site models, with LRTs (including M8a vs M8), Benjamini-Hochberg
-correction and BEB site tables reported in the user's alignment numbering.
-
-- Windows: double-click `install.bat`, then `EasyPAML.bat`.
-- Linux: `sudo apt install git python3-pip python3-venv python3-tk paml`, then
-  `git clone -b correcoes-usabilidade https://github.com/Hesatum/EasyPAML.git && cd EasyPAML && ./install.sh && ./EasyPAML.sh`
-  (this version lives on the `correcoes-usabilidade` branch; `main` still has 0.2.0).
-- CLI: `.venv/bin/python easypaml_cli.py --help`. Methods: [METODOS.md](METODOS.md).
-- The interface follows the system language (Portuguese or English; default English).
-
----
-
-## Licença e citação
-
-MIT. Cite o PAML: Yang Z (2007) *PAML 4: Phylogenetic Analysis by Maximum Likelihood.*
-Mol Biol Evol 24:1586–1591. Ao publicar, informe a versão **e o commit** do EasyPAML
-(em **Sobre** ou `--version`), a versão do codeml e os parâmetros. O `methods_text.txt` de
-cada execução traz tudo isso num parágrafo pronto para revisar (ver METODOS.md).
+MIT. Cite PAML: Yang Z (2007) *PAML 4: Phylogenetic Analysis by Maximum Likelihood.*
+Mol Biol Evol 24:1586–1591. When you publish, report the EasyPAML version and commit
+(under About or with `--version`), the codeml version and the parameters. The
+`methods_text.txt` file of each run puts all of this in one paragraph for you to review
+(see METODOS.md).
