@@ -25,11 +25,13 @@ from backend.codeml_backend import CodemlBatchAnalysis
 from backend import messages as backend_messages
 from backend.ctl_params import (CODONFREQ_OPTIONS, DEFAULT_CODONFREQ, DEFAULT_CTL_PARAMS,
                                 build_ctl_text, codonfreq_label, parse_codonfreq_label)
+from backend.lrt_stats import pairs_for as lrt_pairs_for
 from backend.preflight import discover_per_gene_trees, group_by_gene, list_alignment_files, run_preflight
 from .results_viewer import ResultsViewerWindow
 from .gui_texts import TEXTS, set_language, get_language, tr
-from .ui_helpers import (PALETTE, PreflightDialog, ask_yes_no, disable_mouse_wheel,
-                         fit_to_screen, hover_tint, mix, open_folder, show_about, show_message)
+from .ui_helpers import (FONT_SIZE, PALETTE, RADIUS, SPACE, PreflightDialog, ask_yes_no,
+                         disable_mouse_wheel, fit_to_screen, hover_tint, mix, open_folder,
+                         show_about, show_message)
 
 try:
     from Bio import Phylo
@@ -62,12 +64,13 @@ class ModelConfigWindow(ctk.CTkToplevel):
     TODOS os parâmetros que irão para o .ctl."""
 
     COLORS = {
-        'bg_dark':        '#0c0c0e',
-        'bg_card':        '#16161a',
-        'text_primary':   '#ededef',
-        'text_secondary': '#a3a3b8',
-        'success':        '#15803d',
-        'success_hover':  '#166534',
+        'bg_dark':        PALETTE['bg_window'],
+        'bg_card':        PALETTE['bg_surface'],
+        'bg_input':       PALETTE['bg_inset'],
+        'bg_elevated':    PALETTE['bg_elevated'],
+        'border':         PALETTE['control_border'],
+        'text_primary':   PALETTE['text_primary'],
+        'text_secondary': PALETTE['text_secondary'],
     }
 
     _NUMERIC_FIELDS = (('NSsites', 'cfg_field_nssites'), ('model', 'cfg_field_model'),
@@ -87,12 +90,14 @@ class ModelConfigWindow(ctk.CTkToplevel):
         self.bind("<Escape>", lambda e: self.destroy())
 
         ctk.CTkLabel(self, text=TEXTS["model_config_header"].format(model_code=model_code),
-                     font=(_FONT_UI, 16, "bold"),
-                     text_color=self.COLORS['text_primary']).pack(anchor='w', padx=20, pady=(18, 8))
+                     font=(_FONT_UI, FONT_SIZE['lg'], "bold"),
+                     text_color=self.COLORS['text_primary']).pack(anchor='w', padx=SPACE['xl'],
+                                                                  pady=(SPACE['xl'], SPACE['md']))
 
-        form = ctk.CTkScrollableFrame(self, fg_color=self.COLORS['bg_card'], corner_radius=10,
-                                      border_width=1, border_color='#2a2a2a')
-        form.pack(fill="both", expand=True, padx=20, pady=(0, 12))
+        form = ctk.CTkScrollableFrame(self, fg_color=self.COLORS['bg_card'],
+                                      corner_radius=RADIUS['panel'], border_width=0,
+                                      scrollbar_button_color=self.COLORS['border'])
+        form.pack(fill="both", expand=True, padx=SPACE['xl'], pady=(0, SPACE['lg']))
 
         current = dict(initial)
         current.update(parent.custom_model_params.get(model_code, {}))
@@ -100,16 +105,19 @@ class ModelConfigWindow(ctk.CTkToplevel):
 
         def _label(key_text):
             name, hint = TEXTS[key_text]
-            ctk.CTkLabel(form, text=name, font=(_FONT_UI, 13, "bold"),
-                         text_color=self.COLORS['text_primary']).pack(anchor="w", padx=12, pady=(10, 0))
-            ctk.CTkLabel(form, text=hint, font=(_FONT_UI, 12), wraplength=460, justify='left',
-                         text_color=self.COLORS['text_secondary']).pack(anchor="w", padx=12, pady=(0, 4))
+            ctk.CTkLabel(form, text=name, font=(_FONT_UI, FONT_SIZE['md'], "bold"),
+                         text_color=self.COLORS['text_primary']).pack(anchor="w", padx=SPACE['md'],
+                                                                      pady=(SPACE['md'], 0))
+            ctk.CTkLabel(form, text=hint, font=(_FONT_UI, FONT_SIZE['sm']), wraplength=440,
+                         justify='left', text_color=self.COLORS['text_secondary']).pack(
+                             anchor="w", padx=SPACE['md'], pady=(0, SPACE['xs']))
 
         for key, text_key in self._NUMERIC_FIELDS[:4]:
             _label(text_key)
-            ent = ctk.CTkEntry(form, fg_color=self.COLORS['bg_dark'], border_color='#32323e',
+            ent = ctk.CTkEntry(form, fg_color=self.COLORS['bg_input'], border_color=self.COLORS['border'],
+                               border_width=1, corner_radius=RADIUS['field'], height=32,
                                text_color=self.COLORS['text_primary'])
-            ent.pack(fill="x", padx=12, pady=(0, 4))
+            ent.pack(fill="x", padx=SPACE['md'], pady=(0, SPACE['xs']))
             ent.insert(0, str(current.get(key, '')))
             ent.bind('<KeyRelease>', lambda e: self._refresh_preview())
             self.entries[key] = ent
@@ -118,37 +126,42 @@ class ModelConfigWindow(ctk.CTkToplevel):
         cf_values = [codonfreq_label(v) for v, _, _ in CODONFREQ_OPTIONS]
         self.codonfreq_menu = ctk.CTkOptionMenu(
             form, values=cf_values, command=lambda _v: self._refresh_preview(),
-            fg_color='#262632', button_color='#3a3a4e', text_color=self.COLORS['text_primary'])
+            fg_color=self.COLORS['bg_elevated'], button_color=self.COLORS['border'],
+            button_hover_color=PALETTE['control_border_hover'], height=32,
+            corner_radius=RADIUS['field'], text_color=self.COLORS['text_primary'])
         self.codonfreq_menu.set(codonfreq_label(current.get('CodonFreq', defaults['CodonFreq'])))
-        self.codonfreq_menu.pack(fill='x', padx=12, pady=(0, 4))
+        self.codonfreq_menu.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['xs']))
 
         for key, text_key in self._NUMERIC_FIELDS[4:]:
             _label(text_key)
-            ent = ctk.CTkEntry(form, fg_color=self.COLORS['bg_dark'], border_color='#32323e',
+            ent = ctk.CTkEntry(form, fg_color=self.COLORS['bg_input'], border_color=self.COLORS['border'],
+                               border_width=1, corner_radius=RADIUS['field'], height=32,
                                text_color=self.COLORS['text_primary'])
-            ent.pack(fill="x", padx=12, pady=(0, 4))
+            ent.pack(fill="x", padx=SPACE['md'], pady=(0, SPACE['xs']))
             ent.insert(0, str(current.get(key, defaults.get(key, ''))))
             ent.bind('<KeyRelease>', lambda e: self._refresh_preview())
             self.entries[key] = ent
 
-        ctk.CTkLabel(form, text=TEXTS["cfg_preview"], font=(_FONT_UI, 12, "bold"),
-                     text_color=self.COLORS['text_secondary']).pack(anchor='w', padx=12, pady=(12, 2))
-        self.preview = ctk.CTkTextbox(form, height=260, font=(_FONT_MONO, 11),
-                                      fg_color=self.COLORS['bg_dark'],
+        ctk.CTkLabel(form, text=TEXTS["cfg_preview"], font=(_FONT_UI, FONT_SIZE['sm'], "bold"),
+                     text_color=self.COLORS['text_secondary']).pack(anchor='w', padx=SPACE['md'],
+                                                                    pady=(SPACE['lg'], SPACE['xs']))
+        self.preview = ctk.CTkTextbox(form, height=260, font=(_FONT_MONO, FONT_SIZE['xs']),
+                                      fg_color=self.COLORS['bg_input'], corner_radius=RADIUS['card'],
                                       text_color=self.COLORS['text_secondary'])
-        self.preview.pack(fill='x', padx=12, pady=(0, 12))
+        self.preview.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['md']))
         self._refresh_preview()
 
         btn_frame = ctk.CTkFrame(self, fg_color='transparent')
-        btn_frame.pack(fill="x", padx=20, pady=(0, 18))
-        ctk.CTkButton(btn_frame, text=TEXTS["model_config_btn_cancel"], fg_color='#3d3d4a',
-                      hover_color='#4d4d5a', command=self.destroy, text_color='#ffffff',
-                      font=(_FONT_UI, 13, "bold"), corner_radius=6).pack(side="left", fill="x",
-                                                                          expand=True, padx=(0, 8))
-        ctk.CTkButton(btn_frame, text=TEXTS["model_config_btn_save"], fg_color=self.COLORS['success'],
-                      hover_color=self.COLORS['success_hover'], text_color='#ffffff',
-                      command=self._on_save, font=(_FONT_UI, 13, "bold"),
-                      corner_radius=6).pack(side="left", fill="x", expand=True)
+        btn_frame.pack(fill="x", padx=SPACE['xl'], pady=(0, SPACE['xl']))
+        ctk.CTkButton(btn_frame, text=TEXTS["model_config_btn_cancel"], fg_color=PALETTE['neutral_fill'],
+                      hover_color=mix(PALETTE['neutral_fill'], '#ffffff', 0.08), command=self.destroy,
+                      text_color='#ffffff', height=36,
+                      font=(_FONT_UI, FONT_SIZE['md'], "bold"), corner_radius=RADIUS['card']).pack(
+                          side="left", fill="x", expand=True, padx=(0, SPACE['sm']))
+        ctk.CTkButton(btn_frame, text=TEXTS["model_config_btn_save"], fg_color=PALETTE['accent_fill'],
+                      hover_color=mix(PALETTE['accent_fill'], '#000000', 0.2), text_color='#ffffff',
+                      command=self._on_save, font=(_FONT_UI, FONT_SIZE['md'], "bold"), height=36,
+                      corner_radius=RADIUS['card']).pack(side="left", fill="x", expand=True)
 
     def _grab(self):
         try:
@@ -185,7 +198,7 @@ class ModelConfigWindow(ctk.CTkToplevel):
     def _on_save(self):
         self.parent.custom_model_params[self.model_code] = self._values()
         self.parent.model_ctl_labels[self.model_code].configure(
-            text=TEXTS["model_status_configured"], text_color="#fbbf24")
+            text=TEXTS["model_status_configured"], text_color=PALETTE['warning_text'])
         self.parent.append_log(TEXTS["cfg_saved"].format(model=self.model_code) + "\n", 'ok')
         self.destroy()
 
@@ -194,22 +207,23 @@ class TreeLabelWindow(ctk.CTkToplevel):
     """Janela para marcar ramos com cladograma retangular biologicamente correto - Premium Styling"""
     
     # Cores para consistent styling
-    BG_DARK    = '#0c0c0e'
-    BG_SIDEBAR = '#111115'
-    BG_CARD    = '#16161a'
-    TEXT_PRIMARY   = '#ededef'
-    TEXT_SECONDARY = '#9898a6'
-    ACCENT_BLUE  = '#6366f1'
+    BG_DARK    = PALETTE['bg_window']
+    BG_SIDEBAR = PALETTE['bg_panel']
+    BG_CARD    = PALETTE['bg_surface']
+    TEXT_PRIMARY   = PALETTE['text_primary']
+    TEXT_SECONDARY = PALETTE['text_secondary']
+    TEXT_TERTIARY  = PALETTE['text_tertiary']
+    ACCENT_BLUE  = PALETTE['accent_text']
     ACCENT_PINK  = '#f472b6'
-    SUCCESS      = '#22c55e'
-    SUCCESS_HOVER = '#16a34a'
-    DANGER       = '#f87171'
+    SUCCESS      = PALETTE['success_fill']      # botão preenchido: texto branco 5,0:1
+    SUCCESS_HOVER = mix(PALETTE['success_fill'], '#000000', 0.2)
+    DANGER       = PALETTE['danger_text']
     DANGER_HOVER = '#ef4444'
     
     def __init__(self, parent, tree_path: Path | None, mode: str = 'branchsite'):
         super().__init__(parent)
         self.title(tr("Marcar ramos", "Label branches") + f" - {mode}")
-        self.geometry("1400x850")
+        fit_to_screen(self, 1400, 850, min_w=900, min_h=560)
         self.parent = parent
         self.mode = mode
         
@@ -225,66 +239,71 @@ class TreeLabelWindow(ctk.CTkToplevel):
         
         if Phylo is None:
             ctk.CTkLabel(self, text=TEXTS["tree_err_no_biopython"],
-                        text_color=self.TEXT_SECONDARY).pack(padx=20, pady=20)
+                        text_color=self.TEXT_SECONDARY).pack(padx=SPACE['xl'], pady=SPACE['xl'])
             return
 
         # Layout premium
         left_frame = ctk.CTkFrame(self, width=280, fg_color=self.BG_SIDEBAR,
-                                 border_width=1, border_color=self.BG_CARD)
+                                 corner_radius=0, border_width=0)
         left_frame.pack(side='left', fill='y', padx=0, pady=0)
         left_frame.pack_propagate(False)
         
         plot_frame = ctk.CTkFrame(self, fg_color=self.BG_DARK)
-        plot_frame.pack(side='left', fill='both', expand=True, padx=10, pady=10)
+        plot_frame.pack(side='left', fill='both', expand=True, padx=SPACE['md'], pady=SPACE['md'])
 
         # Sidebar premium
         title_label = ctk.CTkLabel(left_frame, text=TEXTS["tree_labeler_sidebar_title"],
-                                  font=(_FONT_UI, 14, "bold"),
+                                  font=(_FONT_UI, FONT_SIZE['lg'], "bold"),
                                   text_color=self.TEXT_PRIMARY)
-        title_label.pack(pady=(15, 10), padx=15)
+        title_label.pack(pady=(SPACE['xl'], SPACE['sm']), padx=SPACE['lg'], anchor='w')
 
         if self.mode == 'branchsite':
             instructions = TEXTS["tree_labeler_instructions_branchsite"]
         else:
             instructions = TEXTS["tree_labeler_instructions_branch"]
         
-        inst_label = ctk.CTkLabel(left_frame, text=instructions, wraplength=240, justify="left", 
-                                 font=(_FONT_UI, 12), text_color=self.TEXT_SECONDARY)
-        inst_label.pack(pady=10, padx=15)
+        inst_label = ctk.CTkLabel(left_frame, text=instructions, wraplength=244, justify="left", 
+                                 font=(_FONT_UI, FONT_SIZE['sm']), text_color=self.TEXT_SECONDARY)
+        inst_label.pack(pady=(0, SPACE['sm']), padx=SPACE['lg'], anchor='w')
 
-        legend_header = ctk.CTkLabel(left_frame, text=TEXTS["tree_labeler_legend_title"], font=(_FONT_UI, 12, "bold"),
-                                    text_color=self.ACCENT_BLUE)
-        legend_header.pack(pady=(20, 5), padx=15)
+        legend_header = ctk.CTkLabel(left_frame, text=TEXTS["tree_labeler_legend_title"],
+                                     font=(_FONT_UI, FONT_SIZE['xs'], "bold"),
+                                     text_color=self.TEXT_SECONDARY)
+        legend_header.pack(pady=(SPACE['lg'], SPACE['xs']), padx=SPACE['lg'], anchor='w')
         
-        self.legend_frame = ctk.CTkFrame(left_frame, fg_color=self.BG_CARD, corner_radius=8)
-        self.legend_frame.pack(fill='both', expand=True, padx=15, pady=5)
+        self.legend_frame = ctk.CTkFrame(left_frame, fg_color=self.BG_CARD, corner_radius=RADIUS['card'])
+        self.legend_frame.pack(fill='both', expand=True, padx=SPACE['lg'], pady=SPACE['xs'])
 
         btn_frame = ctk.CTkFrame(left_frame, fg_color='transparent')
-        btn_frame.pack(side='bottom', fill='x', padx=12, pady=15)
+        btn_frame.pack(side='bottom', fill='x', padx=SPACE['lg'], pady=SPACE['lg'])
         
         ctk.CTkButton(btn_frame, text=TEXTS["tree_labeler_btn_save"], fg_color=self.SUCCESS, hover_color=self.SUCCESS_HOVER,
-                     command=self._on_save, height=40, font=(_FONT_UI, 12, "bold"),
-                     text_color=self.TEXT_PRIMARY, corner_radius=6).pack(fill='x', pady=5)
-        ctk.CTkButton(btn_frame, text=TEXTS["tree_labeler_btn_cancel"], fg_color='#3d3d3d', hover_color='#4d4d4d',
-                     command=self.destroy, height=40, font=(_FONT_UI, 12, "bold"),
-                     text_color=self.TEXT_PRIMARY, corner_radius=6).pack(fill='x', pady=5)
+                     command=self._on_save, height=40, font=(_FONT_UI, FONT_SIZE['md'], "bold"),
+                     text_color='#ffffff', corner_radius=RADIUS['card']).pack(fill='x', pady=(0, SPACE['sm']))
+        ctk.CTkButton(btn_frame, text=TEXTS["tree_labeler_btn_cancel"], fg_color=PALETTE['neutral_fill'],
+                     hover_color=mix(PALETTE['neutral_fill'], '#ffffff', 0.08),
+                     command=self.destroy, height=40, font=(_FONT_UI, FONT_SIZE['md'], "bold"),
+                     text_color='#ffffff', corner_radius=RADIUS['card']).pack(fill='x')
 
         # Gráfico
         if self.tree_path is None:
-            ctk.CTkLabel(plot_frame, text=TEXTS["tree_err_no_tree"], font=("Arial", 14)).pack(pady=50)
+            ctk.CTkLabel(plot_frame, text=TEXTS["tree_err_no_tree"], font=(_FONT_UI, FONT_SIZE['lg']),
+                         text_color=self.TEXT_SECONDARY).pack(pady=48)
             return
 
         try:
             self.tree = Phylo.read(str(self.tree_path), 'newick')
         except Exception as e:
-            ctk.CTkLabel(plot_frame, text=TEXTS["tree_err_load"].format(error=e), font=("Arial", 12)).pack(pady=50)
+            ctk.CTkLabel(plot_frame, text=TEXTS["tree_err_load"].format(error=e), font=(_FONT_UI, FONT_SIZE['sm']),
+                         text_color=PALETTE['danger_text']).pack(pady=48)
             return
 
         # Matplotlib
         self.fig = Figure(figsize=(12, 10), dpi=110)
-        self.fig.patch.set_facecolor('#0a0a0a')
+        self.fig.patch.set_facecolor(self.BG_DARK)
         self.ax = self.fig.add_subplot(111)
-        self.ax.set_facecolor('#0a0a0a')
+        self.fig.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.02)
+        self.ax.set_facecolor(self.BG_DARK)
         
         self.ax.set_xticks([])
         self.ax.set_yticks([])
@@ -359,7 +378,7 @@ class TreeLabelWindow(ctk.CTkToplevel):
         Se um nó descendente também foi marcado, aquela cor SOBREPÕE a anterior.
         """
         self.ax.clear()
-        self.ax.set_facecolor('#0a0a0a')
+        self.ax.set_facecolor(self.BG_DARK)
         
         self.ax.set_xticks([])
         self.ax.set_yticks([])
@@ -546,7 +565,9 @@ class TreeLabelWindow(ctk.CTkToplevel):
                 max_label_len = 20
             
             x_range = max_x - min_x if max_x > min_x else 0.01
-            right_margin = max(x_range * 0.35, 0.003) + (max_label_len * 0.0012)
+            # espaço à direita proporcional ao maior nome (não corta rótulos
+            # quando a janela é ajustada a telas menores)
+            right_margin = max(x_range * (0.25 + 0.012 * max_label_len), 0.003)
             
             self.ax.set_xlim(min_x - x_range * 0.03, max_x + right_margin)
             self.ax.set_ylim(min_y - 2.5, max_y + 2.5)
@@ -679,44 +700,44 @@ class TreeLabelWindow(ctk.CTkToplevel):
 
         if not active_tags:
             ctk.CTkLabel(self.legend_frame, text=TEXTS["tree_labeler_no_tags"],
-                         text_color="#888888", font=(_FONT_UI, 13, "italic")
-                         ).pack(anchor='w', padx=15, pady=10)
+                         text_color=self.TEXT_TERTIARY, font=(_FONT_UI, FONT_SIZE['sm'])
+                         ).pack(anchor='w', padx=SPACE['md'], pady=SPACE['md'])
         else:
             for tag in active_tags:
                 color = self._get_tag_color(tag)
 
                 row_frame = ctk.CTkFrame(self.legend_frame, fg_color="transparent")
-                row_frame.pack(fill='x', padx=8, pady=3)
+                row_frame.pack(fill='x', padx=SPACE['sm'], pady=SPACE['xs'])
 
                 color_box = Canvas(row_frame, width=22, height=16, highlightthickness=0)
                 try:
                     color_box.configure(bg=self.legend_frame.cget('fg_color')[1])
                 except Exception:
-                    color_box.configure(bg='#16161a')
+                    color_box.configure(bg=self.BG_CARD)
                 color_box.create_rectangle(2, 2, 20, 14, fill=color, outline='white', width=1)
-                color_box.pack(side='left', padx=(4, 4))
+                color_box.pack(side='left', padx=SPACE['xs'])
 
                 tag_label = ctk.CTkLabel(row_frame, text=tag,
-                                         font=(_FONT_UI, 12, "bold"),
+                                         font=(_FONT_UI, FONT_SIZE['sm'], "bold"),
                                          text_color=color)
-                tag_label.pack(side='left', padx=(0, 4))
+                tag_label.pack(side='left', padx=(0, SPACE['xs']))
 
                 count = sum(1 for t in self.clade_tags.values() if t == tag)
                 ctk.CTkLabel(row_frame, text=f"({count})",
-                             font=(_FONT_UI, 12),
-                             text_color="#888888").pack(side='left')
+                             font=(_FONT_UI, FONT_SIZE['sm']),
+                             text_color=self.TEXT_TERTIARY).pack(side='left')
 
                 del_btn = ctk.CTkButton(
-                    row_frame, text="X", width=22, height=22,
+                    row_frame, text="X", width=24, height=24,
                     fg_color='transparent',
-                    hover_color=self.DANGER,
-                    text_color='#888888',
+                    hover_color=hover_tint(self.DANGER, self.BG_CARD),
+                    text_color=self.TEXT_TERTIARY,
                     border_width=0,
-                    corner_radius=4,
-                    font=(_FONT_UI, 13, "bold"),
+                    corner_radius=RADIUS['field'],
+                    font=(_FONT_UI, FONT_SIZE['sm'], "bold"),
                     command=lambda t=tag: self._delete_tag(t)
                 )
-                del_btn.pack(side='right', padx=(0, 4))
+                del_btn.pack(side='right', padx=(0, SPACE['xs']))
 
     def _on_save(self):
         """Salva árvore etiquetada em formato Newick"""
@@ -770,30 +791,33 @@ class TreeLabelWindow(ctk.CTkToplevel):
 
 class App(ctk.CTk):
     # ═══════════════════════════════════════════════════════════════════════
-    # PALETA DE CORES PREMIUM - Estilo YouTube/Instagram Dark
+    # PALETA — dark mode em camadas (janela -> painel -> cartão -> elevado),
+    # separadas por tom. Valores centralizados em ui_helpers.PALETTE.
     # ═══════════════════════════════════════════════════════════════════════
     COLORS = {
-        # Backgrounds — near-black, layered dark
-        'bg_darkest':     '#07070a',
-        'bg_dark':        '#0d0d11',
-        'bg_sidebar':     '#111118',
-        'bg_card':        '#17171f',
-        'bg_card_hover':  '#20202c',
-        'bg_feed':        '#1c1c26',   # elevated surface — lighter than bg_card
-        'bg_input':       '#1e1e2a',
+        # Fundos (do mais escuro ao mais claro)
+        'bg_darkest':     PALETTE['bg_window'],
+        'bg_dark':        PALETTE['bg_window'],
+        'bg_sidebar':     PALETTE['bg_panel'],
+        'bg_card':        PALETTE['bg_surface'],
+        'bg_feed':        PALETTE['bg_elevated'],
+        'bg_card_hover':  PALETTE['bg_elevated'],
+        'bg_hover':       PALETTE['bg_elevated_hover'],
+        'bg_input':       PALETTE['bg_inset'],
 
-        # Text hierarchy — higher contrast than before
-        'text_primary':   '#eeeef2',
-        'text_secondary': '#a0a0b4',
+        # Texto (contraste >= 4,5:1 em todas as camadas acima)
+        'text_primary':   PALETTE['text_primary'],
+        'text_secondary': PALETTE['text_secondary'],
         'text_tertiary':  '#8e8ea4',   # contraste >= 4,5:1 nos cartões
         'text_muted':     '#8a8aa0',
 
-        # Primary accent — indigo
+        # Acento principal — índigo (foco / ação primária)
         'accent_blue':        '#6366f1',
-        'accent_blue_hover':  '#4f46e5',
-        'accent_blue_light':  '#818cf8',
+        'accent_blue_hover':  mix(PALETTE['accent_fill'], '#000000', 0.2),
+        'accent_blue_light':  PALETTE['accent_text'],
+        'accent_fill':        PALETTE['accent_fill'],
 
-        # Secondary accents
+        # Acentos secundários (só cores de modelo / ícones de estado)
         'accent_cyan':        '#22d3ee',
         'accent_cyan_hover':  '#06b6d4',
         'accent_purple':      '#a78bfa',
@@ -801,22 +825,25 @@ class App(ctk.CTk):
         'accent_pink':        '#f472b6',
         'accent_pink_hover':  '#db2777',
 
-        # Status
-        'success':        '#22c55e',
+        # Estado
+        'success':        PALETTE['success_text'],
         'success_hover':  '#16a34a',
         'success_light':  '#86efac',
-        'warning':        '#f59e0b',
+        'warning':        PALETTE['warning_text'],
         'warning_hover':  '#d97706',
-        'danger':         '#f87171',
+        'danger':         PALETTE['danger_text'],
         'danger_hover':   '#ef4444',
-        'info':           '#22d3ee',
+        'info':           PALETTE['info_text'],
         'info_hover':     '#06b6d4',
 
-        # Borders — slightly more visible
-        'border':         '#262632',
-        'border_hover':   '#3a3a4e',
+        # Contornos (só em controles: campo, botão secundário)
+        'border':         PALETTE['control_border'],
+        'border_hover':   PALETTE['control_border_hover'],
+        'divider':        PALETTE['divider'],
     }
-    
+
+    SIDEBAR_WIDTH = 320
+
     def __init__(self):
         super().__init__()
         from backend.version import __version__
@@ -852,344 +879,400 @@ class App(ctk.CTk):
 
         # Auto-detect CPU cores; user can adjust via slider
         _max_cores = CodemlBatchAnalysis.available_cores()
-        self.cores_var = ctk.IntVar(value=_max_cores)
+        # padrão: metade dos núcleos (deixa o computador usável durante a análise)
+        self.cores_var = ctk.IntVar(value=max(1, _max_cores // 2))
         self.ignore_stop_codons_var = ctk.BooleanVar(value=False)
         self.auto_prune_tree_var = ctk.BooleanVar(value=True)
 
         self.tree_branch_labeled = None
         self.tree_branchsite_labeled = None
 
+        # estado só de aparência (lido por _refresh_visual_state)
+        self._visual_sig = None
+        self._gene_count_cache = {}
+        self._slots = {}
+        self._tiles = {}
+        self._tile_parts = {}
+        self._auto_nulls = {}
+
+        C = self.COLORS
+        sp = SPACE
+        fs = FONT_SIZE
+        # largura útil do conteúdo do painel lateral (painel - barra de rolagem - margens)
+        side_inner = self.SIDEBAR_WIDTH - 28 - sp['lg'] - sp['sm']
+
         # ═══ SIDEBAR ═══
-        self.sidebar = ctk.CTkFrame(self, width=290, corner_radius=0,
-                                    fg_color=self.COLORS['bg_sidebar'],
-                                    border_width=1, border_color=self.COLORS['bg_card_hover'])
+        self.sidebar = ctk.CTkFrame(self, width=self.SIDEBAR_WIDTH, corner_radius=0,
+                                    fg_color=C['bg_sidebar'], border_width=0)
         self.sidebar.pack(side="left", fill="y", padx=0, pady=0)
         self.sidebar.pack_propagate(False)
 
-        # ── Logo ─────────────────────────────────────────────────────
+        # ── Marca: logo + nome + versão em chip ──────────────────────
         logo_frame = ctk.CTkFrame(self.sidebar, fg_color='transparent')
-        logo_frame.pack(fill="x", padx=16, pady=(20, 4))
+        logo_frame.pack(fill="x", padx=sp['lg'], pady=(sp['lg'], 0))
 
-        badge_row = ctk.CTkFrame(logo_frame, fg_color='transparent')
-        badge_row.pack(anchor='w')
-
-        badge = ctk.CTkFrame(badge_row, fg_color=self.COLORS['accent_blue'],
-                             width=38, height=38, corner_radius=10)
-        badge.pack(side='left', padx=(0, 11))
+        badge = ctk.CTkFrame(logo_frame, fg_color=C['accent_fill'],
+                             width=32, height=32, corner_radius=RADIUS['card'])
+        badge.pack(side='left', padx=(0, sp['md']))
         badge.pack_propagate(False)
-        ctk.CTkLabel(badge, text="EP", font=(_FONT_UI, 13, "bold"),
+        ctk.CTkLabel(badge, text="EP", font=(_FONT_UI, fs['sm'], "bold"),
                      text_color='#ffffff').pack(expand=True)
 
-        title_col = ctk.CTkFrame(badge_row, fg_color='transparent')
+        title_col = ctk.CTkFrame(logo_frame, fg_color='transparent')
         title_col.pack(side='left', anchor='center')
         ctk.CTkLabel(title_col, text=TEXTS["app_sidebar_title"],
-                     font=(_FONT_UI, 17, "bold"),
-                     text_color=self.COLORS['text_primary']).pack(anchor='w')
+                     font=(_FONT_UI, fs['lg'], "bold"), height=20,
+                     text_color=C['text_primary']).pack(anchor='w')
         ctk.CTkLabel(title_col, text=TEXTS["app_sidebar_subtitle"],
-                     font=(_FONT_UI, 13),
-                     text_color=self.COLORS['text_tertiary']).pack(anchor='w')
+                     font=(_FONT_UI, fs['xs']), height=16,
+                     text_color=C['text_tertiary']).pack(anchor='w')
+        ctk.CTkLabel(logo_frame, text=f"v{__version__}", font=(_FONT_UI, fs['xs']),
+                     fg_color=C['bg_card_hover'], corner_radius=RADIUS['field'], height=20,
+                     text_color=C['text_secondary']).pack(side='right', ipadx=sp['xs'])
 
-        ctk.CTkFrame(logo_frame, fg_color=self.COLORS['border'],
-                     height=1, corner_radius=0).pack(fill='x', pady=(14, 0))
-
-        # ── Scrollable section container ─────────────────────────────
-        _sb = ctk.CTkScrollableFrame(self.sidebar, fg_color='transparent',
-                                     scrollbar_button_color='#52526a',
-                                     scrollbar_button_hover_color='#6366f1')
-        _sb.pack(fill='both', expand=True, padx=0, pady=(4, 0))
+        # ── Container rolável com as etapas ──────────────────────────
+        _sb = ctk.CTkScrollableFrame(self.sidebar, fg_color='transparent', corner_radius=0,
+                                     scrollbar_button_color=C['border'],
+                                     scrollbar_button_hover_color=C['border_hover'])
+        _sb.pack(fill='both', expand=True, padx=0, pady=(sp['md'], 0))
 
         # ── Rodapé de idioma (fixo, fora do scroll) ──────────────────────
         self._build_lang_footer()
 
-        def _sec(parent, title, icon=""):
-            """Labeled card section with inner content frame."""
-            card = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'],
-                                corner_radius=10, border_width=1,
-                                border_color=self.COLORS['border'])
-            card.pack(fill='x', padx=10, pady=(0, 8))
-            hdr = ctk.CTkFrame(card, fg_color='transparent')
-            hdr.pack(fill='x', padx=14, pady=(10, 0))
-            # Small accent dot before section title
-            ctk.CTkFrame(hdr, fg_color=self.COLORS['accent_blue'],
-                         width=3, height=13, corner_radius=2).pack(side='left', padx=(0, 7), anchor='center')
-            ctk.CTkLabel(hdr,
-                         text=title,
-                         font=(_FONT_UI, 12, "bold"),
-                         text_color=self.COLORS['text_secondary']).pack(side='left', anchor='w')
-            ctk.CTkFrame(card, fg_color=self.COLORS['border'],
-                         height=1, corner_radius=0).pack(fill='x', padx=12, pady=(6, 0))
-            inner = ctk.CTkFrame(card, fg_color='transparent')
-            inner.pack(fill='x', padx=10, pady=(10, 12))
-            return inner
+        def _step(parent, number, title, first=False):
+            """Cabeçalho de etapa: círculo numerado (vira ✓) + título em maiúsculas."""
+            sec = ctk.CTkFrame(parent, fg_color='transparent')
+            sec.pack(fill='x', padx=(sp['lg'], sp['sm']), pady=(sp['sm'] if first else sp['xl'], 0))
+            hdr = ctk.CTkFrame(sec, fg_color='transparent')
+            hdr.pack(fill='x')
+            circle = ctk.CTkLabel(hdr, text=str(number) if number else "", width=20, height=20,
+                                  corner_radius=10, fg_color=C['bg_card_hover'],
+                                  font=(_FONT_UI, fs['xs'], "bold"), text_color=C['text_secondary'])
+            if number:
+                circle.pack(side='left', padx=(0, sp['sm']))
+            ctk.CTkLabel(hdr, text=title.upper(), font=(_FONT_UI, fs['xs'], "bold"), height=20,
+                         text_color=C['text_secondary'], anchor='w').pack(side='left')
+            side = ctk.CTkLabel(hdr, text="", font=(_FONT_UI, fs['xs']), height=20,
+                                text_color=C['text_tertiary'], anchor='e')
+            side.pack(side='right')
+            inner = ctk.CTkFrame(sec, fg_color='transparent')
+            inner.pack(fill='x', pady=(sp['sm'], 0))
+            return inner, circle, side
 
-        def _obtn(parent, text, cmd, color, **kw):
-            """Outline-style button — uniform border, accent on hover."""
+        def _obtn(parent, text, cmd, **kw):
+            """Botão secundário de contorno (tom + borda discreta)."""
             return ctk.CTkButton(
                 parent, text=text, command=cmd,
-                fg_color=self.COLORS['bg_card_hover'],
-                hover_color=color,
-                text_color=self.COLORS['text_primary'],
-                border_width=1, border_color=self.COLORS['border_hover'],
-                corner_radius=8, **kw)
+                fg_color=C['bg_card'],
+                hover_color=C['bg_card_hover'],
+                text_color=C['text_primary'],
+                text_color_disabled=C['text_tertiary'],
+                border_width=1, border_color=C['border'],
+                font=(_FONT_UI, fs['md'], "bold"), height=36,
+                corner_radius=RADIUS['card'], **kw)
 
-        # ── Arquivos ─────────────────────────────────────────────────
-        fi = _sec(_sb, TEXTS["section_files"])
+        def _help(parent, title_key, hint_key, fill=None, command=None):
+            """'?' de ajuda: sempre 20×20, mesmo estilo em todo o app."""
+            fill = fill or C['bg_card_hover']
+            return ctk.CTkButton(
+                parent, text="?", width=20, height=20, corner_radius=10,
+                font=(_FONT_UI, fs['xs'], "bold"), fg_color=fill,
+                hover_color=mix(fill, '#ffffff', 0.08),
+                text_color=C['text_secondary'],
+                command=command or (lambda: self._show_help(TEXTS[title_key], TEXTS[hint_key])))
 
-        self.btn_input = _obtn(fi, TEXTS["btn_input_folder"],
-                               self.select_input_folder,
-                               self.COLORS['accent_blue'],
-                               font=(_FONT_UI, 13, "bold"), height=36)
-        self.btn_input.pack(fill='x', pady=(0, 2))
-        self.label_input = ctk.CTkLabel(fi, text=TEXTS["label_not_selected"],
-                                        font=(_FONT_UI, 13),
-                                        wraplength=230,
-                                        text_color=self.COLORS['text_tertiary'])
-        self.label_input.pack(anchor='w', padx=4, pady=(0, 8))
+        def _switch(parent, variable, color, **kw):
+            return ctk.CTkSwitch(
+                parent, text="", variable=variable, onvalue=True, offvalue=False,
+                switch_width=36, switch_height=20, width=36,
+                progress_color=color, button_color=PALETTE['switch_knob'],
+                button_hover_color='#ffffff', fg_color=C['border'], **kw)
 
-        self.btn_tree = _obtn(fi, TEXTS["btn_tree_file"],
-                              self.select_tree_file,
-                              self.COLORS['accent_blue'],
-                              font=(_FONT_UI, 13, "bold"), height=36)
-        self.btn_tree.pack(fill='x', pady=(0, 2))
-        self.label_tree = ctk.CTkLabel(fi, text=TEXTS["label_not_selected"],
-                                       font=(_FONT_UI, 13),
-                                       wraplength=230,
-                                       text_color=self.COLORS['text_tertiary'])
-        self.label_tree.pack(anchor='w', padx=4, pady=(0, 8))
+        def _slot(parent, title_key, command):
+            """Cartão de arquivo: ícone + título + estado; o cartão inteiro e o
+            botão chamam a mesma função select_* de antes."""
+            card = ctk.CTkFrame(parent, fg_color=C['bg_card'], corner_radius=RADIUS['card'],
+                                border_width=1, border_color=C['border'])
+            card.pack(fill='x', pady=(0, sp['sm']))
+            col = ctk.CTkFrame(card, fg_color='transparent')
+            col.pack(side='left', fill='x', expand=True, pady=sp['md'], padx=sp['md'])
+            title = ctk.CTkLabel(col, text=TEXTS[title_key], font=(_FONT_UI, fs['sm'], "bold"),
+                                 anchor='w', height=16, text_color=C['text_primary'])
+            title.pack(fill='x')
+            row = ctk.CTkFrame(col, fg_color='transparent')
+            row.pack(fill='x', pady=(sp['xs'], 0))
+            btn = ctk.CTkButton(row, text=TEXTS["slot_choose"], command=command, width=64, height=24,
+                                corner_radius=RADIUS['field'], font=(_FONT_UI, fs['xs'], "bold"),
+                                fg_color='transparent', hover_color=C['bg_hover'],
+                                text_color=C['text_secondary'], border_width=1,
+                                border_color=C['border'])
+            btn.pack(side='right', anchor='s')
+            # o texto completo continua no rótulo de sempre (escrito por select_*);
+            # o cartão mostra uma versão curta dele (_apply_visual_state)
+            detail = ctk.CTkLabel(card, text=TEXTS["label_not_selected"])
+            shown = ctk.CTkLabel(row, text=TEXTS["label_not_selected"], font=(_FONT_UI, fs['xs']),
+                                 anchor='w', justify='left', text_color=C['text_tertiary'])
+            shown.pack(side='left', fill='x', expand=True)
+            self._make_clickable(card, (card, col, title, row, shown), command,
+                                 lambda: self._slots and self._apply_visual_state(force=True))
+            return card, title, btn, detail, shown
 
-        self.btn_output = _obtn(fi, TEXTS["btn_output_folder"],
-                                self.select_output_folder,
-                                self.COLORS['accent_blue'],
-                                font=(_FONT_UI, 13, "bold"), height=36)
-        self.btn_output.pack(fill='x', pady=(0, 2))
-        self.label_output = ctk.CTkLabel(fi, text=TEXTS["label_not_selected"],
-                                         font=(_FONT_UI, 13),
-                                         wraplength=230,
-                                         text_color=self.COLORS['text_tertiary'])
-        self.label_output.pack(anchor='w', padx=4)
+        # ── 1 · Dados ────────────────────────────────────────────────
+        fi, self._step1_circle, _ = _step(_sb, 1, TEXTS["step_data"], first=True)
+        for key, title_key, cmd in (
+                ('input', "btn_input_folder", self.select_input_folder),
+                ('tree', "btn_tree_file", self.select_tree_file),
+                ('output', "btn_output_folder", self.select_output_folder)):
+            card, title, btn, detail, shown = _slot(fi, title_key, cmd)
+            self._slots[key] = (card, title, btn, detail, shown)
+            setattr(self, f"label_{key}", detail)
+            setattr(self, f"btn_{key}", btn)
 
-        # ── Resultados ───────────────────────────────────────────────
-        ri = _sec(_sb, TEXTS["section_results"])
+        # ── 2 · Modelos (resumo; os cartões ficam à direita) ─────────
+        mi, self._step2_circle, _ = _step(_sb, 2, TEXTS["step_models"])
+        self._step2_text = ctk.CTkLabel(mi, text=TEXTS["step_models_none"], font=(_FONT_UI, fs['sm']),
+                                        anchor='w', text_color=C['text_tertiary'])
+        self._step2_text.pack(fill='x', padx=(sp['xs'], 0))
 
-        self.btn_results = _obtn(ri, TEXTS["btn_view_results"],
-                                  self._open_results_viewer,
-                                  self.COLORS['accent_blue'],
-                                  font=(_FONT_UI, 13, "bold"), height=36)
-        self.btn_results.pack(fill='x', pady=(0, 6))
-        self.btn_results.configure(state="disabled")
+        # ── 3 · Configurações ────────────────────────────────────────
+        # Grade única: rótulo (col 0) | "?" (col 1) | controle (col 2).
+        ci, _c3, side3 = _step(_sb, 3, TEXTS["step_settings"])
+        side3.destroy()
+        # recolhida por padrão: cabeçalho clicável + resumo de uma linha
+        sec3, hdr3 = ci.master, ci.master.winfo_children()[0]
+        ci.pack_forget()
+        self._settings_body = ci
+        srow = ctk.CTkFrame(sec3, fg_color='transparent')
+        srow.pack(fill='x', pady=(sp['sm'], 0))
+        self._settings_btn = ctk.CTkButton(srow, text=TEXTS["settings_show"], width=64, height=20,
+                                           corner_radius=RADIUS['field'], fg_color='transparent',
+                                           hover_color=C['bg_card_hover'], text_color=C['accent_blue_light'],
+                                           border_width=1, border_color=C['border'],
+                                           font=(_FONT_UI, fs['xs'], "bold"),
+                                           command=self._toggle_settings)
+        self._settings_summary = ctk.CTkLabel(srow, text="", font=(_FONT_UI, fs['sm']), anchor='w',
+                                              justify='left', wraplength=side_inner - sp['xs'],
+                                              text_color=C['text_tertiary'])
+        self._settings_summary.pack(fill='x', padx=(sp['xs'], 0))
+        self._settings_btn.pack(anchor='w', pady=(sp['sm'], 0))
+        self._make_clickable(hdr3, [hdr3, srow, self._settings_summary] + [
+            w for w in hdr3.winfo_children() if not isinstance(w, ctk.CTkButton)], self._toggle_settings)
+        CTRL_W = 72
+        ci.grid_columnconfigure(0, weight=1)
+        ci.grid_columnconfigure(1, minsize=20 + sp['sm'])
+        ci.grid_columnconfigure(2, minsize=CTRL_W)
+        label_wrap = side_inner - CTRL_W - 20 - 2 * sp['sm']
+        _row = [0]
 
-        self.btn_update_results = _obtn(ri, TEXTS["btn_update_results"],
-                                         self._update_results_files,
-                                         self.COLORS['success'],
-                                         font=(_FONT_UI, 13, "bold"), height=36)
-        self.btn_update_results.pack(fill='x', pady=(0, 2))
-        self.label_update_results = ctk.CTkLabel(ri,
-                                                  text=TEXTS["label_update_results_hint"],
-                                                  font=(_FONT_UI, 13, "italic"),
-                                                  wraplength=230,
-                                                  text_color=self.COLORS['text_muted'])
-        self.label_update_results.pack(anchor='w', padx=4)
+        def _setting_label(text_key, gap):
+            lbl = ctk.CTkLabel(ci, text=TEXTS[text_key], font=(_FONT_UI, fs['sm']),
+                               anchor='w', justify='left', wraplength=label_wrap,
+                               text_color=C['text_secondary'])
+            lbl.grid(row=_row[0], column=0, sticky='w', pady=(gap, 0))
+            return lbl
 
-        # ── Configurações ────────────────────────────────────────────
-        ci = _sec(_sb, TEXTS["section_config"])
+        def _place_help(widget, gap):
+            widget.grid(row=_row[0], column=1, sticky='e', padx=(sp['sm'], sp['sm']), pady=(gap, 0))
 
-        ctk.CTkLabel(ci, text=TEXTS["label_omega_initial"],
-                     font=(_FONT_UI, 13, "bold"), anchor='w',
-                     text_color=self.COLORS['text_secondary']).pack(anchor='w')
+        def _place_ctrl(widget, gap):
+            widget.grid(row=_row[0], column=2, sticky='e', pady=(gap, 0))
+
+        def _place_full(widget, gap=sp['sm']):
+            _row[0] += 1
+            widget.grid(row=_row[0], column=0, columnspan=3, sticky='ew', pady=(gap, 0))
+
+        # ω inicial
+        _setting_label("label_omega_initial", 0)
         self.omega_label = ctk.CTkLabel(ci, text="")  # kept for compat, unused
-        self.entry_omega = ctk.CTkEntry(ci, placeholder_text="0.5",
-                                        fg_color=self.COLORS['bg_card_hover'],
-                                        border_color=self.COLORS['border_hover'],
+        self.entry_omega = ctk.CTkEntry(ci, placeholder_text="0.5", width=CTRL_W,
+                                        fg_color=C['bg_input'],
+                                        border_color=C['border'],
                                         border_width=1,
-                                        corner_radius=8,
-                                        text_color=self.COLORS['text_primary'],
-                                        height=32)
+                                        corner_radius=RADIUS['field'],
+                                        text_color=C['text_primary'],
+                                        justify='right', height=32)
         self.entry_omega.insert(0, "0.5")
-        self.entry_omega.pack(fill='x', pady=(4, 10))
+        _place_ctrl(self.entry_omega, 0)
+        _place_help(_help(ci, "label_omega_initial", "label_omega_initial_hint"), 0)
 
         # Frequências de códons (global; a janela "editar" de cada modelo pode mudar)
-        row_cf = ctk.CTkFrame(ci, fg_color='transparent')
-        row_cf.pack(fill='x')
-        ctk.CTkLabel(row_cf, text=TEXTS["label_codonfreq"],
-                     font=(_FONT_UI, 13, "bold"), anchor='w',
-                     text_color=self.COLORS['text_secondary']).pack(side='left')
-        ctk.CTkButton(row_cf, text="?", width=22, height=22, corner_radius=11,
-                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
-                      hover_color=self.COLORS['border_hover'],
-                      text_color=self.COLORS['text_primary'],
-                      command=lambda: self._show_help(
-                          TEXTS["label_codonfreq"], TEXTS["label_codonfreq_hint"])
-                      ).pack(side='right')
+        _row[0] += 1
+        _setting_label("label_codonfreq", sp['md'])
+        _place_help(_help(ci, "label_codonfreq", "label_codonfreq_hint"), sp['md'])
         self.codonfreq_var = ctk.StringVar(value=codonfreq_label(DEFAULT_CODONFREQ))
-        ctk.CTkOptionMenu(ci, variable=self.codonfreq_var,
-                          values=[codonfreq_label(v) for v, _, _ in CODONFREQ_OPTIONS],
-                          fg_color=self.COLORS['bg_card_hover'], button_color=self.COLORS['border_hover'],
-                          text_color=self.COLORS['text_primary'], height=30
-                          ).pack(fill='x', pady=(4, 10))
+        _place_full(ctk.CTkOptionMenu(ci, variable=self.codonfreq_var,
+                                      values=[codonfreq_label(v) for v, _, _ in CODONFREQ_OPTIONS],
+                                      fg_color=C['bg_card_hover'], button_color=C['border'],
+                                      button_hover_color=C['border_hover'],
+                                      dropdown_fg_color=C['bg_card_hover'],
+                                      dropdown_hover_color=C['bg_hover'],
+                                      dropdown_text_color=C['text_primary'],
+                                      text_color=C['text_primary'], height=32,
+                                      corner_radius=RADIUS['field'],
+                                      font=(_FONT_UI, fs['sm'])))
 
-        ctk.CTkLabel(ci, text=TEXTS["label_ncatg"],
-                     font=(_FONT_UI, 13, "bold"), anchor='w',
-                     text_color=self.COLORS['text_secondary']).pack(anchor='w')
-        self.entry_ncatg = ctk.CTkEntry(ci, fg_color=self.COLORS['bg_card_hover'],
-                                        border_color=self.COLORS['border_hover'], border_width=1,
-                                        corner_radius=8, text_color=self.COLORS['text_primary'],
-                                        height=32)
+        # Categorias da beta
+        _row[0] += 1
+        _setting_label("label_ncatg", sp['md'])
+        self.entry_ncatg = ctk.CTkEntry(ci, fg_color=C['bg_input'], width=CTRL_W,
+                                        border_color=C['border'], border_width=1,
+                                        corner_radius=RADIUS['field'], text_color=C['text_primary'],
+                                        justify='right', height=32)
         self.entry_ncatg.insert(0, str(DEFAULT_CTL_PARAMS['ncatG']))
-        self.entry_ncatg.pack(fill='x', pady=(4, 10))
+        _place_ctrl(self.entry_ncatg, sp['md'])
+        _place_help(_help(ci, "label_ncatg", "label_ncatg_hint"), sp['md'])
 
-        row_to = ctk.CTkFrame(ci, fg_color='transparent')
-        row_to.pack(fill='x')
-        ctk.CTkLabel(row_to, text=TEXTS["label_timeout"],
-                     font=(_FONT_UI, 13, "bold"), anchor='w',
-                     text_color=self.COLORS['text_secondary']).pack(side='left')
-        ctk.CTkButton(row_to, text="?", width=22, height=22, corner_radius=11,
-                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
-                      hover_color=self.COLORS['border_hover'],
-                      text_color=self.COLORS['text_primary'],
-                      command=lambda: self._show_help(
-                          TEXTS["label_timeout"], TEXTS["label_timeout_hint"])
-                      ).pack(side='right')
+        # Tempo limite por execução (vazio = automático)
+        _row[0] += 1
+        _setting_label("label_timeout", sp['md'])
         self.entry_timeout = ctk.CTkEntry(ci, placeholder_text=TEXTS["label_timeout_auto"],
-                                          fg_color=self.COLORS['bg_card_hover'],
-                                          border_color=self.COLORS['border_hover'], border_width=1,
-                                          corner_radius=8, text_color=self.COLORS['text_primary'],
-                                          height=32)
-        self.entry_timeout.pack(fill='x', pady=(4, 10))
+                                          width=CTRL_W, fg_color=C['bg_input'],
+                                          border_color=C['border'], border_width=1,
+                                          corner_radius=RADIUS['field'],
+                                          text_color=C['text_primary'],
+                                          placeholder_text_color=C['text_muted'],
+                                          justify='right', height=32)
+        _place_ctrl(self.entry_timeout, sp['md'])
+        _place_help(_help(ci, "label_timeout", "label_timeout_hint"), sp['md'])
 
         # Remover gaps toggle
         self.cleandata_var = ctk.BooleanVar(value=True)
-        row_g = ctk.CTkFrame(ci, fg_color='transparent')
-        row_g.pack(fill='x', pady=(0, 8))
-        ctk.CTkLabel(row_g, text=TEXTS["label_remove_gaps"],
-                     font=(_FONT_UI, 12),
-                     text_color=self.COLORS['text_secondary']).pack(side='left')
-        self.cb_cleandata = ctk.CTkSwitch(
-            row_g, text="",
-            variable=self.cleandata_var,
-            onvalue=True, offvalue=False,
-            switch_width=36, switch_height=18,
-            progress_color=self.COLORS['success'],
-            button_color='#f0fdf4',
-            button_hover_color='#dcfce7',
-            fg_color=self.COLORS['border'])
-        self.cb_cleandata.pack(side='right')
-        ctk.CTkButton(row_g, text="?", width=18, height=18, corner_radius=9,
-                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
-                      hover_color=self.COLORS['border_hover'],
-                      text_color=self.COLORS['text_primary'],
-                      command=lambda: self._show_help(
-                          TEXTS["label_remove_gaps"], TEXTS["label_remove_gaps_hint"])
-                      ).pack(side='right', padx=(0, 4))
+        _row[0] += 1
+        _setting_label("label_remove_gaps", sp['md'])
+        self.cb_cleandata = _switch(ci, self.cleandata_var, C['success'])
+        _place_ctrl(self.cb_cleandata, sp['md'])
+        _place_help(_help(ci, "label_remove_gaps", "label_remove_gaps_hint"), sp['md'])
 
         # CPU slider
-        ctk.CTkLabel(ci, text=TEXTS["label_cpus"],
-                     font=(_FONT_UI, 13, "bold"), anchor='w',
-                     text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(0, 4))
-        cores_row = ctk.CTkFrame(ci, fg_color='transparent')
-        cores_row.pack(fill='x', pady=(0, 2))
+        _row[0] += 1
+        _setting_label("label_cpus", sp['md'])
         _max = CodemlBatchAnalysis.available_cores()
+        self.cores_disp = ctk.CTkLabel(
+            ci, text=f"{int(self.cores_var.get())}×",
+            font=(_FONT_UI, fs['sm'], "bold"),
+            text_color=C['accent_blue_light'], anchor='e',
+            width=CTRL_W)
+        _place_ctrl(self.cores_disp, sp['md'])
+        _place_help(_help(ci, "label_cpus", "label_cpus_hint"), sp['md'])
         self.cores_slider = ctk.CTkSlider(
-            cores_row, from_=1, to=max(2, _max),
+            ci, from_=1, to=max(2, _max),
             number_of_steps=max(1, _max - 1),
             variable=self.cores_var,
             command=self._update_cores_label,
-            button_color=self.COLORS['accent_blue'],
-            progress_color=self.COLORS['accent_blue'])
-        self.cores_slider.pack(fill='x', side='left', expand=True)
+            height=16,
+            fg_color=C['border'],
+            button_color=C['accent_blue'],
+            button_hover_color=C['accent_blue_light'],
+            progress_color=C['accent_blue'])
+        _place_full(self.cores_slider, sp['xs'])
         disable_mouse_wheel(self.cores_slider)   # rolar o painel não muda o valor
-        self.cores_disp = ctk.CTkLabel(
-            cores_row, text=f"{_max}×",
-            font=(_FONT_UI, 12, "bold"),
-            text_color=self.COLORS['accent_blue_light'],
-            width=40)
-        self.cores_disp.pack(side='right', padx=(6, 0))
-        ctk.CTkLabel(ci, text=TEXTS["label_cpus_detected"].format(n=_max),
-                     font=(_FONT_UI, 13),
-                     text_color=self.COLORS['text_muted']).pack(anchor='w')
+        _place_full(ctk.CTkLabel(ci, text=TEXTS["label_cpus_detected"].format(n=_max),
+                                 font=(_FONT_UI, fs['xs']), anchor='w', height=16,
+                                 text_color=C['text_muted']), sp['xs'])
 
         # Ignorar Stop Codons toggle
-        row_stops = ctk.CTkFrame(ci, fg_color='transparent')
-        row_stops.pack(fill='x', pady=(10, 0))
-        ctk.CTkLabel(row_stops, text=TEXTS["label_ignore_stops"],
-                     font=(_FONT_UI, 12),
-                     text_color=self.COLORS['text_secondary']).pack(side='left')
-        self.cb_ignore_stops = ctk.CTkSwitch(
-            row_stops, text="",
-            variable=self.ignore_stop_codons_var,
-            onvalue=True, offvalue=False,
-            switch_width=36, switch_height=18,
-            progress_color=self.COLORS['accent_cyan'],
-            button_color='#f0fdff',
-            button_hover_color='#cffafe',
-            fg_color=self.COLORS['border'])
-        self.cb_ignore_stops.pack(side='right')
-        ctk.CTkButton(row_stops, text="?", width=18, height=18, corner_radius=9,
-                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
-                      hover_color=self.COLORS['border_hover'],
-                      text_color=self.COLORS['text_primary'],
-                      command=lambda: self._show_help(
-                          TEXTS["label_ignore_stops"], TEXTS["label_ignore_stops_hint"])
-                      ).pack(side='right', padx=(0, 4))
+        _row[0] += 1
+        _setting_label("label_ignore_stops", sp['md'])
+        self.cb_ignore_stops = _switch(ci, self.ignore_stop_codons_var, C['accent_cyan'])
+        _place_ctrl(self.cb_ignore_stops, sp['md'])
+        _place_help(_help(ci, "label_ignore_stops", "label_ignore_stops_hint"), sp['md'])
 
         # Incluir M8a como nulo automático do M8
-        row_m8a = ctk.CTkFrame(ci, fg_color='transparent')
-        row_m8a.pack(fill='x', pady=(10, 0))
-        ctk.CTkLabel(row_m8a, text=TEXTS["label_include_m8a"],
-                     font=(_FONT_UI, 12),
-                     text_color=self.COLORS['text_secondary']).pack(side='left')
-        ctk.CTkSwitch(row_m8a, text="", variable=self.include_m8a_var,
-                      onvalue=True, offvalue=False, switch_width=36, switch_height=18,
-                      progress_color=self.COLORS['accent_cyan'], button_color='#f0fdff',
-                      button_hover_color='#cffafe', fg_color=self.COLORS['border']).pack(side='right')
-        ctk.CTkButton(row_m8a, text="?", width=18, height=18, corner_radius=9,
-                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
-                      hover_color=self.COLORS['border_hover'],
-                      text_color=self.COLORS['text_primary'],
-                      command=lambda: self._show_help(
-                          TEXTS["label_include_m8a"], TEXTS["label_include_m8a_hint"])
-                      ).pack(side='right', padx=(0, 4))
+        _row[0] += 1
+        _setting_label("label_include_m8a", sp['md'])
+        _place_ctrl(_switch(ci, self.include_m8a_var, C['accent_cyan']), sp['md'])
+        _place_help(_help(ci, "label_include_m8a", "label_include_m8a_hint"), sp['md'])
 
         # Poda automática de árvore toggle
-        row_prune = ctk.CTkFrame(ci, fg_color='transparent')
-        row_prune.pack(fill='x', pady=(10, 0))
-        ctk.CTkLabel(row_prune, text=TEXTS["label_auto_prune"],
-                     font=(_FONT_UI, 12),
-                     text_color=self.COLORS['text_secondary']).pack(side='left')
-        self.cb_auto_prune = ctk.CTkSwitch(
-            row_prune, text="",
-            variable=self.auto_prune_tree_var,
-            onvalue=True, offvalue=False,
-            switch_width=36, switch_height=18,
-            progress_color=self.COLORS['accent_cyan'],
-            button_color='#f0fdff',
-            button_hover_color='#cffafe',
-            fg_color=self.COLORS['border'])
-        self.cb_auto_prune.pack(side='right')
-        ctk.CTkButton(row_prune, text="?", width=18, height=18, corner_radius=9,
-                      font=(_FONT_UI, 12, "bold"), fg_color=self.COLORS['border'],
-                      hover_color=self.COLORS['border_hover'],
-                      text_color=self.COLORS['text_primary'],
-                      command=lambda: self._show_help(
-                          TEXTS["label_auto_prune"], TEXTS["label_auto_prune_hint"])
-                      ).pack(side='right', padx=(0, 4))
+        _row[0] += 1
+        _setting_label("label_auto_prune", sp['md'])
+        self.cb_auto_prune = _switch(ci, self.auto_prune_tree_var, C['accent_cyan'])
+        _place_ctrl(self.cb_auto_prune, sp['md'])
+        _place_help(_help(ci, "label_auto_prune", "label_auto_prune_hint"), sp['md'])
 
-        self.main_frame = ctk.CTkFrame(self, fg_color=self.COLORS['bg_dark'])
-        self.main_frame.pack(side="right", fill="both", expand=True, padx=20, pady=20)
+        # ── Resultados de uma análise anterior ───────────────────────
+        ri, _c4, _ = _step(_sb, None, TEXTS["step_results"])
+        self.btn_results = _obtn(ri, TEXTS["btn_view_results"], self._open_results_viewer)
+        self.btn_results.pack(fill='x', pady=(0, sp['sm']))
+        self.btn_results.configure(state="disabled")
 
-        self.files_hint = ctk.CTkLabel(self.main_frame, text=TEXTS["hint_select_files"],
-                                       font=(_FONT_UI, 13, "bold"), anchor='w', justify='left',
-                                       text_color=self.COLORS['warning'], wraplength=900)
-        self.files_hint.pack(fill='x', pady=(0, 6))
-        self.tabs = ctk.CTkTabview(self.main_frame, fg_color=self.COLORS['bg_card'],
-                                   segmented_button_fg_color=self.COLORS['bg_card'],
-                                   segmented_button_selected_color=PALETTE['accent_fill'],
-                                   segmented_button_selected_hover_color=self.COLORS['accent_blue_hover'],
-                                   text_color='#ffffff',
-                                   corner_radius=10)
-        self.tabs.pack(fill="both", expand=True, padx=0, pady=(0, 15))
+        self.btn_update_results = _obtn(ri, TEXTS["btn_update_results"],
+                                        self._update_results_files)
+        self.btn_update_results.pack(fill='x')
+        self.label_update_results = ctk.CTkLabel(ri,
+                                                  text=TEXTS["label_update_results_hint"],
+                                                  font=(_FONT_UI, fs['xs']), anchor='w',
+                                                  justify='left',
+                                                  wraplength=side_inner - sp['xs'],
+                                                  text_color=C['text_muted'])
+        self.label_update_results.pack(fill='x', padx=sp['xs'], pady=(sp['xs'], 0))
+
+        # respiro no fim da rolagem
+        ctk.CTkFrame(_sb, fg_color='transparent', height=sp['xl']).pack(fill='x')
+
+        # ═══ ÁREA PRINCIPAL ═══
+        self.main_frame = ctk.CTkFrame(self, fg_color=C['bg_dark'], corner_radius=0)
+        self.main_frame.pack(side="right", fill="both", expand=True, padx=sp['xl'], pady=sp['lg'])
+
+        # ── Cabeçalho: título forte + chip de estado ────────────────
+        top = ctk.CTkFrame(self.main_frame, fg_color='transparent')
+        top.pack(fill='x', pady=(0, sp['md']))
+        tcol = ctk.CTkFrame(top, fg_color='transparent')
+        tcol.pack(side='left', fill='x', expand=True)
+        ctk.CTkLabel(tcol, text=TEXTS["app_main_title"], font=(_FONT_UI, fs['xxl'], "bold"),
+                     height=24, anchor='w', text_color=C['text_primary']).pack(fill='x')
+        ctk.CTkLabel(tcol, text=TEXTS["app_main_subtitle"], font=(_FONT_UI, fs['sm']),
+                     height=16, anchor='w', text_color=C['text_tertiary']).pack(fill='x')
+
+        self.stop_label = ctk.CTkLabel(
+            top, text=TEXTS["status_stops_template"].format(n=0),
+            font=(_FONT_UI, fs['sm'], "bold"), height=28, corner_radius=12,
+            fg_color=C['bg_card'], text_color=C['danger'])
+        self.stop_label.pack(side='right', ipadx=sp['sm'])
+        self.status_indicator = ctk.CTkLabel(
+            top, text=TEXTS["status_ready"],
+            font=(_FONT_UI, fs['sm'], "bold"), height=28, corner_radius=12,
+            fg_color=mix(C['bg_dark'], C['text_tertiary'], 0.16),
+            text_color=C['text_tertiary']
+        )
+        self.status_indicator.pack(side='right', padx=(0, sp['sm']), ipadx=sp['sm'])
+
+        self.files_hint = ctk.CTkLabel(self.main_frame, text="⚠  " + TEXTS["hint_select_files"],
+                                       font=(_FONT_UI, fs['sm']), anchor='w', justify='left',
+                                       height=32, corner_radius=RADIUS['card'],
+                                       fg_color=mix(C['bg_dark'], C['warning'], 0.12),
+                                       text_color=C['warning'], wraplength=900)
+        self.files_hint.pack(fill='x', pady=(0, sp['md']), ipadx=sp['md'])
+
+        # ── 2 · Modelos: abas com "tiles" ──────────────────────────
+        self.tabs = ctk.CTkTabview(self.main_frame, fg_color=C['bg_dark'],
+                                   segmented_button_fg_color=C['bg_card'],
+                                   segmented_button_selected_color=C['border_hover'],
+                                   segmented_button_selected_hover_color=C['border_hover'],
+                                   segmented_button_unselected_color=C['bg_card'],
+                                   segmented_button_unselected_hover_color=C['bg_card_hover'],
+                                   text_color=C['text_primary'], anchor='nw',
+                                   corner_radius=RADIUS['card'], border_width=0, height=224)
+        # altura fixa: os cartões cabem e o log fica com o espaço que sobra
+        self.tabs.pack(fill="x", padx=0, pady=(0, sp['md']))
         self.tabs.add(TEXTS["tab_site_models"])
         self.tabs.add(TEXTS["tab_branch_model"])
         self.tabs.add(TEXTS["tab_branchsite"])
+
+        # na mesma linha das abas, à direita: contagem + modelos nulos automáticos
+        models_hdr = ctk.CTkFrame(self.tabs, fg_color=C['bg_dark'], corner_radius=0)
+        models_hdr.place(relx=1.0, x=0, y=0, anchor='ne')
+        self._models_count = ctk.CTkLabel(models_hdr, text="", font=(_FONT_UI, fs['xs'], "bold"),
+                                          height=28, text_color=C['text_tertiary'])
+        self._models_count.pack(side='left', padx=(0, sp['lg']))
+        ctk.CTkLabel(models_hdr, text=TEXTS["label_neutral_models"],
+                     font=(_FONT_UI, fs['sm']), height=28,
+                     text_color=C['text_secondary']).pack(side='left')
+        help_btn = _help(models_hdr, None, None, command=self._show_neutral_models_info)
+        help_btn.pack(side="left", padx=sp['sm'])
+        # rótulo | ? | interruptor — mesma ordem do painel lateral
+        neutral_sw = _switch(models_hdr, self.include_neutral_models, C['accent_blue'])
+        neutral_sw.pack(side='left')
 
         self.model_vars = {}
         self.model_ctl_labels = {}
@@ -1198,135 +1281,120 @@ class App(ctk.CTk):
 
         self._setup_model_list()
 
-        self.ctrl_frame = ctk.CTkFrame(self.main_frame, fg_color=self.COLORS['bg_card'],
-                                       corner_radius=10, border_width=1,
-                                       border_color=self.COLORS['border'])
-        self.ctrl_frame.pack(fill="x", padx=0, pady=(0, 15))
+        # ── Execução: ação primária + resumo + ações secundárias ─────
+        self.ctrl_frame = ctk.CTkFrame(self.main_frame, fg_color=C['bg_card'],
+                                       corner_radius=RADIUS['panel'], border_width=0)
+        self.ctrl_frame.pack(fill="x", padx=0, pady=(0, sp['md']))
 
-        # ── Status + neutral-models row ───────────────────────────────
-        status_bar = ctk.CTkFrame(self.ctrl_frame, fg_color=self.COLORS['bg_sidebar'], corner_radius=8)
-        status_bar.pack(fill="x", padx=12, pady=(10, 6))
+        run_row = ctk.CTkFrame(self.ctrl_frame, fg_color='transparent')
+        run_row.pack(fill='x', padx=sp['lg'], pady=(sp['md'], sp['sm']))
 
-        self.status_indicator = ctk.CTkLabel(
-            status_bar, text=TEXTS["status_ready"],
-            font=(_FONT_UI, 13, "bold"),
-            text_color=self.COLORS['text_tertiary']
-        )
-        self.status_indicator.pack(side="left", padx=(14, 20), pady=8)
-
-        self.stop_label = ctk.CTkLabel(
-            status_bar, text=TEXTS["status_stops_template"].format(n=0),
-            font=(_FONT_UI, 13, "bold"),
-            text_color=self.COLORS['danger']
-        )
-        self.stop_label.pack(side="left")
-
-        neutral_row = ctk.CTkFrame(status_bar, fg_color='transparent')
-        neutral_row.pack(side="right", padx=(0, 6))
-        ctk.CTkLabel(neutral_row, text=TEXTS["label_neutral_models"],
-                     font=(_FONT_UI, 13),
-                     text_color=self.COLORS['text_secondary']).pack(side='left', padx=(0, 8))
-        neutral_sw = ctk.CTkSwitch(
-            neutral_row, text="",
-            variable=self.include_neutral_models,
-            onvalue=True, offvalue=False,
-            switch_width=34, switch_height=17,
-            progress_color=self.COLORS['accent_blue'],
-            button_color='#f0f0ff',
-            button_hover_color='#e0e0ff',
-            fg_color=self.COLORS['border'])
-        neutral_sw.pack(side='right')
-
-        help_btn = ctk.CTkButton(
-            status_bar, text="?", width=26, height=26,
-            font=(_FONT_UI, 12, "bold"),
-            fg_color=self.COLORS['border'],
-            hover_color=self.COLORS['accent_blue'],
-            text_color=self.COLORS['accent_blue_light'],
-            border_width=1, border_color=self.COLORS['accent_blue'],
-            command=self._show_neutral_models_info,
-            corner_radius=6
-        )
-        help_btn.pack(side="right", padx=(0, 12))
-
-        # Barra de progresso "gene X de N"
-        prog_row = ctk.CTkFrame(self.ctrl_frame, fg_color='transparent')
-        prog_row.pack(fill='x', padx=14, pady=(0, 2))
-        self.progress_bar = ctk.CTkProgressBar(prog_row, height=10,
-                                               progress_color=self.COLORS['success'])
-        self.progress_bar.pack(side='left', fill='x', expand=True, padx=(0, 10))
-        self.progress_bar.set(0)
-        self.progress_label = ctk.CTkLabel(prog_row, text=TEXTS["progress_idle"],
-                                           font=(_FONT_UI, 12),
-                                           text_color=self.COLORS['text_secondary'])
-        self.progress_label.pack(side='right')
-
-        # Botões de controle
-        btn_frame = ctk.CTkFrame(self.ctrl_frame, fg_color='transparent')
-        btn_frame.pack(fill="x", padx=0, pady=(0, 10))
+        self.btn_run = ctk.CTkButton(
+            run_row, text=TEXTS["btn_run"], command=self.start_analysis,
+            fg_color=C['accent_fill'], hover_color=C['accent_blue_hover'],
+            text_color='#ffffff',
+            text_color_disabled=mix('#ffffff', C['accent_fill'], 0.45),
+            border_width=0, font=(_FONT_UI, fs['lg'], "bold"),
+            width=176, height=48, corner_radius=RADIUS['card'])
+        self.btn_run.pack(side="left")
 
         def _action_btn(parent, text, cmd, color):
-            # hover = tom escuro da cor, para o texto (na cor) continuar legível
+            # secundário compacto; hover = tom escuro da cor (texto legível)
             return ctk.CTkButton(
                 parent, text=text, command=cmd,
-                fg_color=self.COLORS['bg_card'],
-                hover_color=hover_tint(color, self.COLORS['bg_card']),
+                fg_color='transparent',
+                hover_color=hover_tint(color, C['bg_card']),
                 text_color=color,
-                text_color_disabled=self.COLORS['text_tertiary'],
-                border_width=1, border_color=color,
-                font=(_FONT_UI, 13, "bold"),
-                height=44, corner_radius=8)
+                text_color_disabled=C['text_tertiary'],
+                border_width=1, border_color=C['border'],
+                font=(_FONT_UI, fs['sm'], "bold"),
+                height=32, corner_radius=RADIUS['card'])
 
-        self.btn_run = _action_btn(btn_frame, TEXTS["btn_run"],
-                                   self.start_analysis, self.COLORS['success'])
-        self.btn_run.pack(side="left", fill="both", expand=True, padx=(12, 4), pady=10)
+        # resumo: genes · modelos · CPUs e, embaixo, os testes LRT que sairão nos resultados
+        sum_col = ctk.CTkFrame(run_row, fg_color='transparent')
+        sum_col.pack(side='left', fill='x', expand=True, padx=(sp['lg'], 0))
+        self._summary_label = ctk.CTkLabel(sum_col, text="", font=(_FONT_UI, fs['md'], "bold"),
+                                           anchor='w', justify='left', wraplength=640,
+                                           text_color=C['text_primary'])
+        self._summary_label.pack(fill='x')
+        self._summary_models = ctk.CTkLabel(sum_col, text="", font=(_FONT_UI, fs['sm']),
+                                            anchor='w', justify='left', wraplength=640,
+                                            text_color=C['text_secondary'])
+        self._summary_models.pack(fill='x', pady=(sp['xs'], 0))
+        sum_col.bind('<Configure>', lambda e: [lbl.configure(wraplength=max(240, e.width - sp['sm']))
+                                               for lbl in (self._summary_label, self._summary_models)],
+                     add='+')
 
-        self.btn_pause = _action_btn(btn_frame, TEXTS["btn_pause"],
-                                     self._toggle_pause, self.COLORS['warning'])
-        self.btn_pause.pack(side="left", fill="both", expand=True, padx=4, pady=10)
+        prog_row = ctk.CTkFrame(self.ctrl_frame, fg_color='transparent')
+        prog_row.pack(fill='x', padx=sp['lg'], pady=(0, sp['sm']))
+        self.btn_open_output = _action_btn(prog_row, TEXTS["btn_open_output"],
+                                           self._open_output_folder, C['text_primary'])
+        self.btn_open_output.configure(hover_color=C['bg_card_hover'])
+        self.btn_open_output.pack(side="right")
+        self.btn_stop = _action_btn(prog_row, TEXTS["btn_stop"],
+                                    self._stop_analysis, C['danger'])
+        self.btn_stop.pack(side="right", padx=(0, sp['sm']))
+        self.btn_pause = _action_btn(prog_row, TEXTS["btn_pause"],
+                                     self._toggle_pause, C['warning'])
+        self.btn_pause.pack(side="right", padx=(0, sp['sm']))
+        self.progress_label = ctk.CTkLabel(prog_row, text=TEXTS["progress_idle"],
+                                           font=(_FONT_UI, fs['sm']), anchor='w', height=16,
+                                           text_color=C['text_secondary'])
+        self.progress_label.pack(side='left')
+        self.progress_bar = ctk.CTkProgressBar(self.ctrl_frame, height=8, corner_radius=4,
+                                               fg_color=C['bg_card_hover'],
+                                               progress_color=C['success'])
+        self.progress_bar.pack(fill='x', padx=sp['lg'], pady=(0, sp['md']))
+        self.progress_bar.set(0)
 
-        self.btn_stop = _action_btn(btn_frame, TEXTS["btn_stop"],
-                                    self._stop_analysis, self.COLORS['danger'])
-        self.btn_stop.pack(side="left", fill="both", expand=True, padx=4, pady=10)
-
-        self.btn_open_output = _action_btn(btn_frame, TEXTS["btn_open_output"],
-                                           self._open_output_folder, self.COLORS['info'])
-        self.btn_open_output.pack(side="left", fill="both", expand=True, padx=(4, 12), pady=10)
-
-        # ═══ LOG FRAME COM HEADER ═══
-        log_container = ctk.CTkFrame(self.main_frame, fg_color='transparent')
+        # ═══ CONSOLE (log) ═══
+        log_container = ctk.CTkFrame(self.main_frame, fg_color=C['bg_input'],
+                                     corner_radius=RADIUS['panel'], border_width=1,
+                                     border_color=C['divider'])
         log_container.pack(fill="both", expand=True, padx=0, pady=0)
-        
-        log_header = ctk.CTkFrame(log_container, fg_color='transparent')
-        log_header.pack(fill="x", padx=0, pady=(10, 0))
-        
-        ctk.CTkLabel(log_header, text=TEXTS["log_header_title"], font=(_FONT_UI, 13, "bold"),
-                    text_color=self.COLORS['text_secondary']).pack(side="left", padx=0)
+        self._log_container = log_container
+
+        log_header = ctk.CTkFrame(log_container, fg_color='transparent', height=36)
+        log_header.pack(fill="x", padx=sp['md'], pady=(sp['sm'], 0))
+
+        ctk.CTkLabel(log_header, text=TEXTS["log_header_title"], font=(_FONT_UI, fs['xs'], "bold"),
+                    text_color=C['text_secondary']).pack(side="left", padx=(sp['xs'], 0))
 
         ctk.CTkLabel(log_header, text="·",
-                    font=(_FONT_UI, 13), text_color=self.COLORS['text_muted']).pack(side="left", padx=8)
+                    font=(_FONT_UI, fs['sm']), text_color=C['text_muted']).pack(side="left", padx=sp['sm'])
 
         ctk.CTkLabel(log_header, text=TEXTS["log_header_subtitle"],
-                    font=(_FONT_UI, 13), text_color=self.COLORS['text_muted']).pack(side="left", padx=0)
+                    font=(_FONT_UI, fs['xs']), text_color=C['text_muted']).pack(side="left", padx=0)
         ctk.CTkCheckBox(log_header, text=TEXTS["chk_show_details"], variable=self.show_details_var,
-                        command=self._toggle_details, font=(_FONT_UI, 12),
-                        text_color=self.COLORS['text_secondary'], checkbox_width=18,
-                        checkbox_height=18).pack(side="right")
+                        command=self._toggle_details, font=(_FONT_UI, fs['xs']),
+                        text_color=C['text_secondary'], checkbox_width=16,
+                        checkbox_height=16, corner_radius=4, border_width=1,
+                        border_color=C['border_hover'], fg_color=C['accent_fill'],
+                        hover_color=C['bg_card_hover']).pack(side="right")
+        self._log_toggle = ctk.CTkButton(log_header, text=TEXTS["log_collapse"], width=72, height=24,
+                                         corner_radius=RADIUS['field'], fg_color='transparent',
+                                         hover_color=C['bg_card_hover'], text_color=C['text_secondary'],
+                                         border_width=1, border_color=C['border'],
+                                         font=(_FONT_UI, fs['xs'], "bold"),
+                                         command=self._toggle_log_panel)
+        self._log_toggle.pack(side='right', padx=(0, sp['md']))
 
-        self.log = ctk.CTkTextbox(log_container, font=(_FONT_MONO, 12), wrap='word',
-                                  fg_color=self.COLORS['bg_dark'],
-                                  text_color=self.COLORS['text_secondary'],
-                                  border_color=self.COLORS['border'],
-                                  border_width=1,
-                                  corner_radius=8)
-        self.log.pack(fill="both", expand=True, padx=0, pady=(8, 0))
+        self.log = ctk.CTkTextbox(log_container, font=(_FONT_MONO, fs['sm']), wrap='word',
+                                  fg_color=C['bg_input'],
+                                  text_color=C['text_secondary'],
+                                  border_width=0,
+                                  corner_radius=RADIUS['card'],
+                                  spacing1=2, spacing3=2,
+                                  scrollbar_button_color=C['border'],
+                                  scrollbar_button_hover_color=C['border_hover'])
+        self.log.pack(fill="both", expand=True, padx=sp['xs'], pady=(0, sp['xs']))
 
-        self.log.tag_config("success", foreground=self.COLORS['success_light'])
-        self.log.tag_config("error", foreground=self.COLORS['danger'])
-        self.log.tag_config("warning", foreground=self.COLORS['warning'])
-        self.log.tag_config("info", foreground=self.COLORS['accent_cyan'])
-        self.log.tag_config("header", foreground=self.COLORS['accent_blue_light'])
-        self.log.tag_config("debug", foreground=self.COLORS['text_tertiary'], elide=True)
+        self.log.tag_config("success", foreground=C['success_light'])
+        self.log.tag_config("error", foreground=C['danger'])
+        self.log.tag_config("warning", foreground=C['warning'])
+        self.log.tag_config("info", foreground=C['accent_cyan'])
+        self.log.tag_config("header", foreground=C['accent_blue_light'])
+        self.log.tag_config("debug", foreground=C['text_tertiary'], elide=True)
 
         # Mensagem inicial — editar em gui_texts.py › "log_welcome"
         self.log.insert("end", TEXTS["log_welcome"])
@@ -1334,7 +1402,279 @@ class App(ctk.CTk):
 
         self._update_models_state()
         self._poll_stop_count()
+        self._refresh_visual_state()
         self.bind_all("<Control-q>", lambda e: self.destroy())
+
+    # ── Só aparência: estados visuais derivados do estado existente ─────────
+
+    def _make_clickable(self, frame, widgets, command, after=None):
+        """Torna um cartão inteiro clicável (mesmo command) com hover por tom."""
+        def _enter(_e=None):
+            frame._hovering = True
+            base = getattr(frame, '_base_fg', None)
+            if base and not getattr(frame, '_disabled', False):
+                frame.configure(fg_color=mix(base, '#ffffff', 0.04))
+
+        def _leave(_e=None):
+            def _check():
+                try:
+                    x, y = frame.winfo_pointerxy()
+                    fx, fy = frame.winfo_rootx(), frame.winfo_rooty()
+                    inside = fx <= x < fx + frame.winfo_width() and fy <= y < fy + frame.winfo_height()
+                except Exception:
+                    inside = False
+                if not inside:
+                    frame._hovering = False
+                    base = getattr(frame, '_base_fg', None)
+                    if base:
+                        frame.configure(fg_color=base)
+            frame.after(16, _check)
+
+        def _click(_e=None):
+            command()
+            if after:
+                frame.after(50, after)
+
+        for w in widgets:
+            try:
+                w.bind("<Button-1>", _click, add='+')
+                w.bind("<Enter>", _enter, add='+')
+                w.bind("<Leave>", _leave, add='+')
+                w.configure(cursor='hand2')
+            except Exception:
+                pass
+
+    def _toggle_settings(self):
+        """Mostra/oculta as configurações avançadas (só pack/pack_forget)."""
+        body = self._settings_body
+        if body.winfo_ismapped():
+            body.pack_forget()
+            self._settings_btn.configure(text=TEXTS["settings_show"])
+        else:
+            body.pack(fill='x', pady=(SPACE['md'], 0))
+            self._settings_btn.configure(text=TEXTS["settings_hide"])
+
+    def _on_model_switch(self, code):
+        alt = self._auto_nulls.get(code)
+        self._update_models_state()
+        self._paint_tile(code)
+        if alt and not self.model_vars[code].get():
+            self._show_help(TEXTS["tile_auto_title"].format(null=code),
+                            TEXTS["tile_auto_help"].format(null=code, alt=alt))
+
+    def _tile_click(self, code, switch):
+        alt = self._auto_nulls.get(code)
+        if alt and not self.model_vars[code].get():
+            self._show_help(TEXTS["tile_auto_title"].format(null=code),
+                            TEXTS["tile_auto_help"].format(null=code, alt=alt))
+        else:
+            switch.toggle()
+
+    def _paint_tile(self, code):
+        """Ligado: tingido + borda. Auto (nulo que entra sozinho): tom leve,
+        interruptor atenuado e explicação. Desligado: neutro."""
+        p = self._tile_parts.get(code)
+        if not p:
+            return
+        C = self.COLORS
+        card, cb, lbl, auto_lbl, accent, bg = (p['card'], p['cb'], p['lbl'], p['auto'],
+                                               p['accent'], p['bg'])
+        on = bool(p['var'].get())
+        alt = None if on else self._auto_nulls.get(code)
+        try:
+            if on:
+                fill, border = mix(bg, accent, 0.16), mix(bg, accent, 0.7)
+            elif alt:
+                fill, border = mix(bg, accent, 0.06), mix(bg, accent, 0.4)
+            else:
+                fill, border = bg, C['border']
+            card._base_fg = fill
+            card.configure(fg_color=fill, border_color=border)
+            if alt:
+                cb.configure(progress_color=mix(bg, accent, 0.55),
+                             button_color=mix(PALETTE['switch_knob'], bg, 0.25))
+                cb.select(from_variable_callback=True)
+                auto_lbl.configure(text=TEXTS["tile_auto"].format(alt=alt))
+                if lbl.winfo_manager():
+                    lbl.pack_forget()
+                if not auto_lbl.winfo_manager():
+                    auto_lbl.pack(fill='x', padx=(SPACE['md'] + 4, SPACE['md']),
+                                  pady=(SPACE['xs'], SPACE['sm']))
+            else:
+                cb.configure(progress_color=accent, fg_color=C['border'],
+                             button_color=PALETTE['switch_knob'])
+                if not on:
+                    cb.deselect(from_variable_callback=True)
+                if auto_lbl.winfo_manager():
+                    auto_lbl.pack_forget()
+                if not lbl.winfo_manager():
+                    lbl.pack(fill='x', padx=(SPACE['md'] + 4, SPACE['md']),
+                             pady=(SPACE['xs'], SPACE['sm']))
+                lbl.configure(text_color=C['text_secondary'] if on else C['text_tertiary'])
+        except Exception:
+            pass
+
+    def _toggle_log_panel(self):
+        """Recolhe/expande o console (só aparência)."""
+        if self.log.winfo_ismapped():
+            self.log.pack_forget()
+            self._log_container.pack_configure(expand=False)
+            self._log_toggle.configure(text=TEXTS["log_expand"])
+        else:
+            self.log.pack(fill="both", expand=True, padx=SPACE['xs'], pady=(0, SPACE['xs']))
+            self._log_container.pack_configure(expand=True)
+            self._log_toggle.configure(text=TEXTS["log_collapse"])
+
+    def _gene_count(self):
+        folder = self.input_folder
+        if not folder:
+            return None
+        key = str(folder)
+        if key not in self._gene_count_cache:
+            try:
+                chosen, _ = group_by_gene(list_alignment_files(folder))
+                self._gene_count_cache[key] = len(chosen)
+            except Exception:
+                self._gene_count_cache[key] = 0
+        return self._gene_count_cache[key]
+
+    def _refresh_visual_state(self):
+        """Lê o estado (pastas, modelos, CPUs, status) e atualiza só a aparência."""
+        try:
+            sig = (str(self.input_folder), str(self.tree_file), len(self.per_gene_trees),
+                   str(self.output_folder),
+                   tuple(k for k, v in self.model_vars.items() if v.get()),
+                   bool(self.include_neutral_models.get()), bool(self.include_m8a_var.get()),
+                   int(self.cores_var.get()), str(self.status_indicator.cget('text_color')),
+                   str(self.stop_label.cget('text')),
+                   self.codonfreq_var.get(), self.entry_omega.get(), self.entry_ncatg.get(),
+                   tuple(str(s[3].cget('text')) + str(s[3].cget('text_color')) for s in self._slots.values()))
+            if sig != self._visual_sig:
+                self._visual_sig = sig
+                self._apply_visual_state()
+        except Exception:
+            pass
+        self.after(400, self._refresh_visual_state)
+
+    def _apply_visual_state(self, force=False):
+        C = self.COLORS
+        done = {'input': bool(self.input_folder),
+                'tree': bool(self.tree_file) or bool(self.per_gene_trees),
+                'output': bool(self.output_folder)}
+        next_slot = next((k for k in ('input', 'tree', 'output') if not done[k]), None)
+        for key, (card, title, btn, detail, shown) in self._slots.items():
+            # versão curta do texto escrito por select_* (sem a lista de arquivos)
+            lines = []
+            for line in str(detail.cget('text')).splitlines():
+                line = line.split(': ')[0] if ': ' in line else line
+                lines.append(line if len(line) <= 24 else line[:23] + "…")
+            col = detail.cget('text_color')
+            shown.configure(text="\n".join(lines[:3]),
+                            text_color=col if done[key] or col == C['warning'] else C['text_tertiary'])
+            if done[key]:
+                card._base_fg = C['bg_card_hover']
+                card.configure(fg_color=C['bg_card_hover'], border_color=C['bg_card_hover'])
+                btn.configure(text=TEXTS["slot_change"], fg_color='transparent',
+                              text_color=C['text_secondary'], border_color=C['border'],
+                              hover_color=C['bg_hover'])
+            else:
+                card._base_fg = C['bg_card']
+                card.configure(fg_color=C['bg_card'],
+                               border_color=mix(C['bg_card'], C['accent_fill'], 0.7)
+                               if key == next_slot else C['border'])
+                if key == next_slot:
+                    btn.configure(text=TEXTS["slot_choose"], fg_color=C['accent_fill'],
+                                  text_color='#ffffff', border_color=C['accent_fill'],
+                                  hover_color=C['accent_blue_hover'])
+                else:
+                    btn.configure(text=TEXTS["slot_choose"], fg_color='transparent',
+                                  text_color=C['text_secondary'], border_color=C['border'],
+                                  hover_color=C['bg_hover'])
+
+        def _circle(lbl, ok, number):
+            if ok:
+                lbl.configure(text="✓", fg_color=PALETTE['success_fill'], text_color='#ffffff')
+            else:
+                lbl.configure(text=str(number), fg_color=C['bg_card_hover'], text_color=C['text_secondary'])
+
+        data_ok = all(done.values())
+        _circle(self._step1_circle, data_ok, 1)
+        chosen = [k for k, v in self.model_vars.items() if v.get()]
+        _circle(self._step2_circle, bool(chosen), 2)
+        count = TEXTS["step_models_count"].format(n=len(chosen)) if chosen else ""
+        self._models_count.configure(text=count)
+        self._step2_text.configure(
+            text=(count + ": " + ", ".join(chosen)) if chosen else TEXTS["step_models_none"],
+            text_color=C['text_secondary'] if chosen else C['text_tertiary'])
+
+        # nulos que entram sozinhos (só leitura: _selected_models não muda nada)
+        models = self._selected_models() if chosen else []
+        order = list(self.model_vars)
+        models = sorted(models, key=lambda m: order.index(m) if m in order else len(order))
+        auto = {}
+        for m in models:
+            if m in chosen:
+                continue
+            for alt in chosen:
+                nulls = CodemlBatchAnalysis.NULL_MODEL_PAIRS.get(alt, [])
+                nulls = [nulls] if isinstance(nulls, str) else list(nulls)
+                if m in nulls:
+                    auto[m] = alt
+                    break
+            else:
+                auto[m] = ", ".join(chosen)
+        self._auto_nulls = auto
+        for code in self._tile_parts:
+            self._paint_tile(code)
+        if auto:
+            self._step2_text.configure(text=self._step2_text.cget('text') + f" (+{len(auto)} auto)")
+
+        # resumo: genes · modelos · CPUs; embaixo, os testes LRT que sairão nos resultados
+        n_genes = self._gene_count()
+        parts = [TEXTS["run_summary_no_data"] if n_genes is None
+                 else TEXTS["run_summary_genes"].format(n=n_genes)]
+        if models:
+            parts.append(TEXTS["run_summary_models"].format(n=len(models)) + ": " + ", ".join(models))
+        parts.append(TEXTS["run_summary_cpus"].format(n=int(self.cores_var.get())))
+        self._summary_label.configure(text="  ·  ".join(parts))
+        pairs = lrt_pairs_for(models) if models else []
+        if not models:
+            tests, tcolor = TEXTS["run_summary_no_models"], C['text_tertiary']
+        elif not pairs:
+            tests, tcolor = TEXTS["run_tests_none"], C['warning']
+        else:
+            tests = TEXTS["run_tests_label"].format(
+                tests="  ·  ".join(f"{alt} vs {null}" for null, alt in pairs))
+            tcolor = C['text_secondary']
+        self._summary_models.configure(text=tests, text_color=tcolor)
+
+        # resumo das configurações avançadas (uma linha)
+        try:
+            cf = str(self.codonfreq_var.get()).split('= ')[-1]
+            omega = self.entry_omega.get().strip() or '0.5'
+            if get_language() == 'pt':
+                omega = omega.replace('.', ',')
+            self._settings_summary.configure(text=" · ".join((
+                cf, f"ncatG {self.entry_ncatg.get().strip()}", f"ω {omega}",
+                TEXTS["run_summary_cpus"].format(n=int(self.cores_var.get())))))
+        except Exception:
+            pass
+
+        # chip de stops: vermelho só quando há stops
+        try:
+            import re as _re
+            n_stops = int((_re.findall(r'\d+', str(self.stop_label.cget('text'))) or ['0'])[-1])
+            self.stop_label.configure(text_color=C['danger'] if n_stops else C['text_tertiary'])
+        except Exception:
+            pass
+
+        # chip de estado tingido pela cor do texto de status
+        try:
+            col = self.status_indicator.cget('text_color')
+            col = col if isinstance(col, str) and col.startswith('#') else C['text_tertiary']
+            self.status_indicator.configure(fg_color=mix(C['bg_dark'], col, 0.16))
+        except Exception:
+            pass
 
     def _global_ctl_options(self) -> dict:
         """Opções globais do .ctl escolhidas em Configurações."""
@@ -1370,13 +1710,18 @@ class App(ctk.CTk):
         win.transient(self)
         win.after(50, lambda: (win.grab_set(), win.focus_set()))
         win.bind("<Escape>", lambda e: win.destroy())
-        ctk.CTkLabel(win, text=title, font=(_FONT_UI, 14, "bold"),
-                     text_color=self.COLORS['text_primary']).pack(padx=18, pady=(16, 4), anchor='w')
-        ctk.CTkLabel(win, text=body, font=(_FONT_UI, 13), wraplength=420,
+        win.configure(fg_color=self.COLORS['bg_dark'])
+        ctk.CTkLabel(win, text=title, font=(_FONT_UI, FONT_SIZE['lg'], "bold"),
+                     text_color=self.COLORS['text_primary']).pack(
+                         padx=SPACE['xl'], pady=(SPACE['xl'], SPACE['sm']), anchor='w')
+        ctk.CTkLabel(win, text=body, font=(_FONT_UI, FONT_SIZE['md']), wraplength=600,
                      justify='left',
-                     text_color=self.COLORS['text_secondary']).pack(padx=18, pady=(0, 12))
-        ctk.CTkButton(win, text="OK", width=80, command=win.destroy, text_color='#ffffff',
-                      fg_color=PALETTE['accent_fill']).pack(pady=(0, 14))
+                     text_color=self.COLORS['text_secondary']).pack(
+                         padx=SPACE['xl'], pady=(0, SPACE['lg']), anchor='w')
+        ctk.CTkButton(win, text="OK", width=80, height=32, command=win.destroy, text_color='#ffffff',
+                      fg_color=PALETTE['accent_fill'], hover_color=self.COLORS['accent_blue_hover'],
+                      corner_radius=RADIUS['card'], font=(_FONT_UI, FONT_SIZE['md'], "bold")).pack(
+                          padx=SPACE['xl'], pady=(0, SPACE['xl']), anchor='e')
 
     def _update_cores_label(self, value=None):
         n = int(self.cores_var.get())
@@ -1436,130 +1781,146 @@ class App(ctk.CTk):
             TEXTS["tab_branchsite"]:   ['Branch-site', 'Branch-site_null'],
         }
 
-        for tab_name, codes in models.items():
-            outer = ctk.CTkFrame(
-                self.tabs.tab(tab_name),
-                fg_color='transparent'
+        C = self.COLORS
+        sp = SPACE
+        tile_bg = C['bg_card']
+        # Ordem dos cartões = ordem de leitura do LRT (nulo antes do alternativo)
+        layout = {
+            TEXTS["tab_site_models"]: [['M0', 'M1a', 'M2a'], ['M7', 'M8', 'M8a']],
+            TEXTS["tab_branch_model"]: [['Branch']],
+            TEXTS["tab_branchsite"]: [['Branch-site_null', 'Branch-site']],
+        }
+
+        def _tile(parent, code):
+            meta = MODEL_META.get(code, {'color': C['accent_blue'], 'desc': ''})
+            accent = meta['color']
+            card = ctk.CTkFrame(parent, fg_color=tile_bg, corner_radius=RADIUS['card'],
+                                border_width=1, border_color=C['border'])
+            card._base_fg = tile_bg
+
+            top = ctk.CTkFrame(card, fg_color='transparent')
+            top.pack(fill='x', padx=(sp['md'], sp['sm']), pady=(sp['sm'], 0))
+
+            display_name = self.codeml_backend.MODEL_CONFIGS[code].get('display_name', code)
+            var = ctk.BooleanVar(value=False)
+            cb = ctk.CTkSwitch(
+                top,
+                text=f"  {display_name}",
+                variable=var,
+                onvalue=True, offvalue=False,
+                command=lambda c=code: self._on_model_switch(c),
+                switch_width=32, switch_height=18,
+                progress_color=accent,
+                button_color=PALETTE['switch_knob'],
+                button_hover_color='#ffffff',
+                fg_color=C['border'],
+                text_color=C['text_primary'],
+                text_color_disabled=C['text_tertiary'],
+                font=(_FONT_UI, FONT_SIZE['md'], "bold")
             )
-            outer.pack(fill="x", padx=8, pady=8)
-            outer.grid_columnconfigure(0, weight=1)
-            outer.grid_columnconfigure(1, weight=1)
+            cb.pack(side='left')
 
-            for idx, code in enumerate(codes):
-                meta   = MODEL_META.get(code, {'color': self.COLORS['accent_blue'], 'desc': ''})
-                accent = meta['color']
+            gear = ctk.CTkButton(
+                top, text=TEXTS["cfg_btn"], width=48, height=20,
+                fg_color='transparent',
+                hover_color=C['bg_hover'],
+                text_color=C['text_secondary'],
+                text_color_disabled=C['text_tertiary'],
+                corner_radius=RADIUS['field'],
+                border_width=0,
+                font=(_FONT_UI, FONT_SIZE['xs']),
+                command=lambda c=code: self._open_config_window(c)
+            )
+            gear.pack(side='right')
+            info_btn = ctk.CTkButton(
+                top, text="?", width=20, height=20, corner_radius=10,
+                fg_color='transparent',
+                hover_color=C['bg_hover'],
+                text_color=C['text_secondary'],
+                border_width=0,
+                font=(_FONT_UI, FONT_SIZE['xs'], "bold"),
+                command=lambda c=code: self._show_model_info(c)
+            )
+            info_btn.pack(side='right', padx=(0, sp['xs']))
 
-                row = idx // 2
-                col = idx % 2
+            lbl = ctk.CTkLabel(card, text=TEXTS["model_desc"].get(code, TEXTS["model_status_default"]),
+                               font=(_FONT_UI, FONT_SIZE['xs']), anchor='nw', justify='left',
+                               wraplength=240, height=32,
+                               text_color=C['text_tertiary'])
+            lbl.pack(fill='x', padx=(sp['md'] + 4, sp['md']), pady=(sp['xs'], sp['sm']))
 
-                # ── Compact card (2-column grid) ──────────────────────────────
-                card = ctk.CTkFrame(outer, fg_color=self.COLORS['bg_feed'],
-                                    corner_radius=8, border_width=1,
-                                    border_color=self.COLORS['border'],
-                                    height=64)
-                card.pack_propagate(False)
-                card.grid(row=row, column=col, sticky='ew', pady=3, padx=3)
+            # quebra a descrição na largura real do cartão (só aparência)
+            def _wrap(e, l=lbl):
+                w = max(160, e.width - 2 * sp['md'] - 4)
+                if abs(int(l.cget('wraplength')) - w) > 4:
+                    l.configure(wraplength=w)
+            card.bind('<Configure>', _wrap, add='+')
 
-                # Left accent bar
-                accent_bar = ctk.CTkFrame(card, fg_color=accent, width=4, corner_radius=2)
-                accent_bar.pack(side="left", fill="y", padx=(5, 6), pady=5)
-                accent_bar.pack_propagate(False)
+            # estado "incluído automaticamente" (só aparência; não mexe em model_vars)
+            auto_lbl = ctk.CTkLabel(card, text="", font=(_FONT_UI, FONT_SIZE['xs']), anchor='nw',
+                                    justify='left', wraplength=240, height=32,
+                                    text_color=C['text_secondary'])
+            card.bind('<Configure>', lambda e, l=auto_lbl: l.configure(
+                wraplength=max(160, e.width - 2 * sp['md'] - 4)), add='+')
 
-                # Right icon buttons (stacked)
-                btn_col = ctk.CTkFrame(card, fg_color='transparent')
-                btn_col.pack(side="right", padx=(0, 4), pady=4)
+            # cartão inteiro clicável: alterna o MESMO interruptor (mesmo command);
+            # em estado "auto" só explica por que o nulo entra
+            self._make_clickable(card, (card, top, lbl, auto_lbl),
+                                 lambda c=code, sw=cb: self._tile_click(c, sw))
 
-                info_btn = ctk.CTkButton(
-                    btn_col, text="?", width=22, height=22,
-                    fg_color=self.COLORS['bg_card_hover'],
-                    hover_color=hover_tint(accent, self.COLORS['bg_card_hover']),
-                    text_color=accent,
-                    corner_radius=4,
-                    border_width=1, border_color=self.COLORS['border_hover'],
-                    font=(_FONT_UI, 13, "bold"),
-                    command=lambda c=code: self._show_model_info(c)
-                )
-                info_btn.pack(pady=(0, 2))
+            self._tile_parts[code] = {'card': card, 'cb': cb, 'lbl': lbl, 'auto': auto_lbl,
+                                      'accent': accent, 'var': var, 'bg': tile_bg}
+            var.trace_add('write', lambda *_a, c=code: self._paint_tile(c))
 
-                gear = ctk.CTkButton(
-                    btn_col, text=TEXTS["cfg_btn"], width=52, height=22,
-                    fg_color=self.COLORS['bg_card'],
-                    hover_color=hover_tint(self.COLORS['accent_purple'], self.COLORS['bg_card']),
-                    text_color=self.COLORS['text_primary'],
-                    text_color_disabled=self.COLORS['text_tertiary'],
-                    corner_radius=4,
-                    border_width=1, border_color=self.COLORS['border_hover'],
-                    font=(_FONT_UI, 11),
-                    command=lambda c=code: self._open_config_window(c)
-                )
-                gear.pack()
+            self.model_vars[code]         = var
+            self.model_ctl_labels[code]   = lbl
+            self.model_checkboxes[code]   = cb
+            self.model_gear_buttons[code] = gear
+            self._tiles[code] = card
+            self._paint_tile(code)
+            return card
 
-                # Content area (toggle + status)
-                content = ctk.CTkFrame(card, fg_color='transparent')
-                content.pack(side="left", fill="both", expand=True, pady=4)
+        outers = {}
+        for tab_name in layout:
+            outer = ctk.CTkFrame(self.tabs.tab(tab_name), fg_color='transparent')
+            outer.pack(fill="x", padx=0, pady=(sp['xs'], 0))
+            for c in range(3):
+                outer.grid_columnconfigure(c, weight=1, uniform='tiles')
+            outers[tab_name] = outer
+        # cria na mesma ordem de antes (a ordem de model_vars não muda)
+        for tab_name, codes in models.items():
+            for code in codes:
+                _tile(outers[tab_name], code)
+        for tab_name, rows in layout.items():
+            for r, codes in enumerate(rows):
+                for c, code in enumerate(codes):
+                    self._tiles[code].grid(row=r, column=c, sticky='nsew',
+                                           padx=sp['xs'], pady=(0, sp['sm']))
 
-                display_name = self.codeml_backend.MODEL_CONFIGS[code].get('display_name', code)
-                var = ctk.BooleanVar(value=False)
-                cb = ctk.CTkSwitch(
-                    content,
-                    text=f"  {display_name}",
-                    variable=var,
-                    onvalue=True, offvalue=False,
-                    command=self._update_models_state,
-                    switch_width=32, switch_height=16,
-                    progress_color=accent,
-                    button_color='#f0f0ff',
-                    button_hover_color='white',
-                    fg_color=self.COLORS['border'],
-                    text_color=self.COLORS['text_primary'],
-                    font=(_FONT_UI, 12, "bold")
-                )
-                cb.pack(anchor='w')
+        def _label_btn(tab, text, mode):
+            # ação secundária: contorno discreto, texto em índigo
+            btn = ctk.CTkButton(
+                tab, text=text,
+                fg_color='transparent',
+                hover_color=C['bg_card_hover'],
+                command=lambda: self._open_tree_labeler(mode=mode),
+                height=40,
+                font=(_FONT_UI, FONT_SIZE['md'], "bold"),
+                text_color=C['accent_blue_light'],
+                text_color_disabled=C['text_tertiary'],
+                border_width=1, border_color=C['border'],
+                corner_radius=RADIUS['card']
+            )
+            btn.pack(fill='x', padx=sp['xs'], pady=(sp['md'], 0))
+            return btn
 
-                lbl = ctk.CTkLabel(content, text=TEXTS["model_desc"].get(code, TEXTS["model_status_default"]),
-                                   font=(_FONT_UI, 11), anchor='w', justify='left',
-                                   wraplength=330,
-                                   text_color=self.COLORS['text_tertiary'])
-                lbl.pack(anchor='w', padx=(2, 0))
-
-                self.model_vars[code]         = var
-                self.model_ctl_labels[code]   = lbl
-                self.model_checkboxes[code]   = cb
-                self.model_gear_buttons[code] = gear
-        
         # ═══ BRANCH: Botão de etiquetagem ═══
-        branch_tab = self.tabs.tab(TEXTS["tab_branch_model"])
-
-        self.btn_label_branch = ctk.CTkButton(
-            branch_tab,
-            text=TEXTS["btn_label_branch"],
-            fg_color=self.COLORS['bg_card_hover'],
-            hover_color=self.COLORS['accent_blue'],
-            command=lambda: self._open_tree_labeler(mode='branch'),
-            height=40,
-            font=(_FONT_UI, 13, "bold"),
-            text_color=self.COLORS['accent_blue_light'],
-            border_width=1, border_color=self.COLORS['border_hover'],
-            corner_radius=8
-        )
-        self.btn_label_branch.pack(fill='x', padx=12, pady=(16, 12))
+        self.btn_label_branch = _label_btn(self.tabs.tab(TEXTS["tab_branch_model"]),
+                                           TEXTS["btn_label_branch"], 'branch')
 
         # ═══ BRANCHSITE: Botão de etiquetagem ═══
-        branchsite_tab = self.tabs.tab(TEXTS["tab_branchsite"])
-
-        self.btn_label_branchsite = ctk.CTkButton(
-            branchsite_tab,
-            text=TEXTS["btn_label_branchsite"],
-            fg_color=self.COLORS['bg_card_hover'],
-            hover_color=self.COLORS['accent_blue'],
-            command=lambda: self._open_tree_labeler(mode='branchsite'),
-            height=40,
-            font=(_FONT_UI, 13, "bold"),
-            text_color=self.COLORS['accent_blue_light'],
-            border_width=1, border_color=self.COLORS['border_hover'],
-            corner_radius=8
-        )
-        self.btn_label_branchsite.pack(fill='x', padx=12, pady=(16, 12))
+        self.btn_label_branchsite = _label_btn(self.tabs.tab(TEXTS["tab_branchsite"]),
+                                               TEXTS["btn_label_branchsite"], 'branchsite')
 
     def _open_config_window(self, code):
         default_config = CodemlBatchAnalysis.MODEL_CONFIGS.get(code, {})
@@ -1641,36 +2002,42 @@ class App(ctk.CTk):
         win.configure(fg_color=self.COLORS['bg_dark'])
 
         hdr = ctk.CTkFrame(win, fg_color='transparent')
-        hdr.pack(fill='x', padx=18, pady=(16, 4))
-        ctk.CTkLabel(hdr, text=TEXTS["neutral_header"], font=(_FONT_UI, 15, "bold"),
-                     text_color=self.COLORS['accent_blue_light']).pack(anchor='w')
-        ctk.CTkLabel(hdr, text=TEXTS["neutral_intro"], font=(_FONT_UI, 13), wraplength=700,
-                     justify='left', text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(4, 0))
+        hdr.pack(fill='x', padx=SPACE['xl'], pady=(SPACE['xl'], SPACE['sm']))
+        ctk.CTkLabel(hdr, text=TEXTS["neutral_header"], font=(_FONT_UI, FONT_SIZE['lg'], "bold"),
+                     text_color=self.COLORS['text_primary']).pack(anchor='w')
+        ctk.CTkLabel(hdr, text=TEXTS["neutral_intro"], font=(_FONT_UI, FONT_SIZE['md']), wraplength=700,
+                     justify='left', text_color=self.COLORS['text_secondary']).pack(
+                         anchor='w', pady=(SPACE['xs'], 0))
 
-        scroll = ctk.CTkScrollableFrame(win, fg_color='transparent')
-        scroll.pack(fill='both', expand=True, padx=14, pady=6)
+        scroll = ctk.CTkScrollableFrame(win, fg_color='transparent',
+                                        scrollbar_button_color=self.COLORS['border'])
+        scroll.pack(fill='both', expand=True, padx=SPACE['lg'], pady=SPACE['sm'])
         for null, alt, color, title, test, detail, note in TEXTS["lrt_pairs"]:
-            card = ctk.CTkFrame(scroll, fg_color=self.COLORS['bg_card'], corner_radius=10,
-                                border_width=1, border_color=self.COLORS['border'])
-            card.pack(fill='x', padx=6, pady=5)
-            ctk.CTkFrame(card, fg_color=color, width=5, corner_radius=2).pack(
-                side='left', fill='y', padx=(6, 10), pady=8)
+            card = ctk.CTkFrame(scroll, fg_color=self.COLORS['bg_card'], corner_radius=RADIUS['card'],
+                                border_width=0)
+            card.pack(fill='x', padx=SPACE['xs'], pady=SPACE['xs'])
+            ctk.CTkFrame(card, fg_color=color, width=4, height=8, corner_radius=2).pack(
+                side='left', fill='y', padx=(SPACE['sm'], SPACE['md']), pady=SPACE['md'])
             content = ctk.CTkFrame(card, fg_color='transparent')
-            content.pack(side='left', fill='both', expand=True, pady=10, padx=(0, 10))
+            content.pack(side='left', fill='both', expand=True, pady=SPACE['md'], padx=(0, SPACE['md']))
             row = ctk.CTkFrame(content, fg_color='transparent')
             row.pack(fill='x', anchor='w')
-            ctk.CTkLabel(row, text=title, font=(_FONT_UI, 13, "bold"), text_color=color).pack(side='left')
-            ctk.CTkLabel(row, text="   " + TEXTS["neutral_null_alt"].format(null=null, alt=alt),
-                         font=(_FONT_UI, 12), text_color=self.COLORS['text_secondary']).pack(side='left')
-            ctk.CTkLabel(content, text=test, font=(_FONT_UI, 13, "bold"),
-                         text_color=self.COLORS['text_primary'], anchor='w').pack(anchor='w', pady=(4, 2))
-            ctk.CTkLabel(content, text=detail, font=(_FONT_UI, 12), wraplength=600, justify='left',
-                         text_color=self.COLORS['text_secondary'], anchor='w').pack(anchor='w', pady=(0, 3))
-            ctk.CTkLabel(content, text=TEXTS["neutral_note"].format(note=note), font=(_FONT_UI, 12, "italic"),
+            ctk.CTkLabel(row, text=title, font=(_FONT_UI, FONT_SIZE['md'], "bold"),
+                         text_color=self.COLORS['text_primary']).pack(side='left')
+            ctk.CTkLabel(row, text=TEXTS["neutral_null_alt"].format(null=null, alt=alt),
+                         font=(_FONT_UI, FONT_SIZE['sm']), text_color=self.COLORS['text_secondary']).pack(
+                             side='left', padx=(SPACE['md'], 0))
+            ctk.CTkLabel(content, text=test, font=(_FONT_UI, FONT_SIZE['md'], "bold"),
+                         text_color=self.COLORS['accent_blue_light'], anchor='w').pack(
+                             anchor='w', pady=(SPACE['xs'], SPACE['xs']))
+            ctk.CTkLabel(content, text=detail, font=(_FONT_UI, FONT_SIZE['sm']), wraplength=600, justify='left',
+                         text_color=self.COLORS['text_secondary'], anchor='w').pack(anchor='w', pady=(0, SPACE['xs']))
+            ctk.CTkLabel(content, text=TEXTS["neutral_note"].format(note=note), font=(_FONT_UI, FONT_SIZE['sm'], "italic"),
                          wraplength=600, justify='left', text_color=self.COLORS['text_tertiary'],
                          anchor='w').pack(anchor='w')
-        ctk.CTkLabel(win, text=TEXTS["neutral_footer"], font=(_FONT_UI, 12),
-                     text_color=self.COLORS['success'], wraplength=700).pack(padx=18, pady=12)
+        ctk.CTkLabel(win, text=TEXTS["neutral_footer"], font=(_FONT_UI, FONT_SIZE['sm']),
+                     text_color=self.COLORS['text_secondary'], wraplength=700, justify='left').pack(
+                         padx=SPACE['xl'], pady=(SPACE['sm'], SPACE['lg']), anchor='w')
 
     def _show_model_info(self, model_code: str):
         """Mostra informações detalhadas sobre um modelo específico"""
@@ -1687,90 +2054,41 @@ class App(ctk.CTk):
         info_window.after(50, lambda: (info_window.grab_set(), info_window.focus_set()))
         info_window.bind("<Escape>", lambda e: info_window.destroy())
         
+        info_window.configure(fg_color=self.COLORS['bg_dark'])
+
         # Header com nome do modelo
         display_name = self.codeml_backend.MODEL_CONFIGS[model_code].get('display_name', model_code)
         header = ctk.CTkLabel(info_window, 
                              text=f"{model_code} - {model_info.get('full_name', '')}",
-                             font=(_FONT_UI, 13, "bold"),
-                             text_color=self.COLORS['accent_blue_light'])
-        header.pack(padx=15, pady=15)
+                             font=(_FONT_UI, FONT_SIZE['lg'], "bold"), anchor='w', justify='left',
+                             wraplength=680,
+                             text_color=self.COLORS['text_primary'])
+        header.pack(fill='x', padx=SPACE['xl'], pady=(SPACE['xl'], SPACE['md']))
         
         # Scrollable frame para conteúdo
-        scroll_frame = ctk.CTkScrollableFrame(info_window, fg_color=self.COLORS['bg_feed'],
-                                             corner_radius=8)
-        scroll_frame.pack(fill="both", expand=True, padx=12, pady=(0, 12))
-        
-        # Tipo de teste
-        test_type_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_test_type"],
-                                      font=(_FONT_UI, 13, "bold"),
-                                      text_color=self.COLORS['accent_purple'])
-        test_type_label.pack(anchor="w", padx=8, pady=(8, 2))
-        
-        test_type_value = ctk.CTkLabel(scroll_frame, text=model_info.get('test_type', ''),
-                                      font=(_FONT_UI, 12),
-                                      text_color=self.COLORS['text_primary'],
-                                      wraplength=700, justify="left")
-        test_type_value.pack(anchor="w", padx=25, pady=(0, 8))
-        
-        # Parâmetros
-        params_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_params"],
-                                   font=(_FONT_UI, 13, "bold"),
-                                   text_color=self.COLORS['accent_purple'])
-        params_label.pack(anchor="w", padx=8, pady=(8, 2))
-        
-        params_value = ctk.CTkLabel(scroll_frame, text=model_info.get('parameters', ''),
-                                   font=(_FONT_UI, 12),
-                                   text_color=self.COLORS['text_primary'],
-                                   wraplength=700, justify="left")
-        params_value.pack(anchor="w", padx=25, pady=(0, 8))
-        
-        # Propósito
-        purpose_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_purpose"],
-                                    font=(_FONT_UI, 13, "bold"),
-                                    text_color=self.COLORS['accent_cyan'])
-        purpose_label.pack(anchor="w", padx=8, pady=(8, 2))
-        
-        purpose_value = ctk.CTkLabel(scroll_frame, text=model_info.get('purpose', ''),
-                                    font=(_FONT_UI, 12),
-                                    text_color=self.COLORS['text_primary'],
-                                    wraplength=700, justify="left")
-        purpose_value.pack(anchor="w", padx=25, pady=(0, 8))
-        
-        # Interpretação
-        interp_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_interpretation"],
-                                   font=(_FONT_UI, 13, "bold"),
-                                   text_color=self.COLORS['success'])
-        interp_label.pack(anchor="w", padx=8, pady=(8, 2))
+        scroll_frame = ctk.CTkScrollableFrame(info_window, fg_color=self.COLORS['bg_card'],
+                                              corner_radius=RADIUS['panel'],
+                                              scrollbar_button_color=self.COLORS['border'])
+        scroll_frame.pack(fill="both", expand=True, padx=SPACE['xl'], pady=(0, SPACE['xl']))
 
-        interp_value = ctk.CTkLabel(scroll_frame, text=model_info.get('interpretation', ''),
-                                   font=(_FONT_UI, 12),
-                                   text_color=self.COLORS['text_primary'],
-                                   wraplength=700, justify="left")
-        interp_value.pack(anchor="w", padx=25, pady=(0, 8))
-
-        # Caso de uso
-        use_case_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_use_case"],
-                                     font=(_FONT_UI, 13, "bold"),
-                                     text_color=self.COLORS['warning'])
-        use_case_label.pack(anchor="w", padx=8, pady=(8, 2))
-
-        use_case_value = ctk.CTkLabel(scroll_frame, text=model_info.get('use_case', ''),
-                                     font=(_FONT_UI, 12),
-                                     text_color=self.COLORS['text_primary'],
-                                     wraplength=700, justify="left")
-        use_case_value.pack(anchor="w", padx=25, pady=(0, 8))
-
-        # Referências
-        refs_label = ctk.CTkLabel(scroll_frame, text=TEXTS["model_info_references"],
-                                 font=(_FONT_UI, 13, "bold"),
-                                 text_color='#eab308')   # amarelo — não tem par no COLORS
-        refs_label.pack(anchor="w", padx=8, pady=(8, 2))
-        
-        refs_value = ctk.CTkLabel(scroll_frame, text=model_info.get('references', ''),
-                                 font=(_FONT_UI, 12, "italic"),
-                                 text_color=self.COLORS['text_secondary'],
-                                 wraplength=700, justify="left")
-        refs_value.pack(anchor="w", padx=25, pady=(0, 8))
+        # Seções: título pequeno em índigo + texto; mesma hierarquia em todas
+        sections = (
+            (TEXTS["model_info_test_type"], model_info.get('test_type', ''), self.COLORS['text_primary'], ''),
+            (TEXTS["model_info_params"], model_info.get('parameters', ''), self.COLORS['text_primary'], ''),
+            (TEXTS["model_info_purpose"], model_info.get('purpose', ''), self.COLORS['text_primary'], ''),
+            (TEXTS["model_info_interpretation"], model_info.get('interpretation', ''),
+             self.COLORS['text_primary'], ''),
+            (TEXTS["model_info_use_case"], model_info.get('use_case', ''), self.COLORS['text_primary'], ''),
+            (TEXTS["model_info_references"], model_info.get('references', ''),
+             self.COLORS['text_secondary'], 'italic'),
+        )
+        for i, (title, value, color, style) in enumerate(sections):
+            ctk.CTkLabel(scroll_frame, text=title, font=(_FONT_UI, FONT_SIZE['sm'], "bold"),
+                         text_color=self.COLORS['accent_blue_light']).pack(
+                             anchor="w", padx=SPACE['md'], pady=(SPACE['lg'] if i else SPACE['md'], SPACE['xs']))
+            font = (_FONT_UI, FONT_SIZE['sm'], style) if style else (_FONT_UI, FONT_SIZE['sm'])
+            ctk.CTkLabel(scroll_frame, text=value, font=font, text_color=color,
+                         wraplength=640, justify="left").pack(anchor="w", padx=SPACE['md'], pady=0)
 
     # ── Idioma ───────────────────────────────────────────────────────────────
 
@@ -1802,39 +2120,36 @@ class App(ctk.CTk):
             pass
 
     def _build_lang_footer(self) -> None:
-        """Rodapé fixo da sidebar com botões PT / EN."""
-        footer = ctk.CTkFrame(self.sidebar,
-                              fg_color=self.COLORS['bg_card'],
-                              corner_radius=0,
-                              border_width=1,
-                              border_color=self.COLORS['border'])
+        """Rodapé fixo da sidebar com botões PT / EN (separado por uma linha)."""
+        C = self.COLORS
+        footer = ctk.CTkFrame(self.sidebar, fg_color='transparent', corner_radius=0, border_width=0)
         footer.pack(fill='x', side='bottom', padx=0, pady=0)
+        ctk.CTkFrame(footer, fg_color=C['divider'], height=1, corner_radius=0).pack(fill='x')
 
         inner = ctk.CTkFrame(footer, fg_color='transparent')
-        inner.pack(fill='x', padx=10, pady=6)
-
+        inner.pack(fill='x', padx=SPACE['lg'], pady=SPACE['md'])
 
         current = get_language()
 
         def _make_btn(code: str, label: str):
             active = (code == current)
             btn = ctk.CTkButton(
-                inner, text=label, width=46, height=24,
-                font=(_FONT_UI, 12, "bold" if active else "normal"),
-                corner_radius=6,
-                fg_color=self.COLORS['accent_blue'] if active else self.COLORS['border'],
-                hover_color=self.COLORS['accent_blue_hover'],
-                text_color='#ffffff',
+                inner, text=label, width=44, height=28,
+                font=(_FONT_UI, FONT_SIZE['sm'], "bold"),
+                corner_radius=RADIUS['field'],
+                fg_color=C['accent_fill'] if active else 'transparent',
+                hover_color=C['accent_blue_hover'] if active else C['bg_card_hover'],
+                text_color='#ffffff' if active else C['text_secondary'],
                 command=lambda c=code: self._switch_language(c)
             )
-            btn.pack(side='left', padx=2)
+            btn.pack(side='left', padx=(0, SPACE['xs']))
 
         _make_btn('pt', 'PT')
         _make_btn('en', 'EN')
-        ctk.CTkButton(inner, text=TEXTS["btn_about"], width=70, height=24,
-                      font=(_FONT_UI, 12), corner_radius=6,
-                      fg_color=self.COLORS['border'], hover_color=self.COLORS['border_hover'],
-                      text_color='#ffffff', command=lambda: show_about(self)).pack(side='right', padx=2)
+        ctk.CTkButton(inner, text=TEXTS["btn_about"], width=72, height=28,
+                      font=(_FONT_UI, FONT_SIZE['sm']), corner_radius=RADIUS['field'],
+                      fg_color='transparent', hover_color=C['bg_card_hover'],
+                      text_color=C['text_secondary'], command=lambda: show_about(self)).pack(side='right')
 
     def _switch_language(self, lang: str) -> None:
         """Salva preferência e reinicia o app para aplicar o idioma."""
@@ -1961,7 +2276,7 @@ class App(ctk.CTk):
             if enabled:
                 self.files_hint.pack_forget()
             elif not self.files_hint.winfo_ismapped():
-                self.files_hint.pack(fill='x', pady=(0, 6), before=self.tabs)
+                self.files_hint.pack(fill='x', pady=(0, SPACE['md']), ipadx=SPACE['md'], before=self.tabs)
         except Exception:
             pass
         
@@ -2033,14 +2348,15 @@ class App(ctk.CTk):
         self.after(0, _upd)
 
     def _set_pause_button(self, paused: bool):
+        C = self.COLORS
         if paused:
             self.btn_pause.configure(text=TEXTS["btn_resume"], fg_color=PALETTE['success_fill'],
                                      hover_color=mix(PALETTE['success_fill'], '#000000', 0.2),
                                      text_color='#ffffff', border_color=PALETTE['success_fill'])
         else:
-            self.btn_pause.configure(text=TEXTS["btn_pause"], fg_color=self.COLORS['bg_card'],
-                                     hover_color=hover_tint(self.COLORS['warning'], self.COLORS['bg_card']),
-                                     text_color=self.COLORS['warning'], border_color=self.COLORS['warning'])
+            self.btn_pause.configure(text=TEXTS["btn_pause"], fg_color='transparent',
+                                     hover_color=hover_tint(C['warning'], C['bg_card']),
+                                     text_color=C['warning'], border_color=C['border'])
 
     def _toggle_pause(self):
         if not self.pause_event:

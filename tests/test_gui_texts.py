@@ -63,7 +63,9 @@ def contrast(a, b):
     return (la + 0.05) / (lb + 0.05)
 
 
-CARD_BACKGROUNDS = ('#0c0c0e', '#0d0d11', '#16161a', '#17171f', '#1e1e24', '#20202c', '#1a1a26')
+CARD_BACKGROUNDS = ('#0c0c0e', '#0d0d11', '#16161a', '#17171f', '#1e1e24', '#20202c', '#1a1a26',
+                    # camadas da janela principal (PALETTE bg_window/bg_inset/bg_panel/bg_surface/bg_elevated)
+                    '#0a0b0e', '#0e1014', '#111318', '#181a21', '#20232c')
 
 
 def _palette():
@@ -86,6 +88,22 @@ def test_text_colors_contrast(key):
 @pytest.mark.parametrize('key', ['accent_fill', 'success_fill', 'warning_fill', 'danger_fill', 'info_fill'])
 def test_white_text_on_filled_buttons(key):
     assert contrast('#ffffff', _palette()[key]) >= 4.5
+
+
+@pytest.mark.parametrize('kind', ['success', 'warning', 'danger'])
+def test_semantic_subtle_pairs(kind):
+    """Painel de resultados: texto *_fg sobre o fundo *_subtle e sobre as camadas."""
+    pal = _palette()
+    fg = pal[f'{kind}_fg']
+    for bg in (pal[f'{kind}_subtle'], pal['row_alt']) + CARD_BACKGROUNDS:
+        assert contrast(fg, bg) >= 4.5, (kind, fg, bg, round(contrast(fg, bg), 2))
+
+
+def test_text_on_table_zebra():
+    pal = _palette()
+    for key in ('text_primary', 'text_secondary', 'text_tertiary', 'accent_text'):
+        assert contrast(pal[key], pal['row_alt']) >= 4.5, key
+        assert contrast(pal[key], pal['success_subtle']) >= 4.5, key
 
 
 def test_window_colors_in_gui_modules_are_legible():

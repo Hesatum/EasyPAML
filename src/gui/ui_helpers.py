@@ -41,7 +41,36 @@ PALETTE = {
     'info_fill': '#0e7490',
     'border': '#262632',
     'border_hover': '#3a3a4e',
+    # Camadas da janela principal (escuro -> claro), separadas por tom, não
+    # por bordas. Texto primário/secundário/terciário >= 4,5:1 em todas.
+    'bg_window': '#0a0b0e',          # fundo da janela
+    'bg_panel': '#111318',           # painel lateral
+    'bg_surface': '#181a21',         # cartões, abas, log
+    'bg_elevated': '#20232c',        # cartão de modelo, botão de tom
+    'bg_elevated_hover': '#292c37',  # hover sobre bg_elevated (só texto primário)
+    'bg_inset': '#0e1014',           # campos de entrada
+    'divider': '#262a34',            # linha de 1 px entre grupos
+    'control_border': '#2c303c',     # contorno de botão secundário / campo
+    'control_border_hover': '#3b4050',
+    'neutral_fill': '#343846',       # botão neutro preenchido (texto branco 11,7:1)
+    'switch_knob': '#e6e7ee',
+    # Cores semânticas "subtle" (estilo Primer) do painel de resultados: fundo
+    # quase neutro + texto claro só no valor/rótulo do veredito. Cada *_fg tem
+    # >= 4,5:1 sobre o seu *_subtle e sobre todas as camadas acima.
+    'success_subtle': '#0f2a1d',     # q < 0,05: fundo do rótulo "significativo"
+    'success_fg': '#86efac',         # texto sobre success_subtle (10,9:1)
+    'warning_subtle': '#2e2108',     # avisos (M7×M8 sem M8a×M8, análises órfãs)
+    'warning_fg': '#fcd34d',         # texto sobre warning_subtle (10,9:1)
+    'danger_subtle': '#341719',      # só falha de execução
+    'danger_fg': '#fca5a5',          # texto sobre danger_subtle (8,6:1)
+    'row_alt': '#15171d',            # zebra suave das tabelas (entre bg_panel e bg_surface)
 }
+
+# Escala de espaçamento (grade de 4 px) e raios de canto
+SPACE = {'xs': 4, 'sm': 8, 'md': 12, 'lg': 16, 'xl': 24, 'xxl': 32}
+RADIUS = {'field': 6, 'card': 8, 'panel': 12}
+# Escala de fontes (pt): nada abaixo de 11
+FONT_SIZE = {'xs': 11, 'sm': 12, 'md': 13, 'lg': 15, 'xl': 17, 'xxl': 20}
 
 
 def mix(color_a: str, color_b: str, t: float) -> str:
@@ -100,7 +129,7 @@ class _Modal(ctk.CTkToplevel):
     def __init__(self, parent, title: str, width: int, height: int):
         super().__init__(parent)
         self.title(title)
-        self.configure(fg_color=PALETTE['bg_dark'])
+        self.configure(fg_color=PALETTE['bg_window'])
         fit_to_screen(self, width, height, min_w=420, min_h=240)
         self.transient(parent)
         self.bind("<Escape>", lambda e: self._close(None))
@@ -131,19 +160,22 @@ class _Modal(ctk.CTkToplevel):
 def _button(parent, text, command, fill, **kw):
     return ctk.CTkButton(parent, text=text, command=command, fg_color=fill,
                          hover_color=mix(fill, '#000000', 0.2), text_color='#ffffff',
-                         font=(FONT_UI, 13, 'bold'), height=36, corner_radius=8, **kw)
+                         text_color_disabled=mix('#ffffff', fill, 0.45),
+                         font=(FONT_UI, FONT_SIZE['md'], 'bold'), height=36,
+                         corner_radius=RADIUS['card'], **kw)
 
 
 def ask_yes_no(parent, title: str, message: str, yes: str = None, no: str = None) -> bool:
     """Confirmação com botões traduzidos (o messagebox do Tk usa Yes/No do sistema)."""
     dlg = _Modal(parent, title, 460, 220)
-    ctk.CTkLabel(dlg, text=message, font=(FONT_UI, 13), wraplength=400, justify='left',
-                 text_color=PALETTE['text_primary']).pack(padx=24, pady=(24, 16), anchor='w')
+    ctk.CTkLabel(dlg, text=message, font=(FONT_UI, FONT_SIZE['md']), wraplength=400, justify='left',
+                 text_color=PALETTE['text_primary']).pack(padx=SPACE['xl'], pady=(SPACE['xl'], SPACE['lg']),
+                                                          anchor='w')
     row = ctk.CTkFrame(dlg, fg_color='transparent')
-    row.pack(fill='x', padx=24, pady=(0, 20), side='bottom')
-    _button(row, no or TEXTS['btn_no'], lambda: dlg._close(False), '#3d3d4a').pack(side='right')
+    row.pack(fill='x', padx=SPACE['xl'], pady=(0, SPACE['xl']), side='bottom')
+    _button(row, no or TEXTS['btn_no'], lambda: dlg._close(False), PALETTE['neutral_fill']).pack(side='right')
     _button(row, yes or TEXTS['btn_yes'], lambda: dlg._close(True), PALETTE['accent_fill']).pack(
-        side='right', padx=(0, 8))
+        side='right', padx=(0, SPACE['sm']))
     return bool(dlg.show())
 
 
@@ -151,13 +183,16 @@ def show_message(parent, title: str, message: str, kind: str = 'info') -> None:
     dlg = _Modal(parent, title, 560, 300)
     color = {'error': PALETTE['danger_text'], 'warning': PALETTE['warning_text']}.get(
         kind, PALETTE['text_primary'])
-    box = ctk.CTkTextbox(dlg, font=(FONT_UI, 13), fg_color=PALETTE['bg_card'],
-                         text_color=color, wrap='word', border_width=1,
-                         border_color=PALETTE['border'])
-    box.pack(fill='both', expand=True, padx=20, pady=(20, 10))
+    # borda só em aviso/erro (comunica o tipo); mensagem comum separa pelo tom
+    box = ctk.CTkTextbox(dlg, font=(FONT_UI, FONT_SIZE['md']), fg_color=PALETTE['bg_surface'],
+                         text_color=color, wrap='word', corner_radius=RADIUS['card'],
+                         border_width=1 if kind in ('error', 'warning') else 0,
+                         border_color=mix(PALETTE['bg_surface'], color, 0.45))
+    box.pack(fill='both', expand=True, padx=SPACE['xl'], pady=(SPACE['xl'], SPACE['md']))
     box.insert('end', message)
     box.configure(state='disabled')
-    _button(dlg, "OK", lambda: dlg._close(True), PALETTE['accent_fill'], width=100).pack(pady=(0, 16))
+    _button(dlg, "OK", lambda: dlg._close(True), PALETTE['accent_fill'], width=100).pack(
+        pady=(0, SPACE['lg']))
     dlg.show()
 
 
@@ -170,19 +205,20 @@ class PreflightDialog(_Modal):
         n_err = sum(1 for i in report.issues if i.severity == 'error')
         n_warn = sum(1 for i in report.issues if i.severity == 'warning')
         head = ctk.CTkFrame(self, fg_color='transparent')
-        head.pack(fill='x', padx=20, pady=(18, 6))
+        head.pack(fill='x', padx=SPACE['xl'], pady=(SPACE['lg'], SPACE['sm']))
         ctk.CTkLabel(head, text=TEXTS['preflight_heading'].format(
                          genes=len(report.genes), errors=n_err, warnings=n_warn),
-                     font=(FONT_UI, 15, 'bold'), text_color=PALETTE['text_primary'],
+                     font=(FONT_UI, FONT_SIZE['lg'], 'bold'), text_color=PALETTE['text_primary'],
                      justify='left', wraplength=840).pack(anchor='w')
-        ctk.CTkLabel(head, text=TEXTS['preflight_explain'], font=(FONT_UI, 12),
+        ctk.CTkLabel(head, text=TEXTS['preflight_explain'], font=(FONT_UI, FONT_SIZE['sm']),
                      text_color=PALETTE['text_secondary'], justify='left',
-                     wraplength=840).pack(anchor='w', pady=(4, 0))
+                     wraplength=840).pack(anchor='w', pady=(SPACE['xs'], 0))
 
-        box = ctk.CTkTextbox(self, font=(FONT_MONO, 12), fg_color=PALETTE['bg_card'],
+        box = ctk.CTkTextbox(self, font=(FONT_MONO, FONT_SIZE['sm']), fg_color=PALETTE['bg_surface'],
                              text_color=PALETTE['text_primary'], wrap='word',
-                             border_width=1, border_color=PALETTE['border'])
-        box.pack(fill='both', expand=True, padx=20, pady=8)
+                             corner_radius=RADIUS['card'], border_width=1,
+                             border_color=mix(PALETTE['bg_surface'], PALETTE['warning_text'], 0.35))
+        box.pack(fill='both', expand=True, padx=SPACE['xl'], pady=SPACE['sm'])
         box.tag_config('error', foreground=PALETTE['danger_text'])
         box.tag_config('warning', foreground=PALETTE['warning_text'])
         box.tag_config('info', foreground=PALETTE['text_tertiary'])
@@ -198,12 +234,12 @@ class PreflightDialog(_Modal):
         box.configure(state='disabled')
 
         row = ctk.CTkFrame(self, fg_color='transparent')
-        row.pack(fill='x', padx=20, pady=(4, 18))
+        row.pack(fill='x', padx=SPACE['xl'], pady=(SPACE['sm'], SPACE['lg']))
         _button(row, TEXTS['preflight_btn_continue'], lambda: self._close('continue'),
                 PALETTE['warning_fill']).pack(side='right')
         _button(row, TEXTS['preflight_btn_fix'], lambda: self._close('fix'),
-                PALETTE['accent_fill']).pack(side='right', padx=(0, 8))
-        ctk.CTkLabel(row, text=TEXTS['preflight_continue_hint'], font=(FONT_UI, 12),
+                PALETTE['accent_fill']).pack(side='right', padx=(0, SPACE['sm']))
+        ctk.CTkLabel(row, text=TEXTS['preflight_continue_hint'], font=(FONT_UI, FONT_SIZE['sm']),
                      text_color=PALETTE['text_tertiary'], wraplength=480,
                      justify='left').pack(side='left')
 

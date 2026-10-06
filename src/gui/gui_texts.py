@@ -83,7 +83,7 @@ TEXTS_PT: dict[str, object] = {
 
     "label_omega_initial":    "ω (dN/dS) inicial:",
     "label_timeout":          "Tempo limite por modelo (min):",
-    "label_timeout_auto":     "automático",
+    "label_timeout_auto":     "auto",
     "label_timeout_hint": (
         "Quanto tempo cada execução do codeml (um gene × um modelo) pode levar.\n\n"
         "Vazio = automático: o EasyPAML estima o tempo pelo modelo e pelo tamanho\n"
@@ -104,6 +104,32 @@ TEXTS_PT: dict[str, object] = {
         "Desligue (cleandata = 0) só se souber o que está fazendo."
     ),
     "label_cpus": "CPUs (paralelismo):",
+    "label_omega_initial_hint": (
+        "Valor de partida de ω (dN/dS) para a otimização por máxima verossimilhança\n"
+        "(variável 'omega' do codeml; padrão do EasyPAML: 0,5). Não fixa ω: o codeml\n"
+        "estima ω a partir dele (exceto nos nulos M8a e branch-site, em que ω = 1).\n\n"
+        "O manual do PAML sugere repetir a análise com outros valores iniciais\n"
+        "(ex.: 0,5 e 2) e conferir se o lnL chega ao mesmo valor: M7/M8 e\n"
+        "branch-site podem ter problemas de convergência.\n\n"
+        "Fonte: manual do PAML (pamlDOC: 'omega', 'Specifying initial values') e PAML FAQ."
+    ),
+    "label_ncatg_hint": (
+        "Número de categorias usadas para discretizar a distribuição beta de ω\n"
+        "nos modelos M7, M8 e M8a (variável 'ncatG' do codeml). Não afeta os\n"
+        "outros modelos.\n\n"
+        "Padrão: 10, o valor usado por Yang et al. (2000) para a beta e o que o\n"
+        "codeml adota quando roda vários modelos num mesmo .ctl. Mais categorias\n"
+        "aproximam melhor a distribuição e deixam a análise mais lenta.\n\n"
+        "Fonte: manual do PAML (pamlDOC: 'NSsites' / 'ncatG')."
+    ),
+    "label_cpus_hint": (
+        "Quantos genes o EasyPAML analisa ao mesmo tempo: um processo codeml\n"
+        "por gene (o codeml usa um núcleo por processo). Os modelos de um mesmo\n"
+        "gene rodam um depois do outro.\n\n"
+        "Mais CPUs terminam o lote mais rápido, mas usam mais memória e deixam o\n"
+        "computador mais lento para outras tarefas. Com um gene só, mais de 1 não\n"
+        "acelera. Não muda os resultados."
+    ),
 
     "label_ignore_stops":      "Ignorar stop codons",
     "label_ignore_stops_hint": (
@@ -482,7 +508,7 @@ TEXTS_PT: dict[str, object] = {
     "viewer_btn_open_output": "Abrir pasta de resultados",
     "stats_sig_genes": "Genes com seleção positiva (q < 0,05)",
     "stats_failed": "Genes que falharam",
-    "summary_title": "Uma frase por gene",
+    "summary_title": "Uma linha por gene e por teste",
     "summary_explain": (
         "Para cada teste: p do LRT, q (p corrigido por Benjamini-Hochberg entre os genes), "
         "ω e proporção (p₁) da classe de sítios que pode ter ω > 1, e quantos sítios têm "
@@ -513,6 +539,39 @@ TEXTS_PT: dict[str, object] = {
     "lrt_headers": ["Gene", "lnL nulo", "lnL alternativo", "2Δℓ", "p", "q (BH)", "ω classe + (p₁)", "Sig."],
     "lrt_sig_yes": "sim",
     "lrt_sig_no": "não",
+    "summary_verdict_sig": "significativo",
+    "summary_verdict_nonsig": "não significativo",
+    "summary_verdict_failed": "FALHOU",
+    "summary_sites_n": "{n} sítio(s) com Pr(ω>1) ≥ 0,95",
+    # ── Janela principal (2ª passada visual): etapas, cartões, resumo ──
+    "app_main_title":     "Análise de seleção positiva",
+    "app_main_subtitle":  "Modelos de códons do PAML/codeml para vários genes de uma vez",
+    "step_data":          "Dados",
+    "step_models":        "Modelos",
+    "step_settings":      "Configurações avançadas",
+    "step_results":       "Resultados",
+    "step_models_none":   "Ligue os modelos ao lado",
+    "step_models_count":  "{n} selecionado(s)",
+    "slot_choose":        "Escolher",
+    "slot_change":        "Trocar",
+    "run_summary_no_data":   "Escolha os dados na etapa 1",
+    "run_summary_no_models": "nenhum modelo ligado",
+    "run_summary_genes":     "{n} gene(s)",
+    "run_summary_cpus":      "{n} CPU(s)",
+    "settings_show":       "Mostrar",
+    "settings_hide":       "Ocultar",
+    "log_collapse":        "Recolher",
+    "log_expand":          "Expandir",
+    "run_summary_models":  "{n} modelo(s)",
+    "run_tests_label":     "Testes LRT: {tests}",
+    "run_tests_none":      ("Nenhum teste LRT será feito: cada teste precisa de um par nulo + "
+                            "alternativo (ex.: M1a e M2a, M7 e M8)."),
+    "tile_auto":           "Entra automaticamente como nulo do {alt}.",
+    "tile_auto_title":     "{null}: incluído automaticamente",
+    "tile_auto_help":      ("{null} entra na análise automaticamente porque “Modelos nulos automáticos” "
+                            "está ligado e {alt} foi escolhido: o teste LRT compara o alternativo com "
+                            "o seu modelo nulo.\n\nPara não rodar {null}, desligue “Modelos nulos "
+                            "automáticos” (ou, no caso do M8a, “Incluir M8a”)."),
 }
 
 
@@ -567,7 +626,7 @@ TEXTS_EN: dict[str, object] = {
 
     "label_omega_initial":    "Initial ω (dN/dS):",
     "label_timeout":          "Time limit per model (min):",
-    "label_timeout_auto":     "automatic",
+    "label_timeout_auto":     "auto",
     "label_timeout_hint": (
         "How long each codeml run (one gene × one model) may take.\n\n"
         "Empty = automatic: EasyPAML estimates the time from the model and the\n"
@@ -588,6 +647,33 @@ TEXTS_EN: dict[str, object] = {
         "Turn off (cleandata = 0) only if you know why."
     ),
     "label_cpus": "CPUs (parallelism):",
+    "label_omega_initial_hint": (
+        "Starting value of ω (dN/dS) for the maximum-likelihood optimisation\n"
+        "(codeml variable 'omega'; EasyPAML default: 0.5). It does not fix ω:\n"
+        "codeml estimates ω from it (except in the M8a and branch-site nulls,\n"
+        "where ω = 1).\n\n"
+        "The PAML manual suggests re-running with other initial values (e.g. 0.5\n"
+        "and 2) and checking that lnL reaches the same value: M7/M8 and\n"
+        "branch-site models can have convergence problems.\n\n"
+        "Source: PAML manual (pamlDOC: 'omega', 'Specifying initial values') and PAML FAQ."
+    ),
+    "label_ncatg_hint": (
+        "Number of categories used to discretise the beta distribution of ω in\n"
+        "models M7, M8 and M8a (codeml variable 'ncatG'). It does not affect the\n"
+        "other models.\n\n"
+        "Default: 10, the value used by Yang et al. (2000) for the beta and the one\n"
+        "codeml uses when several models run from one .ctl. More categories\n"
+        "approximate the distribution better and make the analysis slower.\n\n"
+        "Source: PAML manual (pamlDOC: 'NSsites' / 'ncatG')."
+    ),
+    "label_cpus_hint": (
+        "How many genes EasyPAML analyses at the same time: one codeml process\n"
+        "per gene (codeml uses one core per process). The models of a gene run\n"
+        "one after the other.\n\n"
+        "More CPUs finish the batch sooner but use more memory and slow the\n"
+        "computer down for other tasks. With a single gene, more than 1 does not\n"
+        "help. It does not change the results."
+    ),
 
     "label_ignore_stops":      "Ignore stop codons",
     "label_ignore_stops_hint": (
@@ -965,7 +1051,7 @@ TEXTS_EN: dict[str, object] = {
     "viewer_btn_open_output": "Open results folder",
     "stats_sig_genes": "Genes with positive selection (q < 0.05)",
     "stats_failed": "Genes that failed",
-    "summary_title": "One sentence per gene",
+    "summary_title": "One line per gene and test",
     "summary_explain": (
         "For each test: LRT p, q (p corrected by Benjamini-Hochberg across genes), ω and "
         "proportion (p₁) of the site class that can have ω > 1, and how many sites have "
@@ -996,6 +1082,39 @@ TEXTS_EN: dict[str, object] = {
     "lrt_headers": ["Gene", "lnL null", "lnL alternative", "2Δℓ", "p", "q (BH)", "positive-class ω (p₁)", "Sig."],
     "lrt_sig_yes": "yes",
     "lrt_sig_no": "no",
+    "summary_verdict_sig": "significant",
+    "summary_verdict_nonsig": "not significant",
+    "summary_verdict_failed": "FAILED",
+    "summary_sites_n": "{n} site(s) with Pr(ω>1) ≥ 0.95",
+    # ── Main window (2nd visual pass): steps, tiles, summary ──
+    "app_main_title":     "Positive selection analysis",
+    "app_main_subtitle":  "PAML/codeml codon models for many genes at once",
+    "step_data":          "Data",
+    "step_models":        "Models",
+    "step_settings":      "Advanced settings",
+    "step_results":       "Results",
+    "step_models_none":   "Switch models on at the right",
+    "step_models_count":  "{n} selected",
+    "slot_choose":        "Choose",
+    "slot_change":        "Change",
+    "run_summary_no_data":   "Choose the data in step 1",
+    "run_summary_no_models": "no model switched on",
+    "run_summary_genes":     "{n} gene(s)",
+    "run_summary_cpus":      "{n} CPU(s)",
+    "settings_show":       "Show",
+    "settings_hide":       "Hide",
+    "log_collapse":        "Collapse",
+    "log_expand":          "Expand",
+    "run_summary_models":  "{n} model(s)",
+    "run_tests_label":     "LRT tests: {tests}",
+    "run_tests_none":      ("No LRT test will be run: each test needs a null + alternative pair "
+                            "(e.g. M1a and M2a, M7 and M8)."),
+    "tile_auto":           "Included automatically as the null of {alt}.",
+    "tile_auto_title":     "{null}: included automatically",
+    "tile_auto_help":      ("{null} is added to the analysis automatically because “Automatic null "
+                            "models” is on and {alt} was chosen: the LRT compares the alternative "
+                            "with its null model.\n\nTo not run {null}, switch “Automatic null "
+                            "models” off (or, for M8a, “Include M8a”)."),
 }
 
 

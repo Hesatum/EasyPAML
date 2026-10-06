@@ -25,24 +25,25 @@ from src.backend.branch_extractor import BranchExtractor
 from src.backend import lrt_stats
 from src.backend.site_map import attach_original_positions
 from .gui_texts import TEXTS, get_language, tr
-from .ui_helpers import PALETTE, fit_to_screen, hover_tint, open_folder, show_message
+from .ui_helpers import (FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE, fit_to_screen,
+                         hover_tint, mix, open_folder, show_message)
 
 
 class ResultsViewerWindow(ctk.CTkToplevel):
     """Janela de visualização profissional de resultados"""
     
     COLORS = {
-        # Backgrounds — near-black, like Linear / Discord
-        'bg_dark':        '#0c0c0e',
-        'bg_card':        '#16161a',
-        'bg_card_hover':  '#1e1e24',
-        'bg_feed':        '#111115',
-        'bg_sidebar':     '#111115',
-        'bg_input':       '#1e1e24',
+        # Fundos: mesmas camadas da janela principal (PALETTE), separadas por tom
+        'bg_dark':        PALETTE['bg_window'],
+        'bg_card':        PALETTE['bg_surface'],
+        'bg_card_hover':  PALETTE['bg_elevated'],
+        'bg_feed':        PALETTE['bg_panel'],
+        'bg_sidebar':     PALETTE['bg_panel'],
+        'bg_input':       PALETTE['bg_inset'],
 
         # Text hierarchy
-        'text_primary':   '#ededef',
-        'text_secondary': '#9898a6',
+        'text_primary':   PALETTE['text_primary'],
+        'text_secondary': PALETTE['text_secondary'],
         'text_tertiary':  '#8e8ea4',   # contraste >= 4,5:1 (antes #5e5e6e)
         'text_muted':     '#8a8aa0',   # (antes #3a3a48, ilegível)
 
@@ -68,9 +69,84 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         'info':           '#22d3ee',
 
         # Borders
-        'border':         '#222228',
-        'border_hover':   '#32323e',
+        'border':         PALETTE['divider'],
+        'border_hover':   PALETTE['control_border_hover'],
     }
+
+    # ── helpers visuais (só apresentação) ─────────────────────────────
+
+    @staticmethod
+    def _font(size: str = 'sm', weight: str = 'normal'):
+        return (FONT_UI, FONT_SIZE[size], weight)
+
+    @staticmethod
+    def _mono(size: str = 'sm', weight: str = 'normal'):
+        # algarismos de largura fixa: colunas numéricas alinhadas
+        return (FONT_MONO, FONT_SIZE[size], weight)
+
+    def _fit(self, text: str, px: int, font) -> str:
+        """Corta o texto com '…' para caber em px (nomes de gene longos não
+        empurram as colunas seguintes)."""
+        import tkinter.font as tkfont
+        scale = ctk.ScalingTracker.get_widget_scaling(self)
+        cache = self.__dict__.setdefault('_tkfonts', {})
+        f = cache.get(font)
+        if f is None:   # o CTk usa o tamanho da fonte em pixels (negativo no Tk)
+            f = cache[font] = tkfont.Font(family=font[0], size=-round(font[1] * scale),
+                                          weight='bold' if 'bold' in font[2:] else 'normal')
+        px = int(px * scale)
+        if f.measure(text) <= px:
+            return text
+        while text and f.measure(text + '…') > px:
+            text = text[:-1]
+        return text + '…'
+
+    @staticmethod
+    def _chip(parent, text: str, kind: str = 'neutral', font=None):
+        """Rótulo de veredito: fundo "subtle" + texto da mesma família de cor.
+        Sempre com texto (nunca só cor)."""
+        fg, bg = {
+            'success': (PALETTE['success_fg'], PALETTE['success_subtle']),
+            'warning': (PALETTE['warning_fg'], PALETTE['warning_subtle']),
+            'danger': (PALETTE['danger_fg'], PALETTE['danger_subtle']),
+            'neutral': (PALETTE['text_secondary'], PALETTE['bg_elevated']),
+        }[kind]
+        return ctk.CTkLabel(parent, text=text, text_color=fg, fg_color=bg,
+                            corner_radius=RADIUS['field'] - 2, height=22, padx=SPACE['sm'],
+                            font=font or (FONT_UI, FONT_SIZE['xs'], 'bold'))
+
+    @staticmethod
+    def _style_combo(combo):
+        combo.configure(fg_color=PALETTE['bg_inset'], border_color=PALETTE['control_border'],
+                        button_color=PALETTE['control_border'],
+                        button_hover_color=PALETTE['control_border_hover'],
+                        dropdown_fg_color=PALETTE['bg_elevated'],
+                        dropdown_hover_color=PALETTE['bg_elevated_hover'],
+                        dropdown_text_color=PALETTE['text_primary'],
+                        text_color=PALETTE['text_primary'], border_width=1,
+                        corner_radius=RADIUS['field'],
+                        font=(FONT_UI, FONT_SIZE['sm']), dropdown_font=(FONT_UI, FONT_SIZE['sm']))
+        return combo
+
+    def _style_tabs(self, tabs):
+        """Aba ativa: fundo índigo + texto branco (6,3:1); inativas: texto
+        secundário sem fundo; hover das inativas em cinza (não parece ativa)."""
+        seg = tabs._segmented_button
+        seg.configure(font=(FONT_UI, FONT_SIZE['md'], 'bold'))
+
+        def restyle(*_):
+            current = tabs.get()
+            for name, btn in seg._buttons_dict.items():
+                btn.configure(text_color='#ffffff' if name == current else PALETTE['text_secondary'])
+
+        orig_set = tabs.set
+
+        def set_and_restyle(name):
+            orig_set(name)
+            restyle()
+        tabs.set = set_and_restyle
+        tabs.configure(command=restyle)
+        restyle()
     
     def __init__(self, parent, output_folder: Path):
         super().__init__(parent)
@@ -295,62 +371,52 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         error_frame = ctk.CTkFrame(self, fg_color=self.COLORS['bg_dark'])
         error_frame.pack(fill='both', expand=True, padx=20, pady=20)
         
-        ctk.CTkLabel(error_frame, text="[X]", font=("Roboto", 48)).pack(pady=20)
+        ctk.CTkLabel(error_frame, text="[X]", font=(FONT_UI, 48)).pack(pady=20)
         ctk.CTkLabel(error_frame, text=message,
-                    font=("Roboto", 14, "bold"),
+                    font=(FONT_UI, 14, "bold"),
                     text_color=self.COLORS['danger']).pack(pady=10)
         ctk.CTkLabel(error_frame, text=TEXTS["viewer_error_run_analysis"],
-                    font=("Roboto", 11),
+                    font=(FONT_UI, 11),
                     text_color=self.COLORS['text_tertiary']).pack()
     
     def setup_ui(self):
         """Setup da interface premium"""
 
         # ── HEADER ──────────────────────────────────────────────────
-        header = ctk.CTkFrame(self, fg_color=self.COLORS['bg_sidebar'], corner_radius=0, height=64)
+        # Cabeçalho compacto (52 px): sobra altura para as tabelas em 1366×768
+        header = ctk.CTkFrame(self, fg_color=PALETTE['bg_panel'], corner_radius=0, height=52)
         header.pack(fill='x', padx=0, pady=0)
         header.pack_propagate(False)
 
         left = ctk.CTkFrame(header, fg_color='transparent')
-        left.pack(side="left", padx=24, pady=0, fill='y')
-
-        ctk.CTkLabel(left, text="EP", font=("Roboto", 24)).pack(side="left", padx=(0, 12))
-        title_block = ctk.CTkFrame(left, fg_color='transparent')
-        title_block.pack(side="left", fill='y', pady=14)
-        ctk.CTkLabel(title_block, text=TEXTS["viewer_header_title"],
-                     font=("Roboto", 16, "bold"),
-                     text_color=self.COLORS['text_primary']).pack(anchor="w")
-        ctk.CTkLabel(title_block, text=TEXTS["viewer_header_subtitle"],
-                     font=("Roboto", 11),
-                     text_color=self.COLORS['text_tertiary']).pack(anchor="w")
+        left.pack(side="left", padx=SPACE['xl'], pady=0, fill='y')
+        ctk.CTkLabel(left, text=TEXTS["viewer_header_title"], font=self._font('lg', 'bold'),
+                     text_color=PALETTE['text_primary']).pack(side='left')
+        ctk.CTkLabel(left, text=TEXTS["viewer_header_subtitle"], font=self._font('xs'),
+                     text_color=PALETTE['text_tertiary']).pack(side='left', padx=(SPACE['md'], 0))
 
         right = ctk.CTkFrame(header, fg_color='transparent')
-        right.pack(side="right", padx=24, pady=12, fill='y')
-        ctk.CTkButton(right, text=TEXTS["viewer_btn_open_output"], height=34,
-                      fg_color=self.COLORS['bg_card'], border_width=1,
-                      border_color=self.COLORS['accent_cyan'], text_color=self.COLORS['accent_cyan'],
-                      hover_color=hover_tint(self.COLORS['accent_cyan'], self.COLORS['bg_card']),
-                      font=("Roboto", 12, "bold"),
-                      command=lambda: open_folder(self.output_folder)).pack(side='right', padx=(12, 0))
+        right.pack(side="right", padx=SPACE['xl'], pady=SPACE['sm'], fill='y')
+        ctk.CTkButton(right, text=TEXTS["viewer_btn_open_output"], height=32,
+                      fg_color='transparent', border_width=1,
+                      border_color=PALETTE['control_border'], text_color=PALETTE['text_primary'],
+                      hover_color=PALETTE['bg_elevated'], corner_radius=RADIUS['field'],
+                      font=self._font('sm', 'bold'),
+                      command=lambda: open_folder(self.output_folder)).pack(side='right', padx=(SPACE['md'], 0))
         ctk.CTkLabel(right, text=TEXTS["viewer_genes_loaded"].format(n=len(self.df)),
-                     font=("Roboto", 12), text_color=self.COLORS['accent_blue_light']).pack(side='right')
-        
+                     font=self._font('sm'), text_color=PALETTE['text_secondary']).pack(side='right')
+
         # PAINEL DE ESTATÍSTICAS
         stats_frame = ctk.CTkFrame(self, fg_color='transparent')
-        stats_frame.pack(fill='x', padx=20, pady=(16, 4))
+        stats_frame.pack(fill='x', padx=SPACE['lg'], pady=(SPACE['md'], 0))
         self._create_stats_panel(stats_frame)
 
         # ── BANNER DE AVISO: análises órfãs (.ctl sem resultado) ──────────────
         orphaned = getattr(self, '_orphaned_analyses', {})
         if orphaned:
-            warn_frame = ctk.CTkFrame(
-                self,
-                fg_color='#3A1C00',
-                corner_radius=8,
-                border_width=1,
-                border_color=self.COLORS['warning']
-            )
-            warn_frame.pack(fill='x', padx=20, pady=(0, 4))
+            warn_frame = ctk.CTkFrame(self, fg_color=PALETTE['warning_subtle'],
+                                      corner_radius=RADIUS['card'])
+            warn_frame.pack(fill='x', padx=SPACE['lg'], pady=(SPACE['sm'], 0))
 
             n_genes  = len(orphaned)
             n_models = sum(len(v) for v in orphaned.values())
@@ -369,24 +435,23 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             ctk.CTkLabel(
                 warn_frame,
                 text=warn_text,
-                font=("Roboto", 11),
-                text_color=self.COLORS['warning'],
+                font=self._font('sm'),
+                text_color=PALETTE['warning_fg'],
                 justify='left',
                 anchor='w',
-            ).pack(padx=12, pady=6, anchor='w')
+            ).pack(padx=SPACE['md'], pady=SPACE['sm'], anchor='w')
 
         # ABAS PRINCIPAIS
-        tabs = ctk.CTkTabview(self, fg_color=self.COLORS['bg_card'],
-                              segmented_button_fg_color=self.COLORS['bg_sidebar'],
+        tabs = ctk.CTkTabview(self, fg_color=PALETTE['bg_surface'],
+                              segmented_button_fg_color=PALETTE['bg_panel'],
                               segmented_button_selected_color=PALETTE['accent_fill'],
-                              segmented_button_unselected_color=self.COLORS['bg_sidebar'],
-                              segmented_button_unselected_hover_color=self.COLORS['bg_card_hover'],
+                              segmented_button_selected_hover_color=PALETTE['accent_fill'],
+                              segmented_button_unselected_color=PALETTE['bg_panel'],
+                              segmented_button_unselected_hover_color=PALETTE['bg_elevated_hover'],
                               text_color='#ffffff',
-                              segmented_button_selected_hover_color='#4338ca',
-                              corner_radius=12,
-                              border_width=1,
-                              border_color=self.COLORS['border'])
-        tabs.pack(fill='both', expand=True, padx=20, pady=(8, 12))
+                              corner_radius=RADIUS['panel'],
+                              border_width=0)
+        tabs.pack(fill='both', expand=True, padx=SPACE['lg'], pady=(SPACE['xs'], SPACE['md']))
         self.tabs = tabs
         
         tabs.add(TEXTS["viewer_tab_summary"])
@@ -412,6 +477,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         self._create_tree_tab(tabs.tab(TEXTS["viewer_tab_branch"]))
         self._create_export_tab(tabs.tab(TEXTS["viewer_tab_export"]))
+        self._style_tabs(tabs)
     
     # ── p / q por gene e par (TSV novo traz p_/q_; resultados antigos: calcula) ──
 
@@ -453,34 +519,57 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         return [pair for pair in lrt_stats.POSITIVE_SELECTION_PAIRS if self._pair_values(*pair)]
 
     def _create_stats_panel(self, parent):
-        """Cartões: genes, modelos, genes significativos POR TESTE (q < 0,05) e
-        genes que falharam. Sem "seleção global" nem média de ω entre modelos
-        (contradiziam o LRT no teste de usabilidade)."""
-        lines = []
+        """Cartões no estilo "painel": rótulo pequeno em cima, valor grande embaixo,
+        todos com a mesma altura. Genes, modelos, genes significativos POR TESTE
+        (q < 0,05) e genes que falharam. Sem "seleção global" nem média de ω entre
+        modelos (contradiziam o LRT no teste de usabilidade)."""
+        tests = []
         for null, alt in self._positive_tests():
             vals = self._pair_values(null, alt)
             n_sig = sum(1 for _, _, q in vals.values() if pd.notna(q) and q < 0.05)
-            lines.append(f"{alt} vs {null}: {n_sig}/{len(vals)}")
-        sig_text = "\n".join(lines) if lines else "—"
+            tests.append((f"{alt} vs {null}", n_sig, len(vals)))
         n_failed = int((self.df['status'] == 'failed').sum()) if 'status' in self.df.columns else 0
 
-        stats_data = [
-            (TEXTS["stats_total_genes"], str(len(self.df)), self.COLORS['accent_blue_light'], 28),
-            (TEXTS["stats_models_run"], self._count_models(), self.COLORS['accent_cyan'], 28),
-            (TEXTS["stats_sig_genes"], sig_text, self.COLORS['success'], 16 if lines else 28),
-            (TEXTS["stats_failed"], str(n_failed),
-             self.COLORS['danger'] if n_failed else self.COLORS['text_secondary'], 28),
-        ]
-        for label, value, color, size in stats_data:
-            card = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'], corner_radius=10,
-                                border_width=1, border_color=self.COLORS['border'])
-            card.pack(side="left", fill="both", expand=True, padx=5)
-            inner = ctk.CTkFrame(card, fg_color='transparent')
-            inner.pack(fill='both', expand=True, padx=16, pady=10)
-            ctk.CTkLabel(inner, text=label, font=("Roboto", 12),
-                         text_color=self.COLORS['text_secondary'], anchor='w').pack(anchor='w')
-            ctk.CTkLabel(inner, text=value, font=("Roboto", size, "bold"), justify='left',
-                         text_color=color, anchor='w').pack(anchor='w', pady=(2, 0))
+        value_font = (FONT_UI, 22, 'bold')
+        pad = dict(padx=SPACE['lg'], pady=SPACE['md'])
+
+        def card(col, label, weight=1):
+            parent.grid_columnconfigure(col, weight=weight, uniform='stats')
+            c = ctk.CTkFrame(parent, fg_color=PALETTE['bg_surface'], corner_radius=RADIUS['card'])
+            c.grid(row=0, column=col, sticky='nsew',
+                   padx=(0 if col == 0 else SPACE['xs'], 0 if col == 3 else SPACE['xs']))
+            inner = ctk.CTkFrame(c, fg_color='transparent')
+            inner.pack(fill='both', expand=True, **pad)
+            ctk.CTkLabel(inner, text=label, font=self._font('xs'), anchor='w',
+                         text_color=PALETTE['text_secondary']).pack(anchor='w')
+            return inner
+
+        def value(box, text, color):
+            ctk.CTkLabel(box, text=text, font=value_font, anchor='w',
+                         text_color=color).pack(anchor='w')
+
+        value(card(0, TEXTS["stats_total_genes"]), str(len(self.df)), PALETTE['text_primary'])
+        value(card(1, TEXTS["stats_models_run"]), self._count_models(), PALETTE['text_primary'])
+
+        box = card(2, TEXTS["stats_sig_genes"], weight=max(2, len(tests)))
+        if tests:
+            row = ctk.CTkFrame(box, fg_color='transparent')
+            row.pack(anchor='w', fill='x')
+            for k, (name, n_sig, total) in enumerate(tests):
+                cell = ctk.CTkFrame(row, fg_color='transparent')
+                cell.pack(side='left', padx=(0, SPACE['xl']))
+                # valor grande + teste ao lado: lido de relance, com texto (não só cor)
+                ctk.CTkLabel(cell, text=f"{n_sig}/{total}", font=value_font,
+                             text_color=PALETTE['success_fg'] if n_sig else PALETTE['text_secondary']
+                             ).pack(side='left')
+                ctk.CTkLabel(cell, text=name, font=self._font('sm'),
+                             text_color=PALETTE['text_secondary']).pack(side='left', padx=(SPACE['sm'], 0),
+                                                                        pady=(6, 0))
+        else:
+            value(box, "—", PALETTE['text_secondary'])
+
+        value(card(3, TEXTS["stats_failed"]), str(n_failed),
+              PALETTE['danger_fg'] if n_failed else PALETTE['text_secondary'])
 
     def _beb_sites(self, gene: str, model: str, threshold: float = 0.95):
         rf = self._find_results_file(gene, model)
@@ -499,37 +588,38 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             return None
 
     def _create_summary_tab(self, parent):
-        """Uma frase por gene e por teste de seleção positiva."""
-        info = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=8)
-        info.pack(fill='x', padx=10, pady=(10, 4))
-        ctk.CTkLabel(info, text=TEXTS["summary_title"], font=("Roboto", 13, "bold"),
-                     text_color=self.COLORS['accent_blue_light']).pack(anchor='w', padx=14, pady=(10, 2))
-        ctk.CTkLabel(info, text=TEXTS["summary_explain"], font=("Roboto", 12),
-                     text_color=self.COLORS['text_secondary'], wraplength=1150,
-                     justify='left').pack(anchor='w', padx=14, pady=(0, 10))
+        """Uma linha por gene e por teste de seleção positiva. Ordem de leitura:
+        gene → teste → veredito → p → q → efeito (ω, p₁) → sítios."""
+        info = ctk.CTkFrame(parent, fg_color='transparent')
+        info.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], SPACE['xs']))
+        ctk.CTkLabel(info, text=TEXTS["summary_title"], font=self._font('md', 'bold'),
+                     text_color=PALETTE['text_primary']).pack(anchor='w')
+        ctk.CTkLabel(info, text=TEXTS["summary_explain"], font=self._font('xs'),
+                     text_color=PALETTE['text_secondary'], wraplength=1180,
+                     justify='left').pack(anchor='w', pady=(2, 0))
 
         tests = self._positive_tests()
-        scroll = ctk.CTkScrollableFrame(parent, fg_color='transparent', corner_radius=8)
-        scroll.pack(fill='both', expand=True, padx=10, pady=(0, 10))
+        scroll = ctk.CTkScrollableFrame(parent, fg_color='transparent', corner_radius=0)
+        scroll.pack(fill='both', expand=True, padx=SPACE['xs'], pady=(0, SPACE['xs']))
         if not tests and 'status' not in self.df.columns:
-            ctk.CTkLabel(scroll, text=TEXTS["summary_no_tests"], font=("Roboto", 13),
-                         text_color=self.COLORS['text_secondary']).pack(pady=40)
+            ctk.CTkLabel(scroll, text=TEXTS["summary_no_tests"], font=self._font('md'),
+                         text_color=PALETTE['text_secondary']).pack(pady=40)
             return
+
+        mono = self._mono('sm')
+        # larguras mínimas fixas: as colunas se alinham de um gene para o outro
+        col_min = (110, 150, 170, 170, 230, 220)
 
         max_genes = 300
         for i, (_, row) in enumerate(self.df.iterrows()):
             if i >= max_genes:
                 ctk.CTkLabel(scroll, text=f"… +{len(self.df) - max_genes} (→ {TEXTS['viewer_tab_export']})",
-                             font=("Roboto", 12), text_color=self.COLORS['text_secondary']).pack(pady=8)
+                             font=self._font('sm'), text_color=PALETTE['text_secondary']).pack(pady=8)
                 break
             gene = row['Gene']
             failed = row.get('status') == 'failed'
-            sig_any = False
-            lines = []
-            if failed:
-                reason = self._failure_reason(gene)
-                lines.append((TEXTS["summary_failed"].format(reason=reason), self.COLORS['danger']))
             sig_by_pair = {}
+            test_rows = []
             for null, alt in tests:
                 vals = self._pair_values(null, alt).get(gene)
                 if not vals:
@@ -538,17 +628,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 test = f"{alt} vs {null}"
                 sig = pd.notna(q) and q < 0.05
                 sig_by_pair[(null, alt)] = sig
-                sig_any |= sig
+                n_sites = None
                 if sig:
                     sites = self._beb_sites(gene, alt)
                     n_sites = len(sites) if sites is not None else 0
-                    text = TEXTS["summary_sig"].format(test=test, p=lrt_stats.format_p_unicode(p),
-                                                       q=lrt_stats.format_p_unicode(q), sites=n_sites)
-                    color = '#86efac'
-                else:
-                    text = TEXTS["summary_nonsig"].format(test=test, p=lrt_stats.format_p_unicode(p),
-                                                          q=lrt_stats.format_p_unicode(q))
-                    color = self.COLORS['text_secondary']
                 w, p1 = row.get(f'{alt}_w_pos'), row.get(f'{alt}_p_pos')
                 if (pd.isna(w) or pd.isna(p1)) and alt in ('M2a', 'M8'):
                     rf = self._find_results_file(gene, alt)
@@ -556,23 +639,49 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                         from src.backend.sites_parser import SitesParser
                         pc = SitesParser.extract_positive_class(rf) or {}
                         w, p1 = pc.get('omega', np.nan), pc.get('p', np.nan)
-                if pd.notna(w) and pd.notna(p1):
-                    text += "  ·  " + TEXTS["summary_posclass"].format(w=f"{w:.3f}", p1=f"{p1:.3f}")
-                lines.append((text, color))
+                effect = (f"ω = {w:.3f}  p₁ = {p1:.3f}" if pd.notna(w) and pd.notna(p1) else "")
+                test_rows.append((test, sig, lrt_stats.format_p_unicode(p),
+                                  lrt_stats.format_p_unicode(q), effect, n_sites))
+
+            card = ctk.CTkFrame(scroll, fg_color=PALETTE['bg_surface'] if i % 2 == 0 else PALETTE['row_alt'],
+                                corner_radius=RADIUS['card'])
+            card.pack(fill='x', pady=(0, SPACE['xs']), padx=SPACE['xs'])
+            head = ctk.CTkFrame(card, fg_color='transparent')
+            head.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], SPACE['xs']))
+            ctk.CTkLabel(head, text=gene, font=self._font('md', 'bold'),
+                         text_color=PALETTE['text_primary']).pack(side='left')
+            if failed:
+                self._chip(head, TEXTS["summary_verdict_failed"], 'danger').pack(side='left', padx=(SPACE['sm'], 0))
+                ctk.CTkLabel(head, text=self._failure_reason(gene), font=self._font('sm'),
+                             text_color=PALETTE['danger_fg']).pack(side='left', padx=(SPACE['sm'], 0))
+
+            body = ctk.CTkFrame(card, fg_color='transparent')
+            body.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
+            for c, m in enumerate(col_min):
+                body.grid_columnconfigure(c, minsize=m)
+            for r, (test, sig, p_txt, q_txt, effect, n_sites) in enumerate(test_rows):
+                ctk.CTkLabel(body, text=test, font=self._font('sm'), anchor='w',
+                             text_color=PALETTE['text_secondary']).grid(row=r, column=0, sticky='w')
+                self._chip(body, TEXTS["summary_verdict_sig"] if sig else TEXTS["summary_verdict_nonsig"],
+                           'success' if sig else 'neutral').grid(row=r, column=1, sticky='w', pady=2)
+                ctk.CTkLabel(body, text=f"p = {p_txt}", font=mono, anchor='w',
+                             text_color=PALETTE['text_primary'] if sig else PALETTE['text_secondary']
+                             ).grid(row=r, column=2, sticky='w')
+                ctk.CTkLabel(body, text=f"q = {q_txt}", font=self._mono('sm', 'bold') if sig else mono,
+                             anchor='w', text_color=PALETTE['success_fg'] if sig else PALETTE['text_secondary']
+                             ).grid(row=r, column=3, sticky='w')
+                ctk.CTkLabel(body, text=effect, font=mono, anchor='w',
+                             text_color=PALETTE['text_secondary']).grid(row=r, column=4, sticky='w')
+                if n_sites is not None:
+                    ctk.CTkLabel(body, text=TEXTS["summary_sites_n"].format(n=n_sites), font=self._font('sm'),
+                                 anchor='w', text_color=PALETTE['text_primary'] if n_sites
+                                 else PALETTE['text_secondary']).grid(row=r, column=5, sticky='w')
             if sig_by_pair.get(('M7', 'M8')) and ('M8a', 'M8') in sig_by_pair \
                     and not sig_by_pair[('M8a', 'M8')]:
-                lines.append((TEXTS["summary_m8a_caveat"], self.COLORS['warning']))
-
-            border = self.COLORS['danger'] if failed else ('#10b981' if sig_any else self.COLORS['border'])
-            card = ctk.CTkFrame(scroll, fg_color=self.COLORS['bg_card'], corner_radius=10,
-                                border_width=1, border_color=border)
-            card.pack(fill='x', pady=4, padx=4)
-            ctk.CTkLabel(card, text=gene, font=("Roboto", 14, "bold"),
-                         text_color=self.COLORS['text_primary']).pack(anchor='w', padx=14, pady=(10, 2))
-            for k, (text, color) in enumerate(lines):
-                ctk.CTkLabel(card, text=text, font=("Roboto", 12), text_color=color,
-                             wraplength=1150, justify='left').pack(
-                                 anchor='w', padx=22, pady=(1, 10 if k == len(lines) - 1 else 1))
+                ctk.CTkLabel(card, text="⚠ " + TEXTS["summary_m8a_caveat"], font=self._font('sm'),
+                             text_color=PALETTE['warning_fg'], fg_color=PALETTE['warning_subtle'],
+                             corner_radius=RADIUS['field'], padx=SPACE['sm'], wraplength=1100,
+                             justify='left', anchor='w').pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
 
     def _failure_reason(self, gene: str) -> str:
         cache = getattr(self, '_fail_cache', None)
@@ -592,40 +701,49 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         comparisons, descriptions = self._get_available_lrt_columns()
         if not comparisons:
             ctk.CTkLabel(parent, text=TEXTS["lrt_no_comparisons"],
-                        font=("Roboto", 12),
+                        font=(FONT_UI, 12),
                         text_color=self.COLORS['warning']).pack(pady=50)
             return
 
-        # ── selector card ──────────────────────────────────────────────
-        ctrl_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'], corner_radius=8)
-        ctrl_frame.pack(fill='x', padx=10, pady=(10, 4))
+        # ── seletor de teste + hipótese (sem cartão: menos caixas competindo) ──
+        ctrl_frame = ctk.CTkFrame(parent, fg_color='transparent')
+        ctrl_frame.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], SPACE['xs']))
 
         row1 = ctk.CTkFrame(ctrl_frame, fg_color='transparent')
-        row1.pack(fill='x', padx=14, pady=(12, 4))
+        row1.pack(fill='x')
 
         ctk.CTkLabel(row1, text=TEXTS["lrt_label_model"],
-                     font=("Roboto", 11, "bold"),
-                     text_color=self.COLORS['text_secondary']).pack(side='left', padx=(0, 10))
+                     font=self._font('sm', 'bold'),
+                     text_color=PALETTE['text_secondary']).pack(side='left', padx=(0, SPACE['sm']))
 
-        comp_combo = ctk.CTkComboBox(row1, values=list(comparisons.keys()), width=380,
-                                     font=("Roboto", 11))
+        comp_combo = self._style_combo(ctk.CTkComboBox(row1, values=list(comparisons.keys()), width=400))
         comp_combo.pack(side='left')
         comp_combo.set(list(comparisons.keys())[0])
 
         # dynamic null-hypothesis description
         desc_lbl = ctk.CTkLabel(ctrl_frame, text="",
-                                font=("Roboto", 11),
-                                text_color=self.COLORS['text_tertiary'],
-                                anchor='w', justify='left')
-        desc_lbl.pack(fill='x', padx=16, pady=(0, 10))
+                                font=self._font('xs'),
+                                text_color=PALETTE['text_tertiary'],
+                                anchor='w', justify='left', wraplength=1180)
+        desc_lbl.pack(fill='x', pady=(SPACE['xs'], 0))
 
-        table_frame = ctk.CTkScrollableFrame(parent, fg_color=self.COLORS['bg_feed'],
-                                            corner_radius=8)
-        table_frame.pack(fill='both', expand=True, padx=10, pady=(4, 10))
+        # cabeçalho da tabela fora da rolagem (fica fixo); preenchido por _render_pair_table
+        body = ctk.CTkFrame(parent, fg_color='transparent')
+        body.pack(fill='both', expand=True, padx=SPACE['md'], pady=(0, SPACE['md']))
+        body.grid_columnconfigure(0, weight=1)
+        body.grid_rowconfigure(1, weight=1)
+        head_host = ctk.CTkFrame(body, fg_color='transparent')
+        table_frame = ctk.CTkScrollableFrame(body, fg_color=PALETTE['bg_panel'],
+                                            corner_radius=RADIUS['card'])
+        table_frame.grid(row=1, column=0, sticky='nsew')
+        self._lrt_head_host = head_host
 
         def update_lrt_table(*args):
             for widget in table_frame.winfo_children():
                 widget.destroy()
+            for widget in head_host.winfo_children():
+                widget.destroy()
+            head_host.grid_remove()
             selected_comp = comp_combo.get()
             col_name = comparisons[selected_comp]
             desc = descriptions.get(col_name, '')
@@ -645,9 +763,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         """
         info = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=8)
         info.pack(fill='x', padx=10, pady=(10, 2))
-        ctk.CTkLabel(info, text=TEXTS["go_tab_title"], font=("Roboto", 11, "bold"),
+        ctk.CTkLabel(info, text=TEXTS["go_tab_title"], font=(FONT_UI, 11, "bold"),
                      text_color=self.COLORS['accent_blue_light']).pack(side="left", padx=14, pady=(10, 2))
-        ctk.CTkLabel(info, text=TEXTS["go_tab_criterion"], font=("Roboto", 11),
+        ctk.CTkLabel(info, text=TEXTS["go_tab_criterion"], font=(FONT_UI, 11),
                      text_color=self.COLORS['text_tertiary'], wraplength=900,
                      justify='left').pack(anchor='w', padx=14, pady=(0, 10))
 
@@ -661,12 +779,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             if annotation_path is None:
                 empty = ctk.CTkFrame(body, fg_color='transparent')
                 empty.pack(expand=True)
-                ctk.CTkLabel(empty, text=TEXTS["go_tab_none_loaded"], font=("Roboto", 13, "bold"),
+                ctk.CTkLabel(empty, text=TEXTS["go_tab_none_loaded"], font=(FONT_UI, 13, "bold"),
                              text_color=self.COLORS['text_tertiary']).pack(pady=(40, 4))
-                ctk.CTkLabel(empty, text=TEXTS["go_tab_none_loaded_sub"], font=("Roboto", 11),
+                ctk.CTkLabel(empty, text=TEXTS["go_tab_none_loaded_sub"], font=(FONT_UI, 11),
                              text_color=self.COLORS['text_muted'], wraplength=700).pack(pady=(0, 14))
                 ctk.CTkButton(empty, text=TEXTS["go_tab_load_button"], width=220, height=36,
-                              fg_color=self.COLORS['accent_blue'], font=("Roboto", 11, "bold"),
+                              fg_color=self.COLORS['accent_blue'], font=(FONT_UI, 11, "bold"),
                               corner_radius=8, command=pick_file).pack()
                 return
 
@@ -674,12 +792,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 from src.backend.go_enrichment import rank_candidates
                 candidates, go_table = rank_candidates(self.output_folder / 'analysis_summary.tsv', annotation_path)
             except Exception as e:
-                ctk.CTkLabel(body, text=f"{TEXTS['go_tab_load_error']}: {e}", font=("Roboto", 11),
+                ctk.CTkLabel(body, text=f"{TEXTS['go_tab_load_error']}: {e}", font=(FONT_UI, 11),
                              text_color='#f87171', wraplength=900).pack(pady=30)
                 return
 
             if candidates.empty:
-                ctk.CTkLabel(body, text=TEXTS["go_tab_no_candidates"], font=("Roboto", 12, "bold"),
+                ctk.CTkLabel(body, text=TEXTS["go_tab_no_candidates"], font=(FONT_UI, 12, "bold"),
                              text_color=self.COLORS['text_tertiary']).pack(pady=40)
                 return
 
@@ -687,16 +805,16 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             scroll.pack(fill='both', expand=True)
 
             if not go_table.empty:
-                ctk.CTkLabel(scroll, text=TEXTS["go_tab_enrichment_header"], font=("Roboto", 11, "bold"),
+                ctk.CTkLabel(scroll, text=TEXTS["go_tab_enrichment_header"], font=(FONT_UI, 11, "bold"),
                              text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(4, 4))
                 for _, row in go_table.head(15).iterrows():
                     line = (f"{row['description']}  ({row['go_id']})  ·  "
                             f"{row['n_candidates']}/{len(candidates)} candidatos  ·  "
                             f"q = {self._fmt_pval(row['q_value'])} (p = {self._fmt_pval(row['p_value'])})")
-                    ctk.CTkLabel(scroll, text=line, font=("Roboto", 11),
+                    ctk.CTkLabel(scroll, text=line, font=(FONT_UI, 11),
                                  text_color=self.COLORS['text_tertiary'], anchor='w').pack(anchor='w', pady=1)
 
-            ctk.CTkLabel(scroll, text=TEXTS["go_tab_candidates_header"], font=("Roboto", 11, "bold"),
+            ctk.CTkLabel(scroll, text=TEXTS["go_tab_candidates_header"], font=(FONT_UI, 11, "bold"),
                          text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(16, 6))
 
             for _, row in candidates.iterrows():
@@ -709,8 +827,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 content.pack(side="left", fill="both", expand=True, padx=14, pady=10)
                 ctk.CTkLabel(content, text=f"{row['Gene']}   ·   q = {self._fmt_pval(row['q_value'])} "
                                             f"(p = {self._fmt_pval(row['p_value'])})",
-                             font=("Roboto", 12, "bold"), text_color='#6ee7b7').pack(anchor='w')
-                ctk.CTkLabel(content, text=row['go_terms'], font=("Roboto", 11),
+                             font=(FONT_UI, 12, "bold"), text_color='#6ee7b7').pack(anchor='w')
+                ctk.CTkLabel(content, text=row['go_terms'], font=(FONT_UI, 11),
                              text_color='#a7f3d0', wraplength=850, justify='left').pack(anchor='w', pady=(3, 0))
 
         def pick_file():
@@ -724,34 +842,37 @@ class ResultsViewerWindow(ctk.CTkToplevel):
     def _create_sites_tab(self, parent):
         """Sítios sob seleção positiva (BEB/NEB) com a numeração do alinhamento
         do usuário e a do codeml lado a lado, legenda de * / **, copiar/exportar."""
-        ctrl = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'], corner_radius=8)
-        ctrl.pack(fill='x', padx=10, pady=(10, 4))
+        ctrl = ctk.CTkFrame(parent, fg_color='transparent')
+        ctrl.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], SPACE['xs']))
         line1 = ctk.CTkFrame(ctrl, fg_color='transparent')
-        line1.pack(fill='x', padx=15, pady=(10, 4))
+        line1.pack(fill='x')
+        lab = dict(font=self._font('sm', 'bold'), text_color=PALETTE['text_secondary'])
 
         models = [m for m in ('M8', 'M2a', 'Branch-site')
                   if (self.output_folder / m).exists() or
                   (m == 'Branch-site' and (self.output_folder / 'BranchSite_A').exists())] or ['M8']
-        ctk.CTkLabel(line1, text=TEXTS["sites_label_model"], font=("Roboto", 12, "bold")).pack(side='left', padx=(0, 6))
-        model_combo = ctk.CTkComboBox(line1, values=models, width=140)
-        model_combo.pack(side='left', padx=(0, 20))
+        ctk.CTkLabel(line1, text=TEXTS["sites_label_model"], **lab).pack(side='left', padx=(0, SPACE['sm']))
+        model_combo = self._style_combo(ctk.CTkComboBox(line1, values=models, width=130))
+        model_combo.pack(side='left', padx=(0, SPACE['lg']))
         model_combo.set(models[0])
-        ctk.CTkLabel(line1, text=TEXTS["sites_label_gene"], font=("Roboto", 12, "bold")).pack(side='left', padx=(0, 6))
-        gene_combo = ctk.CTkComboBox(line1, values=[], width=260)
-        gene_combo.pack(side='left', padx=(0, 20))
-        ctk.CTkLabel(line1, text=TEXTS["sites_label_analysis"], font=("Roboto", 12, "bold")).pack(side='left', padx=(0, 6))
-        method_combo = ctk.CTkComboBox(line1, values=['BEB', 'NEB'], width=90)
-        method_combo.pack(side='left', padx=(0, 20))
+        ctk.CTkLabel(line1, text=TEXTS["sites_label_gene"], **lab).pack(side='left', padx=(0, SPACE['sm']))
+        gene_combo = self._style_combo(ctk.CTkComboBox(line1, values=[], width=340))
+        gene_combo.pack(side='left', padx=(0, SPACE['lg']))
+        ctk.CTkLabel(line1, text=TEXTS["sites_label_analysis"], **lab).pack(side='left', padx=(0, SPACE['sm']))
+        method_combo = self._style_combo(ctk.CTkComboBox(line1, values=['BEB', 'NEB'], width=90))
+        method_combo.pack(side='left', padx=(0, SPACE['lg']))
         method_combo.set('BEB')
-        ctk.CTkLabel(line1, text=TEXTS["sites_label_filter"], font=("Roboto", 12, "bold")).pack(side='left', padx=(0, 6))
-        p_filter = ctk.CTkEntry(line1, width=70)
+        ctk.CTkLabel(line1, text=TEXTS["sites_label_filter"], **lab).pack(side='left', padx=(0, SPACE['sm']))
+        p_filter = ctk.CTkEntry(line1, width=70, fg_color=PALETTE['bg_inset'], border_width=1,
+                                border_color=PALETTE['control_border'], corner_radius=RADIUS['field'],
+                                font=self._mono('sm'), text_color=PALETTE['text_primary'])
         p_filter.pack(side='left')
         p_filter.insert(0, "0.95")
 
         line2 = ctk.CTkFrame(ctrl, fg_color='transparent')
-        line2.pack(fill='x', padx=15, pady=(2, 10))
-        ctk.CTkLabel(line2, text=TEXTS["sites_legend"], font=("Roboto", 12),
-                     text_color=self.COLORS['text_secondary'], wraplength=760,
+        line2.pack(fill='x', pady=(SPACE['xs'], 0))
+        ctk.CTkLabel(line2, text=TEXTS["sites_legend"], font=self._font('xs'),
+                     text_color=PALETTE['text_secondary'], wraplength=820,
                      justify='left').pack(side='left')
         state = {'df': None, 'gene': '', 'model': ''}
 
@@ -782,15 +903,21 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 Path(path).write_text(_tsv(df), encoding='utf-8')
                 show_message(self, TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=path))
 
-        for text, cmd, color in ((TEXTS["sites_btn_export"], export_sites, self.COLORS['accent_cyan']),
-                                 (TEXTS["sites_btn_copy"], copy_sites, self.COLORS['success'])):
-            ctk.CTkButton(line2, text=text, command=cmd, height=30, fg_color=self.COLORS['bg_card'],
-                          border_width=1, border_color=color, text_color=color,
-                          hover_color=hover_tint(color, self.COLORS['bg_card']),
-                          font=("Roboto", 12, "bold")).pack(side='right', padx=(8, 0))
+        # botões secundários neutros (verde fica reservado a "significativo")
+        for text, cmd in ((TEXTS["sites_btn_export"], export_sites),
+                          (TEXTS["sites_btn_copy"], copy_sites)):
+            ctk.CTkButton(line2, text=text, command=cmd, height=28, fg_color='transparent',
+                          border_width=1, border_color=PALETTE['control_border'],
+                          text_color=PALETTE['text_primary'], hover_color=PALETTE['bg_elevated'],
+                          corner_radius=RADIUS['field'],
+                          font=self._font('sm', 'bold')).pack(side='right', padx=(SPACE['sm'], 0))
 
-        table_frame = ctk.CTkScrollableFrame(parent, fg_color=self.COLORS['bg_feed'], corner_radius=8)
-        table_frame.pack(fill='both', expand=True, padx=10, pady=(4, 10))
+        # resumo do gene + cabeçalho da tabela ficam fixos, fora da rolagem
+        head_host = ctk.CTkFrame(parent, fg_color='transparent')
+        head_host.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], 0))
+        table_frame = ctk.CTkScrollableFrame(parent, fg_color=PALETTE['bg_panel'], corner_radius=RADIUS['card'])
+        table_frame.pack(fill='both', expand=True, padx=SPACE['md'], pady=(0, SPACE['md']))
+        self._sites_head_host = head_host
 
         def update_gene_list(*args):
             model = model_combo.get()
@@ -806,7 +933,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             update_sites_table()
 
         def update_sites_table(*args):
-            for w in table_frame.winfo_children():
+            for w in table_frame.winfo_children() + head_host.winfo_children():
                 w.destroy()
             try:
                 thr = float(p_filter.get().replace(',', '.'))
@@ -830,7 +957,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         if not results_file:
             ctk.CTkLabel(parent, text=TEXTS["sites_file_not_found"].format(
                              filename=f"{gene_name}_{model_name}_results.txt"),
-                         font=("Roboto", 12), text_color=self.COLORS['warning']).pack(pady=50)
+                         font=(FONT_UI, 12), text_color=self.COLORS['warning']).pack(pady=50)
             return None
         try:
             from src.backend.sites_parser import SitesParser
@@ -841,54 +968,76 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 df_f = df_f.sort_values('position')
         except Exception as e:
             ctk.CTkLabel(parent, text=TEXTS["sites_parse_error"].format(error=str(e)),
-                         font=("Roboto", 12), text_color=self.COLORS['danger']).pack(pady=50)
+                         font=(FONT_UI, 12), text_color=self.COLORS['danger']).pack(pady=50)
             return None
 
-        # Cabeçalho compacto: gene · modelo · classe positiva · nº de sítios
+        # Resumo compacto numa linha: gene · nº de sítios · modelo · classe positiva
         from src.backend.sites_parser import SitesParser
         pc = SitesParser.extract_positive_class(results_file) or {}
         sub = f"{model_name} · {method}"
         if pc:
             sub += "  ·  " + TEXTS["summary_posclass"].format(w=f"{pc['omega']:.3f}", p1=f"{pc['p']:.3f}")
-        banner = ctk.CTkFrame(parent, fg_color='#131326', corner_radius=8)
-        banner.pack(fill='x', padx=8, pady=(6, 6))
-        ctk.CTkLabel(banner, text=f"{gene_name}   —   {TEXTS['viewer_sites_count'].format(n=len(df_f))}",
-                     font=("Roboto", 14, "bold"), text_color=self.COLORS['text_primary']).pack(
-                         anchor='w', padx=14, pady=(8, 0))
-        ctk.CTkLabel(banner, text=sub, font=("Roboto", 12), text_color=self.COLORS['text_secondary']).pack(
-            anchor='w', padx=14, pady=(0, 4))
+        host = getattr(self, '_sites_head_host', None)
+        top = host if host is not None and host.winfo_exists() else parent
+        banner = ctk.CTkFrame(top, fg_color='transparent')
+        banner.pack(fill='x', pady=(0, SPACE['xs']))
+        line = ctk.CTkFrame(banner, fg_color='transparent')
+        line.pack(fill='x')
+        ctk.CTkLabel(line, text=gene_name, font=self._font('md', 'bold'),
+                     text_color=PALETTE['text_primary']).pack(side='left')
+        ctk.CTkLabel(line, text=TEXTS['viewer_sites_count'].format(n=len(df_f)), font=self._font('md', 'bold'),
+                     text_color=PALETTE['text_primary']).pack(side='left', padx=(SPACE['md'], 0))
+        ctk.CTkLabel(line, text=sub, font=self._font('sm'),
+                     text_color=PALETTE['text_secondary']).pack(side='left', padx=(SPACE['md'], 0))
         mapped = bool(len(df_f)) and bool(df_f.get('position_mapped', pd.Series([False])).all())
-        ctk.CTkLabel(banner, text=TEXTS["sites_position_note"] if mapped or df_f.empty
-                     else TEXTS["sites_unmapped_note"], font=("Roboto", 11), wraplength=1100,
-                     justify='left', text_color=self.COLORS['text_tertiary']).pack(anchor='w', padx=14, pady=(0, 8))
+        if mapped or df_f.empty:
+            ctk.CTkLabel(banner, text=TEXTS["sites_position_note"], font=self._font('xs'), wraplength=1150,
+                         justify='left', anchor='w', text_color=PALETTE['text_tertiary']).pack(anchor='w')
+        else:   # numeração não verificada: aviso em âmbar
+            ctk.CTkLabel(banner, text="⚠ " + TEXTS["sites_unmapped_note"], font=self._font('xs'),
+                         wraplength=1150, justify='left', anchor='w', text_color=PALETTE['warning_fg'],
+                         fg_color=PALETTE['warning_subtle'], corner_radius=RADIUS['field'],
+                         padx=SPACE['sm']).pack(anchor='w', fill='x', pady=(SPACE['xs'], 0))
 
         if df_f.empty:
             ctk.CTkLabel(parent, text=TEXTS["sites_no_sites"].format(threshold=p_threshold),
-                         font=("Roboto", 12), text_color=self.COLORS['text_secondary']).pack(pady=30)
+                         font=self._font('sm'), text_color=PALETTE['text_secondary']).pack(pady=30)
             return df_f
 
-        widths = [150, 120, 50, 100, 60, 170]
-        th = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=6)
-        th.pack(fill='x', padx=8, pady=(0, 2))
-        for i, (h, w) in enumerate(zip(TEXTS["sites_table_headers"], widths)):
-            ctk.CTkLabel(th, text=h, font=("Roboto", 12, "bold"), width=w, anchor='w',
-                         text_color=self.COLORS['accent_blue_light']).grid(row=0, column=i, padx=5, pady=6, sticky='w')
-        for _, row in df_f.iterrows():
+        # (largura, alinhamento): posições e números à direita, em fonte monoespaçada
+        cols = [(140, 'e'), (110, 'e'), (50, 'center'), (90, 'e'), (60, 'center'), (170, 'e')]
+        cell_pad = (SPACE['xs'], SPACE['xs'])
+        th = ctk.CTkFrame(top, fg_color='transparent', corner_radius=0)
+        th.pack(fill='x', padx=(SPACE['sm'], 0), pady=(SPACE['xs'], SPACE['xs']))
+        for i, (h, (w, anchor)) in enumerate(zip(TEXTS["sites_table_headers"], cols)):
+            ctk.CTkLabel(th, text=h, font=self._font('xs', 'bold'), width=w, anchor=anchor,
+                         text_color=PALETTE['text_secondary']).grid(row=0, column=i, padx=cell_pad, sticky='w')
+        ctk.CTkFrame(top, fg_color=PALETTE['divider'], height=1, corner_radius=0).pack(fill='x')
+        mono = self._mono('sm')
+        for k, (_, row) in enumerate(df_f.iterrows()):
             pr = row['pr_w_gt_1']
             sig = '**' if pr >= 0.99 else ('*' if pr >= 0.95 else '')
-            strong = pr >= 0.99
             mean = row.get('post_mean', np.nan)
             se = row.get('post_se', np.nan)
             omega_txt = f"{mean:.3f} ± {se:.3f}" if pd.notna(mean) and pd.notna(se) else "—"
             cells = [str(int(row['position_original'])) if pd.notna(row.get('position_original')) else "?",
                      str(int(row['position'])), row.get('amino_acid', '?'), f"{pr:.3f}", sig, omega_txt]
-            fr = ctk.CTkFrame(parent, fg_color='#0b2016' if strong else self.COLORS['bg_card'],
-                              corner_radius=4)
-            fr.pack(fill='x', padx=8, pady=1)
-            for i, (c, w) in enumerate(zip(cells, widths)):
-                ctk.CTkLabel(fr, text=c, font=("Roboto", 12, "bold" if i == 0 else "normal"), width=w,
-                             anchor='w', text_color='#86efac' if strong and i in (0, 4)
-                             else self.COLORS['text_primary']).grid(row=0, column=i, padx=5, pady=3, sticky='w')
+            fr = ctk.CTkFrame(parent, fg_color=PALETTE['row_alt'] if k % 2 else PALETTE['bg_panel'],
+                              corner_radius=RADIUS['field'])
+            fr.pack(fill='x', padx=0, pady=0)
+            for i, (c, (w, anchor)) in enumerate(zip(cells, cols)):
+                if i == 4 and sig:
+                    # ** ganha fundo "subtle"; * fica só no texto verde (tom um pouco mais fraco)
+                    lbl = (self._chip(fr, c, 'success', font=self._mono('sm', 'bold')) if sig == '**' else
+                           ctk.CTkLabel(fr, text=c, font=self._mono('sm', 'bold'),
+                                        text_color=PALETTE['success_fg']))
+                    lbl.configure(width=w)
+                    lbl.grid(row=0, column=i, padx=cell_pad, pady=2, sticky='w')
+                    continue
+                font = self._mono('sm', 'bold') if i == 0 else mono
+                color = PALETTE['text_primary'] if i in (0, 2, 3) else PALETTE['text_secondary']
+                ctk.CTkLabel(fr, text=c, font=font, width=w, anchor=anchor,
+                             text_color=color).grid(row=0, column=i, padx=cell_pad, pady=2, sticky='w')
         return df_f
 
     def _parse_sites_manual(self, filepath: Path, method: str):
@@ -954,7 +1103,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         ctrl_frame.pack(fill='x', padx=10, pady=10)
         ctrl_frame.pack_propagate(False)
         
-        ctk.CTkLabel(ctrl_frame, text=TEXTS["branchsite_classes_gene_label"], font=("Roboto", 11, "bold")).pack(side='left', padx=15, pady=10)
+        ctk.CTkLabel(ctrl_frame, text=TEXTS["branchsite_classes_gene_label"], font=(FONT_UI, 11, "bold")).pack(side='left', padx=15, pady=10)
         
         genes = self.df['Gene'].tolist()
         gene_combo = ctk.CTkComboBox(ctrl_frame, values=genes, width=300)
@@ -974,7 +1123,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             
             if gene_row.empty:
                 ctk.CTkLabel(table_frame, text=TEXTS["branchsite_classes_not_found"],
-                           font=("Roboto", 11),
+                           font=(FONT_UI, 11),
                            text_color=self.COLORS['warning']).pack(pady=50)
                 return
             
@@ -995,7 +1144,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         header_frame.pack(fill='x', padx=8, pady=(8, 12))
         
         ctk.CTkLabel(header_frame, text=TEXTS["branchsite_classes_header"].format(gene=gene),
-                    font=("Roboto", 12, "bold"),
+                    font=(FONT_UI, 12, "bold"),
                     text_color=self.COLORS['accent_cyan']).pack(pady=8)
         
         # Table header
@@ -1008,7 +1157,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         for h_text, width in headers:
             ctk.CTkLabel(table_header_frame, text=h_text,
-                        font=("Roboto", 11, "bold"),
+                        font=(FONT_UI, 11, "bold"),
                         text_color=self.COLORS['accent_blue_light'],
                         width=width).pack(side='left', padx=8, pady=8)
         
@@ -1054,7 +1203,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             ]
             
             for cell_text, width in cells:
-                ctk.CTkLabel(row_frame, text=cell_text, font=("Roboto", 11),
+                ctk.CTkLabel(row_frame, text=cell_text, font=(FONT_UI, 11),
                            text_color=self.COLORS['text_secondary'], width=width).pack(side='left', padx=8, pady=8)
         
         # Footer with interpretation
@@ -1063,7 +1212,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         footer_frame.pack(fill='x', padx=8, pady=(12, 8))
         
         ctk.CTkLabel(footer_frame, text=TEXTS["branchsite_classes_footer"],
-                    font=("Roboto", 11),
+                    font=(FONT_UI, 11),
                     text_color=self.COLORS['text_tertiary'],
                     wraplength=400).pack(pady=8, padx=8)
     
@@ -1081,22 +1230,22 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         info.pack(fill='x', padx=10, pady=(10, 4))
         ctk.CTkLabel(info,
                      text=TEXTS["branch_tab_title"],
-                     font=("Roboto", 11, "bold"),
+                     font=(FONT_UI, 11, "bold"),
                      text_color=self.COLORS['accent_blue_light']).pack(side="left", padx=14, pady=(10, 2))
         ctk.CTkLabel(info,
                      text=TEXTS["branch_tab_legend"],
-                     font=("Roboto", 11),
+                     font=(FONT_UI, 11),
                      text_color=self.COLORS['text_tertiary']).pack(side="left", padx=(0, 14), pady=(10, 2))
 
         if not has_branch_model and not has_branchsite:
             empty = ctk.CTkFrame(parent, fg_color='transparent')
             empty.pack(expand=True)
             ctk.CTkLabel(empty, text=TEXTS["branch_no_data_title"],
-                         font=("Roboto", 14, "bold"),
+                         font=(FONT_UI, 14, "bold"),
                          text_color=self.COLORS['text_tertiary']).pack(pady=(60, 6))
             ctk.CTkLabel(empty,
                          text=TEXTS["branch_no_data_hint"],
-                         font=("Roboto", 11),
+                         font=(FONT_UI, 11),
                          text_color=self.COLORS['text_muted']).pack()
             return
 
@@ -1104,7 +1253,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         ctrl = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'], corner_radius=8)
         ctrl.pack(fill='x', padx=10, pady=(0, 4))
 
-        ctk.CTkLabel(ctrl, text=TEXTS["branch_label_gene"], font=("Roboto", 11, "bold")).pack(
+        ctk.CTkLabel(ctrl, text=TEXTS["branch_label_gene"], font=(FONT_UI, 11, "bold")).pack(
             side='left', padx=(15, 4), pady=10)
 
         if has_branch_omega:
@@ -1121,7 +1270,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         if valid_genes:
             gene_combo.set(valid_genes[0])
 
-        ctk.CTkLabel(ctrl, text=TEXTS["branch_label_outgroup"], font=("Roboto", 11, "bold")).pack(
+        ctk.CTkLabel(ctrl, text=TEXTS["branch_label_outgroup"], font=(FONT_UI, 11, "bold")).pack(
             side='left', padx=(0, 4), pady=10)
         outgroup_combo = ctk.CTkComboBox(ctrl, values=[TEXTS["branch_outgroup_none"]], width=210)
         outgroup_combo.pack(side='left', padx=(0, 16), pady=10)
@@ -1129,7 +1278,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         lrt_col  = 'lrt_M0_vs_Branch'
         has_lrt  = lrt_col in self.df.columns
-        info_lbl = ctk.CTkLabel(ctrl, text="", font=("Roboto", 11),
+        info_lbl = ctk.CTkLabel(ctrl, text="", font=(FONT_UI, 11),
                                 text_color=self.COLORS['text_tertiary'])
         info_lbl.pack(side='left', padx=10, pady=10)
 
@@ -1156,7 +1305,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         btn_bar = ctk.CTkFrame(parent, fg_color='transparent')
         btn_bar.pack(fill='x', padx=10, pady=(0, 4))
         ctk.CTkButton(btn_bar, text=TEXTS["branch_btn_export_png"],
-                      font=("Roboto", 11),
+                      font=(FONT_UI, 11),
                       fg_color=self.COLORS['accent_blue'],
                       hover_color=self.COLORS['accent_blue_hover'],
                       width=130, height=28,
@@ -1625,17 +1774,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             render_tree()
     
     def _create_export_tab(self, parent):
-        """Aba de exportação"""
-        main_frame = ctk.CTkScrollableFrame(parent, fg_color=self.COLORS['bg_feed'],
-                                           corner_radius=10)
-        main_frame.pack(fill='both', expand=True, padx=15, pady=15)
-        
-        header_frame = ctk.CTkFrame(main_frame, fg_color='transparent')
-        header_frame.pack(fill='x', pady=(0, 30))
-        
-        ctk.CTkLabel(header_frame, text=TEXTS["export_tab_title"],
-                    font=("Roboto", 18, "bold"),
-                    text_color=self.COLORS['text_primary']).pack()
+        """Aba de exportação: lista neutra (cor semântica fica para os resultados)."""
+        main_frame = ctk.CTkScrollableFrame(parent, fg_color='transparent', corner_radius=0)
+        main_frame.pack(fill='both', expand=True, padx=SPACE['md'], pady=SPACE['sm'])
+
+        ctk.CTkLabel(main_frame, text=TEXTS["export_tab_title"], font=self._font('md', 'bold'),
+                     text_color=PALETTE['text_primary'], anchor='w').pack(anchor='w', pady=(0, SPACE['sm']))
 
         _export_callbacks = [
             self._export_excel,
@@ -1643,47 +1787,25 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             self._export_charts,
             self._export_html,
         ]
-        _export_colors = [
-            self.COLORS['success'],
-            self.COLORS['accent_blue'],
-            self.COLORS['warning'],
-            self.COLORS['accent_cyan'],
-        ]
-        export_options = [
-            (title, desc, cmd, color)
-            for (title, desc), cmd, color
-            in zip(TEXTS["export_options"], _export_callbacks, _export_colors)
-        ]
-
-        for title, desc, command, color in export_options:
-            card = ctk.CTkFrame(main_frame, fg_color=self.COLORS['bg_card'],
-                                corner_radius=12, border_width=1,
-                                border_color=self.COLORS['border'])
-            card.pack(fill='x', pady=8)
-
-            # Top strip
-            ctk.CTkFrame(card, fg_color=color, height=3,
-                         corner_radius=2).pack(fill='x')
+        for (title, desc), command in zip(TEXTS["export_options"], _export_callbacks):
+            card = ctk.CTkFrame(main_frame, fg_color=PALETTE['bg_elevated'], corner_radius=RADIUS['card'])
+            card.pack(fill='x', pady=(0, SPACE['sm']))
 
             row = ctk.CTkFrame(card, fg_color='transparent')
-            row.pack(fill='x', padx=20, pady=14)
+            row.pack(fill='x', padx=SPACE['lg'], pady=SPACE['md'])
 
             txt = ctk.CTkFrame(row, fg_color='transparent')
             txt.pack(side="left", fill='both', expand=True)
-            ctk.CTkLabel(txt, text=title, font=("Roboto", 12, "bold"),
-                         text_color=color, anchor='w').pack(anchor='w')
-            ctk.CTkLabel(txt, text=desc, font=("Roboto", 11),
-                         text_color=self.COLORS['text_muted'], anchor='w').pack(anchor='w', pady=(2, 0))
+            ctk.CTkLabel(txt, text=title, font=self._font('md', 'bold'),
+                         text_color=PALETTE['text_primary'], anchor='w').pack(anchor='w')
+            ctk.CTkLabel(txt, text=desc, font=self._font('sm'),
+                         text_color=PALETTE['text_secondary'], anchor='w').pack(anchor='w', pady=(2, 0))
 
-            ctk.CTkButton(row, text=TEXTS["export_btn"], width=130, height=34,
-                          fg_color=self.COLORS['border'],
-                          hover_color=color,
-                          text_color=color,
-                          border_width=1, border_color=color,
-                          font=("Roboto", 11, "bold"),
-                          corner_radius=8,
-                          command=command).pack(side="right")
-    
+            ctk.CTkButton(row, text=TEXTS["export_btn"], width=130, height=32,
+                          fg_color=PALETTE['accent_fill'], hover_color=mix(PALETTE['accent_fill'], '#000000', 0.15),
+                          text_color='#ffffff', font=self._font('sm', 'bold'),
+                          corner_radius=RADIUS['field'], command=command).pack(side="right")
+
     # ═══════════════════════════════════════════════════════════
     # MÉTODOS AUXILIARES
     # ═══════════════════════════════════════════════════════════
@@ -1822,16 +1944,30 @@ class ResultsViewerWindow(ctk.CTkToplevel):
     
     def _render_pair_table(self, parent, null: str, alt: str):
         """Tabela de um LRT de modelos de sítio: lnL de cada modelo, 2Δℓ,
-        p (notação científica), q (BH), ω e p₁ da classe positiva."""
+        p (notação científica), q (BH), ω e p₁ da classe positiva.
+        Ordem visual: gene → veredito → p → q → efeito → 2Δℓ → lnL."""
         vals = self._pair_values(null, alt) or {}
-        widths = [240, 120, 130, 90, 110, 110, 170, 60]
-        hdr = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=6)
-        hdr.pack(fill='x', padx=8, pady=(4, 2))
-        for i, (h, w) in enumerate(zip(TEXTS["lrt_headers"], widths)):
-            ctk.CTkLabel(hdr, text=h, font=("Roboto", 12, "bold"), width=w, anchor='w',
-                         text_color=self.COLORS['accent_blue_light']).grid(row=0, column=i, padx=5, pady=8, sticky='w')
+        hd = TEXTS["lrt_headers"]   # Gene, lnL0, lnL1, 2Δℓ, p, q, ω(p₁), Sig.
+        # (índice no cabeçalho original, largura, alinhamento)
+        cols = [(0, 330, 'w'), (7, 70, 'w'), (4, 100, 'e'), (5, 100, 'e'), (6, 170, 'e'),
+                (3, 90, 'e'), (1, 110, 'e'), (2, 130, 'e')]
+        cell_pad = (SPACE['xs'], SPACE['xs'])
+        host = getattr(self, '_lrt_head_host', None)
+        if host is not None and host.winfo_exists():
+            host.grid(row=0, column=0, sticky='ew')
+            hdr_parent = host
+        else:
+            hdr_parent = parent
+        hdr = ctk.CTkFrame(hdr_parent, fg_color='transparent', corner_radius=0)
+        hdr.pack(fill='x', padx=(SPACE['sm'], 0), pady=(SPACE['xs'], SPACE['xs']))
+        for c, (i, w, anchor) in enumerate(cols):
+            ctk.CTkLabel(hdr, text=hd[i], font=self._font('xs', 'bold'), width=w, anchor=anchor,
+                         text_color=PALETTE['text_secondary']).grid(row=0, column=c, padx=cell_pad, sticky='w')
+        ctk.CTkFrame(hdr_parent, fg_color=PALETTE['divider'], height=1, corner_radius=0).pack(fill='x')
+
+        gene_font, mono = self._font('sm', 'bold'), self._mono('sm')
         n_sig = 0
-        for gene, (lrt, p, q) in vals.items():
+        for k, (gene, (lrt, p, q)) in enumerate(vals.items()):
             row = self.df[self.df['Gene'] == gene].iloc[0]
             sig = pd.notna(q) and q < 0.05
             n_sig += sig
@@ -1848,21 +1984,39 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                      f"{row.get(f'{alt}_lnL'):.3f}" if pd.notna(row.get(f'{alt}_lnL')) else "NA",
                      f"{max(0.0, lrt):.3f}", lrt_stats.format_p(p), lrt_stats.format_p(q), wtxt,
                      TEXTS["lrt_sig_yes"] if sig else TEXTS["lrt_sig_no"]]
-            fr = ctk.CTkFrame(parent, fg_color='#0b2016' if sig else self.COLORS['bg_card'],
-                              corner_radius=4, border_width=1,
-                              border_color='#10b981' if sig else self.COLORS['border'])
-            fr.pack(fill='x', padx=8, pady=2)
-            for i, (c, wd) in enumerate(zip(cells, widths)):
-                color = ('#86efac' if sig and i in (4, 5, 7) else self.COLORS['text_primary'] if i == 0
-                         else self.COLORS['text_secondary'])
-                ctk.CTkLabel(fr, text=c, font=("Roboto", 12), width=wd, anchor='w',
-                             text_color=color).grid(row=0, column=i, padx=5, pady=6, sticky='w')
+            # zebra suave; nada de borda por linha nem linha inteira verde
+            fr = ctk.CTkFrame(parent, fg_color=PALETTE['row_alt'] if k % 2 else PALETTE['bg_panel'],
+                              corner_radius=RADIUS['field'])
+            fr.pack(fill='x', padx=0, pady=0)
+            for c, (i, wd, anchor) in enumerate(cols):
+                if i == 7:
+                    # célula de largura fixa: o rótulo curto não desloca as colunas seguintes
+                    box = ctk.CTkFrame(fr, fg_color='transparent', width=wd, height=28)
+                    box.pack_propagate(False)
+                    box.grid(row=0, column=c, padx=cell_pad, pady=SPACE['xs'], sticky='w')
+                    (self._chip(box, cells[i], 'success') if sig else
+                     ctk.CTkLabel(box, text=cells[i], font=self._font('xs'),
+                                  text_color=PALETTE['text_tertiary'])).pack(side='left')
+                    continue
+                if i == 0:
+                    font, color, txt = gene_font, PALETTE['text_primary'], self._fit(cells[0], wd, gene_font)
+                else:
+                    font, txt = mono, cells[i]
+                    if i == 5 and sig:
+                        color, font = PALETTE['success_fg'], self._mono('sm', 'bold')
+                    elif i in (4, 5):
+                        color = PALETTE['text_primary'] if sig else PALETTE['text_secondary']
+                    else:
+                        color = PALETTE['text_secondary']
+                ctk.CTkLabel(fr, text=txt, font=font, width=wd, anchor=anchor,
+                             text_color=color).grid(row=0, column=c, padx=cell_pad,
+                                                    pady=SPACE['xs'], sticky='w')
         info = lrt_stats.PAIRS.get((null, alt), {})
         df_txt = str(info.get('df')) + (" (χ²₁)" if info.get('boundary') else "")
-        footer = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_sidebar'], corner_radius=6)
-        footer.pack(fill='x', padx=8, pady=(10, 8))
-        ctk.CTkLabel(footer, text=TEXTS["lrt_footer_template"].format(total=len(vals), sig=n_sig, df=df_txt),
-                     font=("Roboto", 12), text_color=self.COLORS['text_secondary']).pack(pady=8, padx=12)
+        ctk.CTkLabel(parent, text=TEXTS["lrt_footer_template"].format(total=len(vals), sig=n_sig, df=df_txt),
+                     font=self._font('xs'), text_color=PALETTE['text_tertiary'], anchor='w',
+                     wraplength=1150, justify='left').pack(fill='x', pady=(SPACE['md'], SPACE['sm']),
+                                                          padx=SPACE['sm'])
 
     def _render_lrt_table(self, parent, lrt_col: str, comparison_name: str):
         """Renderiza tabela LRT com estatísticas e omegas recuperados
@@ -1910,21 +2064,20 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         # ── 200 bp notice (Branch / Branch-site) ──────────────────────
         if is_branch_model or is_branchsite_model:
-            notice = ctk.CTkFrame(parent, fg_color='#1c1408', corner_radius=8,
-                                  border_width=1,
-                                  border_color=self.COLORS['warning'])
+            notice = ctk.CTkFrame(parent, fg_color=PALETTE['warning_subtle'],
+                                  corner_radius=RADIUS['card'])
             notice.pack(fill='x', padx=8, pady=(4, 8))
             ctk.CTkLabel(
                 notice,
                 text=TEXTS["lrt_branch_warning"],
-                font=("Roboto", 11),
-                text_color=self.COLORS['warning'],
-                wraplength=860,
+                font=self._font('sm'),
+                text_color=PALETTE['warning_fg'],
+                wraplength=1100,
                 justify='left',
             ).pack(padx=14, pady=8, anchor='w')
 
         # ── Table header ──────────────────────────────────────────────
-        header_frame = ctk.CTkFrame(parent, fg_color='#1a1a26', corner_radius=6)
+        header_frame = ctk.CTkFrame(parent, fg_color='transparent', corner_radius=0)
         header_frame.pack(fill='x', padx=8, pady=(4, 2))
 
         if is_branchsite_model:
@@ -1938,8 +2091,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             col_widths = [260, 120, 100, 130, 60]
 
         for i, (h, width) in enumerate(zip(headers, col_widths)):
-            ctk.CTkLabel(header_frame, text=h, font=("Roboto", 11, "bold"),
-                         text_color=self.COLORS['accent_blue_light'], width=width).grid(
+            ctk.CTkLabel(header_frame, text=h, font=self._font('xs', 'bold'),
+                         text_color=PALETTE['text_secondary'], width=width, anchor='w').grid(
                              row=0, column=i, padx=5, pady=9, sticky="w")
         
         # Rows
@@ -2110,15 +2263,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             is_strong = is_sig and pd.notna(omega) and omega > 1.0 if not (is_branch_model or is_branchsite_model) else False
             row_idx = row_count  # for alternating
 
-            if is_strong:
-                bg_color    = '#0b2016'
-                border_color = '#10b981'
-            elif is_sig:
-                bg_color    = '#11112a'
-                border_color = self.COLORS['accent_blue']
-            else:
-                bg_color    = self.COLORS['bg_card'] if row_idx % 2 == 0 else self.COLORS['bg_sidebar']
-                border_color = self.COLORS['border']
+            # zebra suave em todas as linhas; o destaque fica só em p e Sig.
+            bg_color = PALETTE['bg_panel'] if row_idx % 2 == 0 else PALETTE['row_alt']
+            border_color = bg_color
             
             # Para Branch-site, renderizar uma linha por site class
             if is_branchsite_model and branchsite_class_data:
@@ -2130,9 +2277,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     
                     row_frame = ctk.CTkFrame(parent, 
                                             fg_color=bg_color,
-                                            corner_radius=4, border_width=1,
-                                            border_color=border_color)
-                    row_frame.pack(fill='x', padx=8, pady=4)
+                                            corner_radius=RADIUS['field'], border_width=0)
+                    row_frame.pack(fill='x', padx=SPACE['sm'], pady=0)
                     
                     sig_text = "* Sim" if is_sig else "—"
 
@@ -2149,17 +2295,17 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
                     for i, (v, width) in enumerate(zip(vals, col_widths)):
                         if i == 7 and is_sig:
-                            color = self.COLORS['success_light']
+                            color = PALETTE['success_fg']
                         elif i == 7:
                             color = self.COLORS['text_muted']
                         elif i == 6 and is_sig:
-                            color = self.COLORS['success_light']
+                            color = PALETTE['success_fg']
                         elif i == 6:
                             color = self.COLORS['text_secondary']
                         else:
                             color = self.COLORS['text_secondary']
                         
-                        label = ctk.CTkLabel(row_frame, text=v, font=("Roboto", 11),
+                        label = ctk.CTkLabel(row_frame, text=v, font=(FONT_UI, 11),
                                    text_color=color, width=width)
                         label.grid(row=0, column=i, padx=5, pady=8, sticky="w")
 
@@ -2168,9 +2314,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 # Renderização padrão para outros modelos
                 row_frame = ctk.CTkFrame(parent,
                                         fg_color=bg_color,
-                                        corner_radius=4, border_width=1,
-                                        border_color=border_color)
-                row_frame.pack(fill='x', padx=8, pady=4)
+                                        corner_radius=RADIUS['field'], border_width=0)
+                row_frame.pack(fill='x', padx=SPACE['sm'], pady=0)
 
                 # Destaque especial para omega > 1 E significante (apenas para não-Branch)
                 if is_strong:
@@ -2188,21 +2333,21 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
                 for i, (v, width) in enumerate(zip(vals, col_widths)):
                     if i == 4 and is_strong:
-                        color = self.COLORS['success_light']
+                        color = PALETTE['success_fg']
                     elif i == 4 and is_sig:
-                        color = self.COLORS['accent_blue']
+                        color = PALETTE['accent_text']
                     elif i == 4:
                         color = self.COLORS['text_muted']
                     elif i == 3 and is_sig:
-                        color = self.COLORS['success_light'] if is_strong else self.COLORS['accent_blue']
+                        color = PALETTE['success_fg'] if is_strong else PALETTE['accent_text']
                     else:
                         color = self.COLORS['text_secondary']
 
                     if i == 1 and is_branch_model and '\n' in str(v):
-                        label = ctk.CTkLabel(row_frame, text=v, font=("Roboto", 11),
+                        label = ctk.CTkLabel(row_frame, text=v, font=(FONT_UI, 11),
                                              text_color=color, width=width, justify="left")
                     else:
-                        label = ctk.CTkLabel(row_frame, text=v, font=("Roboto", 11),
+                        label = ctk.CTkLabel(row_frame, text=v, font=(FONT_UI, 11),
                                              text_color=color, width=width)
 
                     label.grid(row=0, column=i, padx=5, pady=8, sticky="nw")
@@ -2211,7 +2356,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         
         if row_count == 0:
             ctk.CTkLabel(parent, text=TEXTS["lrt_no_data_for_comparison"],
-                        font=("Roboto", 11),
+                        font=(FONT_UI, 11),
                         text_color=self.COLORS['warning']).pack(pady=30)
         else:
             # ── Footer ───────────────────────────────────────────────
@@ -2234,7 +2379,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             footer_text = TEXTS["lrt_footer_template"].format(
                 total=row_count, sig=sig_count, df=df_display_footer
             )
-            ctk.CTkLabel(footer, text=footer_text, font=("Roboto", 11),
+            ctk.CTkLabel(footer, text=footer_text, font=(FONT_UI, 11),
                          text_color=self.COLORS['text_tertiary']).pack(pady=8, padx=12)
     
     # ═══════════════════════════════════════════════════════════
