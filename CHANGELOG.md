@@ -2,6 +2,16 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+- Progress weighted by the expected time of each run, with a time left from the
+  start; the command line prints it every minute.
+- A significant test with no site at Pr(ω>1) ≥ 0.95 is shown as a weak signal.
+- The LRT tab explains each column when the mouse is over its title.
+- The command line adds null models like the window (`--no-auto-nulls` to turn off).
+- The installers use the tested versions of the dependencies (`requirements-lock.txt`).
+- `LRT_results.txt` uses only q < 0.05 to call a result significant.
+
 ## [0.3.0] 2026-10-07
 
 ### Changes that affect results
