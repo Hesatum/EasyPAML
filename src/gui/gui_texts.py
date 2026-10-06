@@ -398,6 +398,10 @@ TEXTS_PT: dict[str, object] = {
     ),
     "overwrite_yes": "Continuar",
     "overwrite_no": "Escolher outra pasta",
+    "err_permission": "Você não tem permissão para gravar em {path}. Escolha uma pasta dentro da sua pasta pessoal.",
+    "err_not_found": "{path} não existe (foi movido ou apagado?).",
+    "err_disk_full": "Não há espaço livre no disco para gravar em {path}.",
+    "msg_still_running": "A análise ainda está rodando. O painel de resultados abre sozinho quando ela terminar.",
     "stop_confirm_title": "Parar a análise?",
     "stop_confirm_text": (
         "Os modelos em execução serão interrompidos e os genes que ainda não terminaram "
@@ -407,6 +411,7 @@ TEXTS_PT: dict[str, object] = {
     "stop_confirm_no": "Continuar rodando",
     "chk_show_details": "Mostrar detalhes técnicos",
     "preflight_title": "Verificação dos dados",
+    "preflight_ok": "Verificação dos dados: nenhum problema em {n} gene(s).",
     "preflight_running": "Verificando os alinhamentos e a árvore…",
     "preflight_heading": "{genes} gene(s) verificado(s): {errors} erro(s) e {warnings} aviso(s)",
     "preflight_explain": (
@@ -964,6 +969,10 @@ TEXTS_EN: dict[str, object] = {
     ),
     "overwrite_yes": "Continue",
     "overwrite_no": "Choose another folder",
+    "err_permission": "You do not have permission to write in {path}. Choose a folder inside your home folder.",
+    "err_not_found": "{path} does not exist (was it moved or deleted?).",
+    "err_disk_full": "There is no free disk space to write in {path}.",
+    "msg_still_running": "The analysis is still running. The results panel opens by itself when it ends.",
     "stop_confirm_title": "Stop the analysis?",
     "stop_confirm_text": (
         "The models that are running will be interrupted and genes that have not finished "
@@ -973,6 +982,7 @@ TEXTS_EN: dict[str, object] = {
     "stop_confirm_no": "Keep running",
     "chk_show_details": "Show technical details",
     "preflight_title": "Data check",
+    "preflight_ok": "Data check: no problems in {n} gene(s).",
     "preflight_running": "Checking alignments and tree…",
     "preflight_heading": "{genes} gene(s) checked: {errors} error(s) and {warnings} warning(s)",
     "preflight_explain": (

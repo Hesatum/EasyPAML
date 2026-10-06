@@ -29,7 +29,7 @@ from backend.preflight import discover_per_gene_trees, group_by_gene, list_align
 from .results_viewer import ResultsViewerWindow
 from .gui_texts import TEXTS, set_language, get_language, tr
 from .ui_helpers import (CURRENT_THEME, FONT_SIZE, PALETTE, RADIUS, SPACE, THEME_CHOICES, PreflightDialog,
-                         ask_directory, ask_open_file, ask_string, ask_yes_no, save_theme_pref, system_theme,
+                         ask_directory, ask_open_file, ask_string, ask_yes_no, os_error_text, save_theme_pref, system_theme,
                          disable_mouse_wheel, fit_to_screen, hover_tint, mix, open_folder,
                          show_about, show_message)
 
@@ -77,7 +77,7 @@ class ModelConfigWindow(ctk.CTkToplevel):
     def __init__(self, parent, model_code: str, initial: dict):
         super().__init__(parent)
         self.title(TEXTS["model_config_header"].format(model_code=model_code))
-        fit_to_screen(self, 560, 720, min_w=480, min_h=480)
+        fit_to_screen(self, 1100, 720, min_w=900, min_h=480)
         self.parent = parent
         self.model_code = model_code
         self.entries = {}
@@ -91,10 +91,14 @@ class ModelConfigWindow(ctk.CTkToplevel):
                      text_color=self.COLORS['text_primary']).pack(anchor='w', padx=SPACE['xl'],
                                                                   pady=(SPACE['xl'], SPACE['md']))
 
-        form = ctk.CTkScrollableFrame(self, fg_color=self.COLORS['bg_card'],
+        body = ctk.CTkFrame(self, fg_color='transparent')
+        body.pack(fill="both", expand=True, padx=SPACE['xl'], pady=(0, SPACE['lg']))
+        form = ctk.CTkScrollableFrame(body, fg_color=self.COLORS['bg_card'], width=440,
                                       corner_radius=RADIUS['panel'], border_width=0,
                                       scrollbar_button_color=self.COLORS['border'])
-        form.pack(fill="both", expand=True, padx=SPACE['xl'], pady=(0, SPACE['lg']))
+        form.pack(side='left', fill="y", padx=(0, SPACE['lg']))
+        side = ctk.CTkFrame(body, fg_color='transparent')
+        side.pack(side='left', fill='both', expand=True)
 
         current = dict(initial)
         current.update(parent.custom_model_params.get(model_code, {}))
@@ -105,7 +109,7 @@ class ModelConfigWindow(ctk.CTkToplevel):
             ctk.CTkLabel(form, text=name, font=(_FONT_UI, FONT_SIZE['md'], "bold"),
                          text_color=self.COLORS['text_primary']).pack(anchor="w", padx=SPACE['md'],
                                                                       pady=(SPACE['md'], 0))
-            ctk.CTkLabel(form, text=hint, font=(_FONT_UI, FONT_SIZE['sm']), wraplength=440,
+            ctk.CTkLabel(form, text=hint, font=(_FONT_UI, FONT_SIZE['sm']), wraplength=400,
                          justify='left', text_color=self.COLORS['text_secondary']).pack(
                              anchor="w", padx=SPACE['md'], pady=(0, SPACE['xs']))
 
@@ -139,13 +143,12 @@ class ModelConfigWindow(ctk.CTkToplevel):
             ent.bind('<KeyRelease>', lambda e: self._refresh_preview())
             self.entries[key] = ent
 
-        ctk.CTkLabel(form, text=TEXTS["cfg_preview"], font=(_FONT_UI, FONT_SIZE['sm'], "bold"),
-                     text_color=self.COLORS['text_secondary']).pack(anchor='w', padx=SPACE['md'],
-                                                                    pady=(SPACE['lg'], SPACE['xs']))
-        self.preview = ctk.CTkTextbox(form, height=260, font=(_FONT_MONO, FONT_SIZE['xs']),
+        ctk.CTkLabel(side, text=TEXTS["cfg_preview"], font=(_FONT_UI, FONT_SIZE['md'], "bold"),
+                     text_color=self.COLORS['text_primary']).pack(anchor='w', pady=(0, SPACE['xs']))
+        self.preview = ctk.CTkTextbox(side, font=(_FONT_MONO, FONT_SIZE['sm']),
                                       fg_color=self.COLORS['bg_input'], corner_radius=RADIUS['card'],
-                                      text_color=self.COLORS['text_secondary'])
-        self.preview.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['md']))
+                                      text_color=self.COLORS['text_primary'], wrap='none')
+        self.preview.pack(fill='both', expand=True)
         self._refresh_preview()
 
         btn_frame = ctk.CTkFrame(self, fg_color='transparent')
@@ -1820,6 +1823,7 @@ class App(ctk.CTk):
 
     def _use_input_folder(self, path):
         self.input_folder = Path(path)
+        self.stop_label.configure(text=TEXTS["status_stops_template"].format(n="–"))
         files = list_alignment_files(self.input_folder)
         chosen, _ = group_by_gene(files)
         self.per_gene_trees = discover_per_gene_trees(self.input_folder, genes=set(chosen))
@@ -1866,7 +1870,7 @@ class App(ctk.CTk):
             folder.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
             show_message(self, TEXTS["msg_error"],
-                         TEXTS["msg_output_folder_error"].format(error=exc), 'error')
+                         TEXTS["msg_output_folder_error"].format(error=os_error_text(exc)), 'error')
             return
         self.output_folder = folder
         label = (TEXTS["label_output_created"].format(name=folder.name) if created else folder.name)
@@ -2120,6 +2124,9 @@ class App(ctk.CTk):
         """Open the results panel; ask for a results folder when the current one has
         no results."""
         folder = self.output_folder
+        if self.analysis_thread and self.analysis_thread.is_alive():
+            show_message(self, TEXTS["btn_view_results"], TEXTS["msg_still_running"])
+            return
         if not (folder and (Path(folder) / 'analysis_summary.tsv').exists()):
             chosen = ask_directory(self, TEXTS["dialog_select_results_folder"],
                                    folder or self.input_folder or Path.home())
@@ -2346,6 +2353,8 @@ class App(ctk.CTk):
             self.stop_label.configure(text=TEXTS["status_stops_template"].format(n=n_stops))
         if error is not None:
             self.append_log(f"{error}", 'error')
+        elif report is not None and not report.has_problems:
+            self.append_log(TEXTS["preflight_ok"].format(n=len(report.genes)), 'ok')
         elif report is not None and report.has_problems:
             for line in report.format_text(get_language(), include_info=False).splitlines():
                 self.append_log(line, 'warn')

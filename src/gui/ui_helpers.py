@@ -369,6 +369,18 @@ def _select_all_binding(entry) -> None:
     inner.bind('<Control-A>', _sel)
 
 
+def os_error_text(exc: OSError) -> str:
+    """A file-system error in words, instead of '[Errno 13] Permission denied: …'."""
+    path = getattr(exc, 'filename', None) or ''
+    if isinstance(exc, PermissionError):
+        return TEXTS['err_permission'].format(path=path)
+    if isinstance(exc, FileNotFoundError):
+        return TEXTS['err_not_found'].format(path=path)
+    if getattr(exc, 'errno', None) == 28:
+        return TEXTS['err_disk_full'].format(path=path)
+    return str(exc)
+
+
 def ask_string(parent, title: str, prompt: str, initial: str = '') -> Optional[str]:
     """One-line text input in the program's theme."""
     dlg = _Modal(parent, title, 440, 200)
@@ -580,7 +592,7 @@ class FilePicker(_Modal):
         try:
             new.mkdir(exist_ok=True)
         except OSError as exc:
-            show_message(self, TEXTS['picker_new_folder'], str(exc), 'error')
+            show_message(self, TEXTS['picker_new_folder'], os_error_text(exc), 'error')
             return
         self.cwd = new.resolve()
         self._load()
