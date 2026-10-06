@@ -45,8 +45,9 @@ with Benjamini-Hochberg correction, and lists the sites under selection (BEB).
    ./install.sh
    ```
 
-   `install.sh` installs the dependencies in a `.venv/` folder inside EasyPAML and
-   leaves the system Python alone. If something is missing, it prints the command
+   `install.sh` installs the dependencies in a `.venv/` folder inside EasyPAML, in the
+   versions EasyPAML was tested with (`requirements-lock.txt`), and leaves the system
+   Python alone. If something is missing, it prints the command
    to run; then run `./install.sh` again.
 
 3. Open:

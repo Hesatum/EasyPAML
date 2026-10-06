@@ -93,12 +93,18 @@ fi
 VENV_PY="$SCRIPT_DIR/.venv/bin/python"
 "$VENV_PY" -m pip install --upgrade pip --quiet --disable-pip-version-check || \
     warn "could not update pip; continuing with the current version"
-if ! "$VENV_PY" -m pip install -r requirements.txt --disable-pip-version-check; then
+# the exact versions EasyPAML was tested with; the minimum versions when they have
+# no package for this Python
+if "$VENV_PY" -m pip install -r requirements-lock.txt --disable-pip-version-check --quiet; then
+    ok "Dependencies installed in .venv/ (tested versions, requirements-lock.txt)"
+elif "$VENV_PY" -m pip install -r requirements.txt --disable-pip-version-check; then
+    warn "the tested versions are not available for this Python; newer ones were installed (requirements.txt)"
+    ok "Dependencies installed in .venv/"
+else
     err "Installing the dependencies failed (see the message above). Common causes: no internet, a proxy."
     echo "      To try again: ./install.sh"
     exit 1
 fi
-ok "Dependencies installed in .venv/"
 
 # ── 4. CODEML ────────────────────────────────────────────────────────────────
 echo ""

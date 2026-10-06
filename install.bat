@@ -81,6 +81,12 @@ if not exist ".venv\Scripts\python.exe" (
 if not exist ".venv\Scripts\python.exe" goto :install_user
 
 ".venv\Scripts\python.exe" -m pip install --upgrade pip --quiet --disable-pip-version-check
+".venv\Scripts\python.exe" -m pip install -r requirements-lock.txt --disable-pip-version-check --quiet
+if not errorlevel 1 (
+    echo  OK: dependencies installed in .venv ^(tested versions, requirements-lock.txt^)
+    goto :deps_done
+)
+echo  Warning: the tested versions are not available for this Python; installing newer ones
 ".venv\Scripts\python.exe" -m pip install -r requirements.txt --disable-pip-version-check
 if errorlevel 1 goto :pip_error
 echo  OK: dependencies installed in .venv
