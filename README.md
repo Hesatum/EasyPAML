@@ -103,9 +103,9 @@ at the bottom left change them, and the choice is kept for the next session.
 
 The results panel has these tabs:
 
-- Summary: one line per gene and test, for example
-  "M8 vs M7: significant, p = 4.7×10⁻²², q = 4.7×10⁻²², 20 sites with Pr(ω>1) ≥ 0.95,
-  positive class ω = 3.8, p₁ = 0.11".
+- Summary: a sentence per gene, such as "Positive selection: M8 vs M7, M8 vs M8a
+  significant (q < 0.05), 21 site(s) with Pr(ω>1) ≥ 0.95", and below it p, q, ω and
+  p₁ of the positive class for each test.
 - LRT and p-values: lnL of each model, 2Δℓ, p (in scientific notation), q (BH), and
   ω and proportion of the positive class.
 - Positive Sites: the position in your alignment and the position in the codeml
@@ -113,6 +113,7 @@ The results panel has these tabs:
   Pr(ω>1), `*` (≥ 0.95) or `**` (≥ 0.99), and mean ω ± SE. Buttons copy or export the
   table as TSV.
 - Export: Excel, CSV, PNG and HTML. "Open results folder" opens the folder itself.
+- Candidates & GO: significant genes, and GO enrichment (Fisher's exact test) if you load a GO annotation TSV.
 
 > The mean ω of a gene is not a criterion for positive selection. It stays below 1
 > even when a few sites are under strong selection. Use the LRT (q) and the site table.

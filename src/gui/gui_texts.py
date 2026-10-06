@@ -200,7 +200,7 @@ TEXTS_PT: dict[str, object] = {
     "pos_sel_criterion_short": "Critério: ω > 1.0  AND  p-valor < 0.05",
     "pos_sel_badge":           "* Positivo",
 
-    "viewer_tab_interpretation": "Interpretação",
+    "viewer_tab_interpretation": "Candidatos e GO",
     "go_tab_title":              "Candidatos e enriquecimento de GO",
     "go_tab_criterion": (
         "Candidatos: genes com q < 0,05 (Benjamini-Hochberg dentro de cada teste, os "
@@ -269,10 +269,10 @@ TEXTS_PT: dict[str, object] = {
     "export_btn":       "Exportar →",
 
     "export_options": [
-        ("Excel (.xlsx)",    "Tabela com formatação profissional"),
-        ("CSV",              "Formato universal compatível"),
-        ("Gráficos (PNG)",   "Exportar gráficos em alta resolução"),
-        ("Relatório (HTML)", "Relatório completo interativo"),
+        ("Excel (.xlsx)",    "Uma planilha por teste"),
+        ("CSV",              "Um arquivo por teste"),
+        ("Gráficos (PNG)",   "Gráficos de ω, LRT e genes com seleção (PNG ou PDF)"),
+        ("Relatório (HTML)", "Uma página com todos os testes"),
     ],
 
     # ── TreeLabelWindow — mensagens de erro inline ───────────────────────
@@ -515,11 +515,14 @@ TEXTS_PT: dict[str, object] = {
     "summary_sig": "{test}: significativo (p = {p}, q = {q}) — {sites} sítio(s) com Pr(ω>1) ≥ 0,95",
     "summary_nonsig": "{test}: não significativo (p = {p}, q = {q})",
     "summary_posclass": "classe positiva: ω = {w}, p₁ = {p1}",
-    "summary_failed": "FALHOU: {reason}",
-    "summary_m8a_caveat": (
-        "Atenção: M7 vs M8 é significativo mas M8a vs M8 não -- o sinal pode vir de sítios "
-        "neutros (ω = 1), não de seleção positiva."
+    "conclusion_supported": "Seleção positiva: {tests} significativo(s) (q < 0,05){sites}.",
+    "conclusion_sites": ", {n} sítio(s) com Pr(ω>1) ≥ 0,95",
+    "conclusion_neutral": (
+        "Não sustentada: M8 vs M7 é significativo mas M8a vs M8 não, então o sinal pode vir "
+        "de sítios neutros (ω = 1)."
     ),
+    "conclusion_none": "Sem seleção positiva detectada (nenhum teste com q < 0,05).",
+    "summary_failed": "FALHOU: {reason}",
     "summary_no_tests": "Nenhum teste de seleção positiva (M1a/M2a, M7/M8, M8a/M8) neste resultado.",
     "sites_legend": "* Pr(ω>1) ≥ 0,95   ** Pr(ω>1) ≥ 0,99   (Pr = probabilidade posterior de o sítio estar na classe com ω > 1)",
     "sites_position_note": (
@@ -774,7 +777,7 @@ TEXTS_EN: dict[str, object] = {
     "pos_sel_criterion_short": "Criterion: ω > 1.0  AND  p-value < 0.05",
     "pos_sel_badge":           "* Positive",
 
-    "viewer_tab_interpretation": "Interpretation",
+    "viewer_tab_interpretation": "Candidates & GO",
     "go_tab_title":              "Candidates and GO enrichment",
     "go_tab_criterion": (
         "Candidates: genes with q < 0.05 (Benjamini-Hochberg within each test, the "
@@ -843,10 +846,10 @@ TEXTS_EN: dict[str, object] = {
     "export_btn":       "Export →",
 
     "export_options": [
-        ("Excel (.xlsx)",   "Table with professional formatting"),
-        ("CSV",             "Universal compatible format"),
-        ("Charts (PNG)",    "Export charts in high resolution"),
-        ("Report (HTML)",   "Complete interactive report"),
+        ("Excel (.xlsx)",   "One sheet per test"),
+        ("CSV",             "One file per test"),
+        ("Charts (PNG)",    "ω, LRT and selected-gene charts (PNG or PDF)"),
+        ("Report (HTML)",   "One page with every test"),
     ],
 
     # ── TreeLabelWindow — inline error messages ──────────────────────────
@@ -1088,11 +1091,14 @@ TEXTS_EN: dict[str, object] = {
     "summary_sig": "{test}: significant (p = {p}, q = {q}) — {sites} site(s) with Pr(ω>1) ≥ 0.95",
     "summary_nonsig": "{test}: not significant (p = {p}, q = {q})",
     "summary_posclass": "positive class: ω = {w}, p₁ = {p1}",
-    "summary_failed": "FAILED: {reason}",
-    "summary_m8a_caveat": (
-        "Caution: M7 vs M8 is significant but M8a vs M8 is not -- the signal may come from "
-        "neutral sites (ω = 1), not from positive selection."
+    "conclusion_supported": "Positive selection: {tests} significant (q < 0.05){sites}.",
+    "conclusion_sites": ", {n} site(s) with Pr(ω>1) ≥ 0.95",
+    "conclusion_neutral": (
+        "Not supported: M8 vs M7 is significant but M8a vs M8 is not, so the signal may "
+        "come from neutral sites (ω = 1)."
     ),
+    "conclusion_none": "No positive selection detected (no test with q < 0.05).",
+    "summary_failed": "FAILED: {reason}",
     "summary_no_tests": "No positive selection test (M1a/M2a, M7/M8, M8a/M8) in this result.",
     "sites_legend": "* Pr(ω>1) ≥ 0.95   ** Pr(ω>1) ≥ 0.99   (Pr = posterior probability that the site is in the ω > 1 class)",
     "sites_position_note": (

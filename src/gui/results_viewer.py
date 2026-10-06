@@ -617,6 +617,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 card.bind('<Configure>', lambda e, l=note: l.configure(
                     wraplength=max(300, e.width - 2 * SPACE['md'])), add='+')
 
+            if not failed and test_rows:
+                text, color = self._conclusion(sig_by_pair, test_rows)
+                ctk.CTkLabel(card, text=text, font=self._font('md', 'bold'), anchor='w', justify='left',
+                             wraplength=1100, text_color=color).pack(fill='x', padx=SPACE['md'],
+                                                                      pady=(0, SPACE['xs']))
             body = ctk.CTkFrame(card, fg_color='transparent')
             body.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
             for c, m in enumerate(col_min):
@@ -638,12 +643,20 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                     ctk.CTkLabel(body, text=TEXTS["summary_sites_n"].format(n=n_sites), font=self._font('sm'),
                                  anchor='w', text_color=PALETTE['text_primary'] if n_sites
                                  else PALETTE['text_secondary']).grid(row=r, column=5, sticky='w')
-            if sig_by_pair.get(('M7', 'M8')) and ('M8a', 'M8') in sig_by_pair \
-                    and not sig_by_pair[('M8a', 'M8')]:
-                ctk.CTkLabel(card, text="⚠ " + TEXTS["summary_m8a_caveat"], font=self._font('sm'),
-                             text_color=PALETTE['warning_fg'], fg_color=PALETTE['warning_subtle'],
-                             corner_radius=RADIUS['field'], padx=SPACE['sm'], wraplength=1100,
-                             justify='left', anchor='w').pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
+
+    @staticmethod
+    def _conclusion(sig_by_pair: dict, test_rows: list):
+        """One plain sentence for a gene, from the q-values of its tests."""
+        if sig_by_pair.get(('M7', 'M8')) and sig_by_pair.get(('M8a', 'M8')) is False \
+                and not sig_by_pair.get(('M1a', 'M2a')):
+            return "⚠ " + TEXTS["conclusion_neutral"], PALETTE['warning_fg']
+        sig_tests = [t for t, sig, *_ in test_rows if sig]
+        if not sig_tests:
+            return TEXTS["conclusion_none"], PALETTE['text_secondary']
+        n = max((r[5] for r in test_rows if r[1] and r[5] is not None), default=None)
+        sites = TEXTS["conclusion_sites"].format(n=n) if n is not None else ""
+        return (TEXTS["conclusion_supported"].format(tests=", ".join(sig_tests), sites=sites),
+                PALETTE['success_fg'])
 
     def _status_columns(self) -> dict:
         cache = getattr(self, '_status_cache', None)
