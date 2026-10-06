@@ -46,6 +46,11 @@ elif mode == 'rc1':
     sys.exit(1)
 elif mode == 'nolnl':
     open(out, 'w').write("CODONML (in paml version 9.9fake)\nsomething went wrong\n")
+elif mode == 'busy':
+    t0 = time.time()
+    while time.time() - t0 < float(os.environ.get('FAKE_BUSY_S', '5')):
+        pass                   # trabalha (usa CPU) e termina bem
+    write_ok()
 elif mode == 'slow':
     t0 = time.time()
     while time.time() - t0 < 60:
@@ -59,6 +64,16 @@ else:
 def fake_codeml(tmp_path):
     path = tmp_path / 'fake_codeml'
     path.write_text(FAKE.format(python=sys.executable))
+    path.chmod(path.stat().st_mode | stat.S_IEXEC)
+    return str(path)
+
+
+@pytest.fixture
+def wrapped_codeml(tmp_path, fake_codeml):
+    """Como o /usr/bin/codeml do Debian/Ubuntu: um script sh que roda o codeml
+    de verdade como FILHO (sem exec)."""
+    path = tmp_path / 'codeml_wrapper'
+    path.write_text(f'#!/bin/sh -e\n{fake_codeml} "$@"\n')
     path.chmod(path.stat().st_mode | stat.S_IEXEC)
     return str(path)
 
@@ -150,6 +165,40 @@ def test_timeout_unset_uses_automatic_limit(tmp_path, fake_codeml, monkeypatch):
     assert summary['ok'] == 1
     log = (tmp_path / 'out' / 'batch_analysis_log.txt').read_text()
     assert 'time limit 1800 s' in log and 'automatic' in log
+
+
+def test_wrapper_script_busy_child_is_not_idle(tmp_path, wrapped_codeml, monkeypatch):
+    """Rodada 2 do teste de usabilidade: o detector de inatividade media só o
+    script sh e matava o codeml filho que estava trabalhando."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'busy')
+    monkeypatch.setenv('FAKE_BUSY_S', '6')
+    app = _app(tmp_path, wrapped_codeml, models=('M7',))
+    app.config['idle_timeout'] = 2
+    summary = app.run_batch_analysis()
+    assert summary['ok'] == 1, summary['failures']
+
+
+def test_wrapper_script_idle_child_still_detected(tmp_path, wrapped_codeml, monkeypatch):
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'idle')
+    app = _app(tmp_path, wrapped_codeml, models=('M7',))
+    app.config['idle_timeout'] = 2
+    t0 = time.time()
+    summary = app.run_batch_analysis()
+    assert summary['failed'] == 1 and 'CPU' in summary['failures']['gene']
+    assert time.time() - t0 < 30
+
+
+def test_stop_kills_child_of_wrapper_script(tmp_path, wrapped_codeml, monkeypatch):
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'slow')
+    app = _app(tmp_path, wrapped_codeml, models=('M7',))
+    app.config['idle_timeout'] = 0
+    app.config['timeout'] = 3
+    app.run_batch_analysis()
+    time.sleep(0.5)
+    import subprocess
+    left = subprocess.run(['pgrep', '-f', str(tmp_path / 'fake_codeml')],
+                          capture_output=True, text=True).stdout.split()
+    assert not left, f"codeml filho ficou rodando: {left}"
 
 
 def test_stop_kills_codeml_without_orphans(tmp_path, fake_codeml, monkeypatch):

@@ -993,35 +993,76 @@ class CodemlBatchAnalysis:
 
     @staticmethod
     def _process_cpu_seconds(pid: int) -> Optional[float]:
-        """Tempo de CPU acumulado do processo (s). psutil se houver; /proc no
-        Linux; None se não for possível medir (aí só o timeout vale)."""
+        """Tempo de CPU acumulado do processo E dos descendentes (s).
+
+        No Debian/Ubuntu, /usr/bin/codeml é um script sh que roda
+        /usr/lib/paml/bin/codeml como filho (sem exec): medir só o pid do
+        script daria 0 s para sempre e a detecção de inatividade mataria um
+        codeml que está trabalhando. psutil se houver; /proc no Linux; None
+        se não for possível medir (aí só o timeout vale)."""
         try:
             import psutil
-            t = psutil.Process(pid).cpu_times()
-            return float(t.user + t.system)
+            proc = psutil.Process(pid)
+            total = 0.0
+            for p in [proc] + proc.children(recursive=True):
+                try:
+                    t = p.cpu_times()
+                    total += t.user + t.system
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+            return float(total)
         except ImportError:
             pass
         except Exception:
             return None
         try:
-            with open(f"/proc/{pid}/stat", 'r') as fh:
-                fields = fh.read().rsplit(')', 1)[1].split()
             ticks = os.sysconf(os.sysconf_names['SC_CLK_TCK'])
-            return (int(fields[11]) + int(fields[12])) / ticks
+            stats = {}
+            for d in os.listdir('/proc'):
+                if not d.isdigit():
+                    continue
+                try:
+                    with open(f"/proc/{d}/stat", 'r') as fh:
+                        fields = fh.read().rsplit(')', 1)[1].split()
+                except OSError:
+                    continue
+                stats[int(d)] = (int(fields[1]), int(fields[11]) + int(fields[12]))
+            if pid not in stats:
+                return None
+            total, todo = 0, [pid]
+            while todo:
+                cur = todo.pop()
+                total += stats[cur][1]
+                todo.extend(c for c, (ppid, _) in stats.items() if ppid == cur)
+            return total / ticks
         except Exception:
             return None
 
     @staticmethod
     def _terminate(process) -> None:
-        """Encerra o codeml e recolhe o processo (sem deixar zumbi/órfão)."""
+        """Encerra o codeml e recolhe o processo (sem deixar zumbi/órfão).
+
+        Fora do Windows o codeml roda num grupo de processos próprio
+        (start_new_session): o sinal vai para o grupo inteiro, assim o codeml
+        real também morre quando o executável é um script que o chama."""
         if process.poll() is not None:
             return
+        import signal
+
+        def _signal(sig):
+            if platform.system() != 'Windows':
+                try:
+                    os.killpg(process.pid, sig)
+                    return
+                except (ProcessLookupError, PermissionError, OSError):
+                    pass
+            (process.terminate if sig == signal.SIGTERM else process.kill)()
         try:
-            process.terminate()
+            _signal(signal.SIGTERM)
             process.wait(timeout=3)
         except Exception:
             try:
-                process.kill()
+                _signal(getattr(signal, 'SIGKILL', signal.SIGTERM))
                 process.wait(timeout=3)
             except Exception:
                 pass
@@ -1284,6 +1325,8 @@ class CodemlBatchAnalysis:
             popen_kw = {}
             if platform.system() == 'Windows':
                 popen_kw['creationflags'] = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+            else:
+                popen_kw['start_new_session'] = True   # ver _terminate
             # stdin FECHADO: quando o codeml encontra um stop codon ele imprime
             # "Press Enter to continue" e chama getchar(); com a entrada padrão
             # fechada ele segue na hora (tratando a coluna como dado ausente)
@@ -1308,7 +1351,7 @@ class CodemlBatchAnalysis:
                             beb_was_skipped[0] = True
                             self._log(f"[{model_name}] {base_name}: skip_beb -- stopping before BEB")
                             try:
-                                process.terminate()
+                                self._terminate(process)
                             except Exception:
                                 pass
                 except Exception:
