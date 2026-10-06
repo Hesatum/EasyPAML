@@ -1,6 +1,6 @@
 @echo off
-REM EasyPAML - lancador Windows. Usa o .venv criado pelo install.bat;
-REM sem ele, usa o Python do sistema (instalacao antiga com pip --user).
+REM EasyPAML launcher for Windows. Uses the .venv created by install.bat;
+REM without it, uses the system Python.
 cd /d "%~dp0"
 if exist ".venv\Scripts\python.exe" (
     ".venv\Scripts\python.exe" EasyPAML.py
@@ -16,7 +16,7 @@ py EasyPAML.py
 :check
 if errorlevel 1 (
     echo.
-    echo  Erro ao iniciar EasyPAML.
-    echo  Execute install.bat se ainda nao instalou.
+    echo  EasyPAML could not start.
+    echo  Run install.bat if you have not installed it yet.
     pause
 )
