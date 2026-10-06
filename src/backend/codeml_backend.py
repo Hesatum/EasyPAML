@@ -32,6 +32,9 @@ from .ctl_params import (DEFAULT_CODONFREQ, DEFAULT_CTL_PARAMS, build_ctl_text,
 from .preflight import discover_per_gene_trees, group_by_gene, list_alignment_files
 from .site_map import codeml_site_count, write_sitemap
 from .timeouts import resolve_timeout, user_timeout
+
+# saída parcial de uma execução que falhou (não casa com *_results.txt)
+FAILED_RESULTS_SUFFIX = '_results_FAILED.txt'
 from .version import __version__
 
 # Absolute path to the bundled codeml binary — works regardless of CWD.
@@ -1505,6 +1508,20 @@ class CodemlBatchAnalysis:
                 elif lnL is None:
                     fail_reason = self._t('reason_no_lnl', line=last_line[:200])
 
+            # Execução que falhou (inatividade, tempo limite, código de erro):
+            # a saída parcial fica para diagnóstico, mas com outro nome, para
+            # nenhum leitor de *_results.txt (LRT, painel, Atualizar
+            # Resultados) usar um lnL de um codeml interrompido.
+            if fail_reason and save_outputs and output_path.exists():
+                failed_path = output_path.with_name(
+                    output_path.name[:-len('_results.txt')] + FAILED_RESULTS_SUFFIX)
+                try:
+                    output_path.replace(failed_path)
+                    output_path = failed_path
+                    lnL = np_params = ntime_params = omega = None
+                except OSError as exc:
+                    self._log(f"[{model_name}] {base_name}: could not rename failed output: {exc}")
+
             return {
                 'output_file': str(output_path) if output_path.exists() else None,
                 'results_file': str(output_path) if output_path.exists() else None,
@@ -1725,6 +1742,8 @@ class CodemlBatchAnalysis:
                     null_res = gene_results.get(null_model)
                     alt_res = gene_results.get(alt_model)
                     if not null_res or not alt_res:
+                        continue
+                    if 'failed' in (null_res.get('status'), alt_res.get('status')):
                         continue
                     lnL_null, lnL_alt = null_res.get('lnL'), alt_res.get('lnL')
                     if lnL_null is None or lnL_alt is None:
@@ -2018,8 +2037,14 @@ class CodemlBatchAnalysis:
 
         
         # Calcular LRTs (pares em lrt_stats.PAIRS) e p-valores
+        gene_status = CodemlBatchAnalysis._read_gene_status(results_folder)
         for gene_name in data:
             row = data[gene_name]
+            st, reason = gene_status.get(gene_name, ('', ''))
+            if st:
+                row['status'] = st
+            if st == 'failed':
+                continue
             for (null_m, alt_m), info in lrt_stats.PAIRS.items():
                 a_l, n_l = row.get(f'{alt_m}_lnL'), row.get(f'{null_m}_lnL')
                 if a_l is None or n_l is None or pd.isna(a_l) or pd.isna(n_l):
@@ -2075,7 +2100,12 @@ class CodemlBatchAnalysis:
         
         # Converter para DataFrame e salvar. p/q em notação científica: com
         # '%.6f' um p de 4e-23 virava "0.000000" (o "p = 0" de volta).
+        for gene_name, (st, _reason) in gene_status.items():
+            if gene_name not in data:   # falhou em todos os modelos: sem *_results.txt
+                data[gene_name] = {'Gene': gene_name, 'status': st}
         df = pd.DataFrame(list(data.values()))
+        if 'status' in df.columns:   # mesma posição que numa execução normal
+            df.insert(1, 'status', df.pop('status').fillna('ok'))
         for col in df.columns:
             if col.startswith(('p_', 'q_')):
                 df[col] = [f"{v:.6e}" if isinstance(v, (int, float)) and pd.notna(v) else 'NA'
@@ -2104,6 +2134,7 @@ class CodemlBatchAnalysis:
         _reverse = {v: k for k, v in _legacy.items()}
 
         orphaned: dict = {}
+        gene_status = CodemlBatchAnalysis._read_gene_status(results_folder)
         for item in results_folder.iterdir():
             if not item.is_dir() or item.name in {'reports'}:
                 continue
@@ -2113,7 +2144,9 @@ class CodemlBatchAnalysis:
             for ctl_file in item.glob(f"*_{folder_name}.ctl"):
                 gene_name = ctl_file.stem.replace(f"_{folder_name}", "")
                 result_file = item / f"{gene_name}_{folder_name}_results.txt"
-                if not result_file.exists():
+                failed_file = item / f"{gene_name}_{folder_name}{FAILED_RESULTS_SUFFIX}"
+                if not result_file.exists() and not failed_file.exists() \
+                        and gene_status.get(gene_name, ('',))[0] != 'failed':
                     orphaned.setdefault(gene_name, []).append(model)
 
         if orphaned:
@@ -2206,6 +2239,21 @@ class CodemlBatchAnalysis:
         return log_file
     
     @staticmethod
+    def _read_gene_status(results_folder: Path) -> Dict[str, Tuple[str, str]]:
+        """{gene: (status, motivo)} de genes_status.tsv ({} se não existir)."""
+        path = Path(results_folder) / 'genes_status.tsv'
+        out: Dict[str, Tuple[str, str]] = {}
+        try:
+            for line in path.read_text(encoding='utf-8').splitlines()[1:]:
+                parts = line.split('\t')
+                if parts and parts[0]:
+                    out[parts[0]] = (parts[1] if len(parts) > 1 else '',
+                                     parts[2] if len(parts) > 2 else '')
+        except OSError:
+            pass
+        return out
+
+    @staticmethod
     def _regenerate_lrt_results(results_folder: Path) -> tuple:
         """Regenera LRT_results.txt, com correcao Benjamini-Hochberg (FDR) por
         comparacao -- mesma logica de duas fases que _run_lrt_analysis (coleta
@@ -2218,6 +2266,7 @@ class CodemlBatchAnalysis:
         results_folder = Path(results_folder)
         lrt_file = results_folder / "LRT_results.txt"
         qvalues: dict = {}
+        gene_status = CodemlBatchAnalysis._read_gene_status(results_folder)
 
         # Mapeamento de nomes legados → atuais (centralizado na constante de classe)
         model_name_mapping = CodemlBatchAnalysis._LEGACY_MODEL_NAMES
@@ -2264,6 +2313,8 @@ class CodemlBatchAnalysis:
                 # linha como o p bruto).
                 collected = []
                 for gene in sorted(genes):
+                    if gene_status.get(gene, ('',))[0] == 'failed':
+                        continue   # pasta antiga: saída de um codeml interrompido
                     null_folder = reverse_mapping.get(null_model, null_model)
                     alt_folder = reverse_mapping.get(alt_model, alt_model)
                     

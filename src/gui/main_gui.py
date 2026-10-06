@@ -2489,6 +2489,7 @@ class App(ctk.CTk):
         self.pause_event.set()
         self._set_pause_button(False)
         self.progress_bar.set(0)
+        self.progress_bar.configure(progress_color=self.COLORS['success'])
         self.progress_label.configure(text=TEXTS["progress_template"].format(done=0, total='…'))
         self.status_indicator.configure(text=TEXTS["status_running"], text_color=self.COLORS['success'])
         self.analysis_thread = threading.Thread(target=self._run_thread, args=(selected, ignore_stops),
@@ -2559,9 +2560,17 @@ class App(ctk.CTk):
         if not summary:
             return
         total, done = summary.get('total', 0), summary.get('ok', 0) + summary.get('failed', 0)
-        self.progress_label.configure(text=TEXTS["progress_done"].format(done=done, total=total))
         if summary.get('failed'):
-            items = "\n".join(f"• {g}: {r}" for g, r in sorted(summary['failures'].items())[:30])
+            self.progress_label.configure(text=TEXTS["progress_done_failed"].format(
+                ok=summary.get('ok', 0), total=total, failed=summary['failed']))
+            self.progress_bar.configure(progress_color=self.COLORS['warning'])
+        else:
+            self.progress_label.configure(text=TEXTS["progress_done"].format(done=done, total=total))
+        if summary.get('failed'):
+            def _item(g, r):
+                why = ResultsViewerWindow._compact_reason(r).replace("\n", "\n    ")
+                return f"• {g}\n    {why}"
+            items = "\n".join(_item(g, r) for g, r in sorted(summary['failures'].items())[:30])
             if len(summary['failures']) > 30:
                 items += f"\n… (+{len(summary['failures']) - 30})"
             show_message(self, TEXTS["failures_title"], TEXTS["failures_text"].format(

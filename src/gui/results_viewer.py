@@ -203,7 +203,7 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             self.df = pd.read_csv(tsv_file, sep='\t')
             self.df = self.df.replace(['NA', 'nan', '', 'None'], np.nan)
 
-            numeric_cols = [col for col in self.df.columns if col != 'Gene']
+            numeric_cols = [col for col in self.df.columns if col not in ('Gene', 'status', 'reason')]
             for col in numeric_cols:
                 self.df[col] = pd.to_numeric(self.df[col], errors='coerce')
 
@@ -495,16 +495,22 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         info = lrt_stats.PAIRS.get((null, alt), {'df': 1, 'boundary': False})
         pcol, qcol = lrt_stats.p_column(null, alt), lrt_stats.q_column(null, alt)
         genes, lrts, ps = [], [], []
+        skipped_failed = False
         for _, row in self.df.iterrows():
             lrt = row.get(lcol)
             if pd.isna(lrt):
+                continue
+            if row.get('status') == 'failed':
+                # pasta de versão anterior: o LRT foi calculado com a saída de
+                # um codeml interrompido; não entra no teste nem na família BH
+                skipped_failed = True
                 continue
             p = row.get(pcol) if pcol in self.df.columns else np.nan
             if pd.isna(p) or p <= 0:   # p = 0 só aparece por arredondamento: recalcula
                 df_ = info['df'] or 1
                 p = lrt_stats.p_value(max(0.0, float(lrt)), df_, boundary=info['boundary'])
             genes.append(row['Gene']); lrts.append(float(lrt)); ps.append(float(p))
-        if qcol in self.df.columns:
+        if qcol in self.df.columns and not skipped_failed:
             qmap = dict(zip(self.df['Gene'], self.df[qcol]))
             qs = [qmap.get(g, np.nan) for g in genes]
             if any(pd.isna(q) or q <= 0 for q in qs):
@@ -652,8 +658,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                          text_color=PALETTE['text_primary']).pack(side='left')
             if failed:
                 self._chip(head, TEXTS["summary_verdict_failed"], 'danger').pack(side='left', padx=(SPACE['sm'], 0))
-                ctk.CTkLabel(head, text=self._failure_reason(gene), font=self._font('sm'),
-                             text_color=PALETTE['danger_fg']).pack(side='left', padx=(SPACE['sm'], 0))
+                why = ctk.CTkLabel(card, text=self._compact_reason(self._failure_reason(gene)),
+                                   font=self._font('sm'), anchor='w', justify='left', wraplength=1000,
+                                   text_color=PALETTE['danger_fg'])
+                why.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
+                card.bind('<Configure>', lambda e, l=why: l.configure(
+                    wraplength=max(300, e.width - 2 * SPACE['md'])), add='+')
 
             body = ctk.CTkFrame(card, fg_color='transparent')
             body.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
@@ -695,6 +705,20 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 except Exception:
                     pass
         return cache.get(gene, '?')
+
+    @staticmethod
+    def _compact_reason(reason: str) -> str:
+        """'M8: X; M8a: X; M7: Y' -> 'M8, M8a: X' / 'M7: Y' (modelos com o mesmo motivo juntos)."""
+        import re as _re
+        parts = _re.split(r';\s+(?=(?:M\d\w*|Branch[-\w]*):\s)', str(reason).strip())
+        groups: dict = {}
+        for part in [x.strip() for x in parts if x.strip()]:
+            m = _re.match(r'(M\d\w*|Branch[-\w]*):\s+(.*)$', part, _re.S)
+            model, why = (m.group(1), m.group(2)) if m else ('', part)
+            why = _re.sub(r';\s*(última linha|last line):\s*$', '', why.strip())
+            groups.setdefault(why, []).append(model)
+        return "\n".join((", ".join(x for x in ms if x) + ": " if any(ms) else "") + why
+                         for why, ms in groups.items())
 
     def _create_lrt_stats_tab(self, parent):
         """Aba de Tabela LRT com p-valores"""

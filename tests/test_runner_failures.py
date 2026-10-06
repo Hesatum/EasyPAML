@@ -34,6 +34,11 @@ def write_ok():
     with open(out, 'w') as f:
         f.write("CODONML (in paml version 9.9fake)\nns =  10  ls = 300\n")
         f.write("lnL(ntime: 17  np: 22):  -4100.000000      +0.000000\n")
+fail_model = os.environ.get('FAKE_FAIL_MODEL')
+if fail_model and sys.argv[1].endswith('_' + fail_model + '.ctl'):
+    write_ok()                 # escreve o lnL e depois para (como um codeml morto no BEB)
+    time.sleep(60)
+    sys.exit(0)
 if mode == 'stdin':
     print("stop codon TGA in seq. #   3 (Gorilla_gorilla), nucleotide site 448")
     print("Press Enter to continue", flush=True)
@@ -199,6 +204,40 @@ def test_stop_kills_child_of_wrapper_script(tmp_path, wrapped_codeml, monkeypatc
     left = subprocess.run(['pgrep', '-f', str(tmp_path / 'fake_codeml')],
                           capture_output=True, text=True).stdout.split()
     assert not left, f"codeml filho ficou rodando: {left}"
+
+
+def test_failed_run_output_is_not_used_in_lrt(tmp_path, fake_codeml, monkeypatch):
+    """Rodada 2: um M8 morto depois de escrever o lnL entrava no LRT e o painel
+    mostrava o gene que falhou como 'significativo'."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    monkeypatch.setenv('FAKE_FAIL_MODEL', 'M8')
+    app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))
+    app.config['idle_timeout'] = 2
+    summary = app.run_batch_analysis()
+    assert summary['failed'] == 1
+    m8 = tmp_path / 'out' / 'M8'
+    assert not list(m8.glob('*_results.txt'))
+    assert list(m8.glob('*_results_FAILED.txt'))
+    tsv = (tmp_path / 'out' / 'analysis_summary.tsv').read_text().splitlines()
+    head, row = tsv[0].split('\t'), tsv[1].split('\t')
+    assert row[head.index('status')] == 'failed'
+    assert 'lrt_M7_vs_M8' not in head or row[head.index('lrt_M7_vs_M8')] in ('', 'NA', 'nan')
+    assert 'Gene: gene' not in (tmp_path / 'out' / 'LRT_results.txt').read_text()
+
+
+def test_regenerate_skips_genes_marked_failed(tmp_path, fake_codeml, monkeypatch):
+    """Pasta de versão anterior: *_results.txt de um gene que falhou continua lá."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))
+    app.run_batch_analysis()
+    out = tmp_path / 'out'
+    (out / 'genes_status.tsv').write_text("Gene\tstatus\treason\ngene\tfailed\tM8: inatividade\n")
+    CodemlBatchAnalysis.regenerate_summary_files(out)
+    tsv = (out / 'analysis_summary.tsv').read_text().splitlines()
+    head, row = tsv[0].split('\t'), tsv[1].split('\t')
+    assert row[head.index('status')] == 'failed'
+    assert 'lrt_M7_vs_M8' not in head
+    assert CodemlBatchAnalysis._find_orphaned_analyses(out) == {}
 
 
 def test_stop_kills_codeml_without_orphans(tmp_path, fake_codeml, monkeypatch):
