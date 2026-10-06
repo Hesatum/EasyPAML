@@ -23,7 +23,8 @@ def _join(items: Sequence[str]) -> str:
 def build_methods_text(*, version: str, codeml_version: Optional[str], models: List[str],
                        ctl: Dict[str, object], omega0: float, pruned: bool,
                        family_sizes: Dict[Tuple[str, str], int], n_genes: int,
-                       beb: bool = True) -> str:
+                       beb: bool = True, masked_stops: Optional[Dict[str, int]] = None,
+                       excluded_taxa: Optional[Dict[str, List[str]]] = None) -> str:
     cf = ctl.get('CodonFreq')
     cf_name = CODONFREQ_NAMES.get(int(cf), str(cf)) if cf is not None else '?'
     site = [m for m in _SITE_MODELS if m in models]
@@ -46,6 +47,14 @@ def build_methods_text(*, version: str, codeml_version: Optional[str], models: L
     if pruned:
         tree += " and pruned to the taxa present in each alignment"
     s.append(tree + ".")
+    if masked_stops:
+        genes = sorted(masked_stops)
+        n = sum(masked_stops.values())
+        s.append(f"{n} stop codon(s) in {len(genes)} gene(s) ({_join(genes)}) were treated as "
+                 "missing data.")
+    if excluded_taxa:
+        parts = [f"{', '.join(names)} from {gene}" for gene, names in sorted(excluded_taxa.items())]
+        s.append("Sequences absent from the tree were excluded: " + "; ".join(parts) + ".")
 
     tests = []
     for (null, alt) in lrt_stats.pairs_for(models):

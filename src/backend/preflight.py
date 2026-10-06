@@ -279,14 +279,18 @@ _MESSAGES = {
     'stop_codon': {
         'pt': "Stop codon {codon} na sequência {sequence}, códon {codon_position} "
               "(nucleotídeo {nucleotide_position}){terminal_pt}. O codeml trata essa coluna inteira como dado ausente. "
-              "O que fazer: se o códon está errado (erro de sequenciamento, montagem ou alinhamento), "
-              "corrija o arquivo; se ele é real (por exemplo, um pseudogene), dá para seguir, e o "
-              "aviso fica registrado em genes_status.tsv e no painel.",
+              "Se o códon está errado (erro de sequenciamento, montagem ou alinhamento), corrija o "
+              "arquivo, por exemplo trocando esse códon por NNN nessa sequência. Se ele é real "
+              "(por exemplo, um pseudogene), \"Continuar mesmo assim\" roda o gene com o códon "
+              "mascarado, como \"Ignorar stop codons\"; o aviso fica em genes_status.tsv, no painel "
+              "e em methods_text.txt.",
         'en': "Stop codon {codon} in sequence {sequence}, codon {codon_position} "
               "(nucleotide {nucleotide_position}){terminal_en}. codeml treats that whole column as missing data. "
-              "What to do: if the codon is wrong (sequencing, assembly or alignment error), fix the "
-              "file; if it is real (e.g. a pseudogene) you can go on, and the warning is kept in "
-              "genes_status.tsv and in the panel.",
+              "If the codon is wrong (sequencing, assembly or alignment error), fix the file, for "
+              "example by replacing that codon with NNN in that sequence. If it is real (e.g. a "
+              "pseudogene), \"Continue anyway\" runs the gene with the codon masked, the same as "
+              "\"Ignore stop codons\"; the warning is kept in genes_status.tsv, the panel and "
+              "methods_text.txt.",
     },
     'name_not_in_tree': {
         'pt': "'{name}' está no alinhamento mas não na árvore{suggest_pt}.{prune_pt}",

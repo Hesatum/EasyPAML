@@ -1148,7 +1148,7 @@ class App(ctk.CTk):
                      height=16, anchor='w', text_color=C['text_tertiary']).pack(fill='x')
 
         self.stop_label = ctk.CTkLabel(
-            top, text=TEXTS["status_stops_template"].format(n=0),
+            top, text=TEXTS["status_stops_template"].format(n="–"),
             font=(_FONT_UI, fs['sm'], "bold"), height=28, corner_radius=12,
             fg_color=C['bg_card'], text_color=C['danger'])
         self.stop_label.pack(side='right', ipadx=sp['sm'])
@@ -2363,6 +2363,9 @@ class App(ctk.CTk):
     def _after_preflight(self, selected, report, error):
         self.status_indicator.configure(text=TEXTS["status_ready"], text_color=self.COLORS['text_tertiary'])
         ignore_stops = bool(self.ignore_stop_codons_var.get())
+        if report is not None:
+            n_stops = sum(1 for i in report.issues if i.kind == 'stop_codon')
+            self.stop_label.configure(text=TEXTS["status_stops_template"].format(n=n_stops))
         if error is not None:
             self.append_log(f"{error}", 'error')
         elif report is not None and report.has_problems:

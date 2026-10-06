@@ -98,10 +98,14 @@ MESSAGES = {
         'en': "codeml produced no output file: {line}",
     },
     'reason_stop_codons': {
-        'pt': "stop codon(s) no meio da sequência: {details}. Corrija o alinhamento ou ative "
-              "'Ignorar stop codons' para o codeml tratar essas colunas como dado ausente.",
-        'en': "internal stop codon(s): {details}. Fix the alignment or enable 'Ignore stop codons' "
-              "so codeml treats those columns as missing data.",
+        'pt': "stop codon(s) no meio da sequência: {details}. Corrija o alinhamento (por exemplo, "
+              "troque o códon por NNN) ou rode com os stop codons ignorados ('Ignorar stop codons' "
+              "na janela, --ignore-stop-codons na linha de comando) para o codeml tratar essas "
+              "colunas como dado ausente.",
+        'en': "internal stop codon(s): {details}. Fix the alignment (for example, replace the codon "
+              "with NNN) or run with stop codons ignored ('Ignore stop codons' in the window, "
+              "--ignore-stop-codons on the command line) so codeml treats those columns as "
+              "missing data.",
     },
     'reason_stopped': {
         'pt': "interrompido pelo usuário",

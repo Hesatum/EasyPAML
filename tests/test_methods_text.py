@@ -24,6 +24,16 @@ def test_methods_text_without_m8a_does_not_invent_it():
     assert 'M8a' not in t
 
 
+def test_methods_text_reports_masked_stops_and_excluded_sequences():
+    t = build_methods_text(
+        version='0.3.0', codeml_version='4.9j', models=['M7', 'M8'],
+        ctl={'CodonFreq': 2, 'ncatG': 10, 'kappa': 2, 'cleandata': 1}, omega0=0.5,
+        pruned=True, family_sizes={}, n_genes=2,
+        masked_stops={'geneB': 1}, excluded_taxa={'geneA': ['Macaca_mulata']})
+    assert '1 stop codon(s) in 1 gene(s) (geneB) were treated as missing data' in t
+    assert 'Macaca_mulata from geneA' in t
+
+
 def test_version_string_has_commit_in_a_clone():
     c = source_commit()
     assert c is None or len(c.split('-')[0]) == 40

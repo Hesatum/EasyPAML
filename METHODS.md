@@ -27,7 +27,7 @@ codeml is searched in this order: `--codeml` or the setting in the window, the
 | Finding | Consequence |
 |---|---|
 | fewer than 3 sequences, unequal lengths, length not a multiple of 3, repeated name | the gene does not run and is reported as failed |
-| internal stop codon (not in the last codon) | the gene fails with the sequence and codon position, unless "Ignore stop codons" is on; then codeml treats the whole column as missing data |
+| internal stop codon (not in the last codon) | the codon is masked (codeml treats the column as missing data) if "Ignore stop codons" is on, `--ignore-stop-codons` is given, or "Continue anyway" is chosen in the data check; otherwise the gene fails with the sequence and codon position. Masked codons are listed in `genes_status.tsv` and `methods_text.txt` |
 | sequence missing from the tree | with automatic pruning (default) the sequence is left out of that gene and the closest tree name is suggested; without pruning codeml fails |
 | tree taxon missing from the alignment | with automatic pruning it is removed from that gene's tree |
 
