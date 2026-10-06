@@ -1911,10 +1911,9 @@ class CodemlBatchAnalysis:
                 self._lrt_qvalues[(null_model, alt_model)] = {c['gene']: c['q_value'] for c in collected}
                 self._lrt_pvalues[(null_model, alt_model)] = {c['gene']: c['p_value'] for c in collected}
 
-                sig_count_05 = sig_count_01 = sig_count_q05 = 0
+                sig_count_05 = sig_count_q05 = 0
                 for c in sorted(collected, key=lambda c: (c['p_value'], c['gene'])):
                     sig_count_05 += c['p_value'] < 0.05
-                    sig_count_01 += c['p_value'] < 0.01
                     sig_count_q05 += c['q_value'] < 0.05
                     f.write(f"Gene: {c['gene']}\n")
                     f.write(f"  lnL {null_model}: {c['lnL_null']:.6f} (np={c['np_null']})\n")
@@ -1930,9 +1929,7 @@ class CodemlBatchAnalysis:
                         f.write(f"  p-value (50:50 mixture, reference only, not used for q) = "
                                 f"{c['p_value_mixture']:.6e}\n")
                     f.write(f"  q-value (BH) = {c['q_value']:.6e}\n")
-                    if c['q_value'] < 0.01:
-                        f.write(f"  Result: SIGNIFICANT -- {alt_model} better (q < 0.01, BH-corrected)\n")
-                    elif c['q_value'] < 0.05:
+                    if c['q_value'] < 0.05:
                         f.write(f"  Result: SIGNIFICANT -- {alt_model} better (q < 0.05, BH-corrected)\n")
                     else:
                         f.write(f"  Result: not significant (q >= 0.05, BH-corrected)\n")
@@ -1942,8 +1939,7 @@ class CodemlBatchAnalysis:
                 f.write("\nSUMMARY:\n")
                 f.write(f"  Genes tested: {total_valid}\n")
                 if total_valid > 0:
-                    f.write(f"  Significant at raw p < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
-                    f.write(f"  Significant at raw p < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
+                    f.write(f"  Significant at raw p < 0.05 (before correction, reference only): {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
                     f.write(f"  Significant at BH q < 0.05: {sig_count_q05} ({100*sig_count_q05/total_valid:.1f}%)\n")
                 f.write("\n")
                 self._emit('info', self._t('lrt_pair_done', null=null_model, alt=alt_model,
@@ -2472,12 +2468,10 @@ class CodemlBatchAnalysis:
                         c['q_value'] = q
                 qvalues[(null_model, alt_model)] = {c['gene']: c['q_value'] for c in collected}
 
-                sig_count_05 = sig_count_01 = sig_count_q05 = 0
+                sig_count_05 = sig_count_q05 = 0
                 for c in sorted(collected, key=lambda c: (c['p_value'], c['gene'])):
                     if c['p_value'] < 0.05:
                         sig_count_05 += 1
-                    if c['p_value'] < 0.01:
-                        sig_count_01 += 1
                     if c['q_value'] < 0.05:
                         sig_count_q05 += 1
 
@@ -2492,9 +2486,7 @@ class CodemlBatchAnalysis:
                                 f"{c['p_value_mixture']:.6e}\n")
                     f.write(f"  q-value (BH) = {c['q_value']:.6e}\n")
 
-                    if c['q_value'] < 0.01:
-                        f.write(f"  Result: SIGNIFICANT -- {alt_model} better (q < 0.01, BH-corrected)\n")
-                    elif c['q_value'] < 0.05:
+                    if c['q_value'] < 0.05:
                         f.write(f"  Result: SIGNIFICANT -- {alt_model} better (q < 0.05, BH-corrected)\n")
                     else:
                         f.write(f"  Result: not significant (q >= 0.05, BH-corrected)\n")
@@ -2505,8 +2497,7 @@ class CodemlBatchAnalysis:
                 if total_valid > 0:
                     f.write("\nSUMMARY:\n")
                     f.write(f"  Genes tested: {total_valid}\n")
-                    f.write(f"  Significant at raw p < 0.05: {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
-                    f.write(f"  Significant at raw p < 0.01: {sig_count_01} ({100*sig_count_01/total_valid:.1f}%)\n")
+                    f.write(f"  Significant at raw p < 0.05 (before correction, reference only): {sig_count_05} ({100*sig_count_05/total_valid:.1f}%)\n")
                     f.write(f"  Significant at BH q < 0.05: {sig_count_q05} ({100*sig_count_q05/total_valid:.1f}%)\n")
                     f.write("\n")
 
