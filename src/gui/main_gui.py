@@ -1249,16 +1249,20 @@ class App(ctk.CTk):
                                            self._open_output_folder, C['text_primary'])
         self.btn_open_output.configure(hover_color=C['bg_card_hover'])
         self.btn_open_output.pack(side="right")
+        self.btn_view_results_main = _action_btn(prog_row, TEXTS["btn_view_results"],
+                                                 self._open_results_viewer, C['accent_blue_light'])
+        self.btn_view_results_main.configure(hover_color=C['bg_card_hover'])
+        self.btn_view_results_main.pack(side="right", padx=(0, sp['sm']))
         self.btn_stop = _action_btn(prog_row, TEXTS["btn_stop"],
                                     self._stop_analysis, C['danger'])
         self.btn_stop.pack(side="right", padx=(0, sp['sm']))
         self.btn_pause = _action_btn(prog_row, TEXTS["btn_pause"],
                                      self._toggle_pause, C['warning'])
         self.btn_pause.pack(side="right", padx=(0, sp['sm']))
-        self.progress_label = ctk.CTkLabel(prog_row, text=TEXTS["progress_idle"],
-                                           font=(_FONT_UI, fs['sm']), anchor='w', height=16,
+        self.progress_label = ctk.CTkLabel(self.ctrl_frame, text=TEXTS["progress_idle"],
+                                           font=(_FONT_UI, fs['sm']), anchor='w', height=18,
                                            text_color=C['text_secondary'])
-        self.progress_label.pack(side='left')
+        self.progress_label.pack(fill='x', padx=sp['lg'], pady=(0, sp['xs']))
         self.progress_bar = ctk.CTkProgressBar(self.ctrl_frame, height=8, corner_radius=4,
                                                fg_color=C['bg_card_hover'],
                                                progress_color=C['success'])

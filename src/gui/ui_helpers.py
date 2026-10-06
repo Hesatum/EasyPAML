@@ -23,9 +23,9 @@ DARK_PALETTE = {
     'bg_card': '#17171f',
     'bg_card_hover': '#20202c',
     'text_primary': '#eeeef2',
-    'text_secondary': '#a3a3b8',
-    'text_tertiary': '#8e8ea4',
-    'text_muted': '#8a8aa0',
+    'text_secondary': '#b8b8ca',
+    'text_tertiary': '#a2a2b6',
+    'text_muted': '#9c9cb2',
     'accent_text': '#818cf8',
     'accent_fill': '#4f46e5',
     'success_text': '#22c55e',
@@ -76,9 +76,9 @@ LIGHT_PALETTE = {
     'bg_card': '#ffffff',
     'bg_card_hover': '#f3f4f7',
     'text_primary': '#111827',
-    'text_secondary': '#454c59',
-    'text_tertiary': '#555d6b',
-    'text_muted': '#555d6b',
+    'text_secondary': '#363c47',
+    'text_tertiary': '#474e5b',
+    'text_muted': '#474e5b',
     'accent_text': '#4338ca',
     'accent_fill': '#4f46e5',
     'success_text': '#167038',
@@ -172,7 +172,7 @@ apply_theme()
 SPACE = {'xs': 4, 'sm': 8, 'md': 12, 'lg': 16, 'xl': 24, 'xxl': 32}
 RADIUS = {'field': 6, 'card': 8, 'panel': 12}
 # font sizes (pt), none below 11
-FONT_SIZE = {'xs': 11, 'sm': 12, 'md': 13, 'lg': 15, 'xl': 17, 'xxl': 20}
+FONT_SIZE = {'xs': 12, 'sm': 13, 'md': 14, 'lg': 16, 'xl': 18, 'xxl': 21}
 
 
 def mix(color_a: str, color_b: str, t: float) -> str:
