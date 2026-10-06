@@ -16,10 +16,12 @@ Benjamini-Hochberg e tabela de sítios (BEB).
 
 ### Baixar
 
-- Com git: `git clone https://github.com/Hesatum/EasyPAML.git`
-- Sem git: [baixe o ZIP](https://github.com/Hesatum/EasyPAML/archive/refs/heads/main.zip)
-  e extraia, ou pegue uma versão numerada em
-  [Releases / Tags](https://github.com/Hesatum/EasyPAML/tags).
+Esta versão está na branch `correcoes-usabilidade` (a `main` ainda tem a 0.2.0,
+com outro instalador e outros padrões):
+
+- Com git: `git clone -b correcoes-usabilidade https://github.com/Hesatum/EasyPAML.git`
+- Sem git: [baixe o ZIP](https://github.com/Hesatum/EasyPAML/archive/refs/heads/correcoes-usabilidade.zip)
+  e extraia.
 
 ### Windows
 
@@ -43,7 +45,7 @@ Benjamini-Hochberg e tabela de sítios (BEB).
 2. Baixar e instalar:
 
    ```bash
-   git clone https://github.com/Hesatum/EasyPAML.git
+   git clone -b correcoes-usabilidade https://github.com/Hesatum/EasyPAML.git
    cd EasyPAML
    ./install.sh
    ```
@@ -259,7 +261,8 @@ correction and BEB site tables reported in the user's alignment numbering.
 
 - Windows: double-click `install.bat`, then `EasyPAML.bat`.
 - Linux: `sudo apt install git python3-pip python3-venv python3-tk paml`, then
-  `git clone https://github.com/Hesatum/EasyPAML.git && cd EasyPAML && ./install.sh && ./EasyPAML.sh`.
+  `git clone -b correcoes-usabilidade https://github.com/Hesatum/EasyPAML.git && cd EasyPAML && ./install.sh && ./EasyPAML.sh`
+  (this version lives on the `correcoes-usabilidade` branch; `main` still has 0.2.0).
 - CLI: `.venv/bin/python easypaml_cli.py --help`. Methods: [METODOS.md](METODOS.md).
 - The interface follows the system language (Portuguese or English; default English).
 
