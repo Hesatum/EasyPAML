@@ -149,6 +149,14 @@ MESSAGES = {
               "(ω = 1); to tell positive selection from neutrality, also run M8a "
               "(M8 vs M8a test, the default).",
     },
+    'progress_line': {
+        'pt': "  … {pct}% · {elapsed} decorridos{left} · rodando {running}",
+        'en': "  … {pct}% · {elapsed} elapsed{left} · running {running}",
+    },
+    'progress_left': {
+        'pt': " · faltam cerca de {left}",
+        'en': " · about {left} left",
+    },
     'summary_ok': {
         'pt': "ANÁLISE CONCLUÍDA: {ok} de {n} genes concluídos ({minutes:.1f} min)",
         'en': "ANALYSIS COMPLETE: {ok} of {n} genes completed ({minutes:.1f} min)",

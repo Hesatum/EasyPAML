@@ -2484,14 +2484,11 @@ class App(ctk.CTk):
         self.after(1000, self._poll_stop_count)
 
     def _show_live_progress(self, a):
-        """Bar by model run; label with the model running, elapsed time and, once a
-        gene has finished, a rough estimate of the time left."""
-        running = dict(getattr(a, 'running', {}))
+        """Bar, percentage and time left from the backend's progress_snapshot (runs
+        weighted by their expected time); label with the models running."""
+        snap = a.progress_snapshot()
+        running, frac, elapsed = snap['running'], snap['frac'], snap['elapsed']
         now = time.time()
-        elapsed = now - a.run_start_time
-        # a running model counts as half done; the bar and the estimate use this fraction
-        done = min(a.runs_total, a.runs_done + 0.5 * len(running))
-        frac = done / a.runs_total
         self.progress_bar.set(frac)
         if len(running) == 1:
             gene, (model, t0) = next(iter(running.items()))
@@ -2505,9 +2502,7 @@ class App(ctk.CTk):
                 model=m, n=n) for m, n in by_model.items())
         else:
             what = "…"
-        left = ""
-        if a.runs_done and frac < 1:
-            left = TEXTS["progress_left"].format(left=self._clock(elapsed / frac * (1 - frac)))
+        left = TEXTS["progress_left"].format(left=self._clock(snap['left'])) if snap['left'] else ""
         text = TEXTS["progress_running"].format(done=a.current_processed_genes,
                                                 total=a.current_total_genes, pct=int(frac * 100),
                                                 what=what, elapsed=self._clock(elapsed), left=left)

@@ -27,7 +27,7 @@ from .ctl_params import (DEFAULT_CODONFREQ, DEFAULT_CTL_PARAMS, build_ctl_text,
                          codonfreq_label)
 from .preflight import discover_per_gene_trees, group_by_gene, list_alignment_files
 from .site_map import codeml_site_count, write_sitemap
-from .timeouts import resolve_timeout, user_timeout
+from .timeouts import estimate_seconds, resolve_timeout, user_timeout
 
 # partial output of a failed run (does not match *_results.txt)
 FAILED_RESULTS_SUFFIX = '_results_FAILED.txt'
@@ -78,6 +78,13 @@ def codeml_version(codeml_path: Optional[str]) -> Optional[str]:
         version = None
     _CODEML_VERSION_CACHE[codeml_path] = version
     return version
+
+
+def _clock(seconds: float) -> str:
+    seconds = int(seconds)
+    h, rest = divmod(seconds, 3600)
+    m, s = divmod(rest, 60)
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
 
 class CodemlBatchAnalysis:
@@ -690,6 +697,11 @@ class CodemlBatchAnalysis:
         self.runs_done = 0
         self.running: Dict[str, Tuple[str, float]] = {}
         self.run_start_time = time.time()
+        self.expected = self._expected_seconds(genes, cfg['models'])
+        self.expected_total = sum(sum(m.values()) for m in self.expected.values()) or 1.0
+        self.expected_done = 0.0
+        self.expected_finished = 0.0     # expected seconds of the runs that ended
+        self.actual_finished = 0.0       # their measured seconds
         n_workers = max(1, int(cfg.get('n_workers', 1)))
 
         with open(log_file, 'w', encoding='utf-8') as log:
@@ -731,12 +743,17 @@ class CodemlBatchAnalysis:
                 self._mark_gene_failed(gene, self._t('reason_no_codeml'))
         else:
             indexed = [(i, g, p) for i, (g, p) in enumerate(genes, 1)]
-            if n_workers > 1:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
-                    list(executor.map(lambda a: self._process_gene(*a, len(genes)), indexed))
-            else:
-                for item in indexed:
-                    self._process_gene(*item, len(genes))
+            beat = self._start_heartbeat(float(cfg.get('heartbeat', 60 if cfg.get('interface') == 'cli' else 0)))
+            try:
+                if n_workers > 1:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+                        list(executor.map(lambda a: self._process_gene(*a, len(genes)), indexed))
+                else:
+                    for item in indexed:
+                        self._process_gene(*item, len(genes))
+            finally:
+                if beat is not None:
+                    beat.set()
 
         total_time = time.time() - start_time
         stopped = bool(cfg.get('stop_event') is not None and cfg['stop_event'].is_set())
@@ -803,21 +820,89 @@ class CodemlBatchAnalysis:
         self._emit('error', self._t('gene_failed', gene=gene, reason=reason))
         self._log(f"[FAILED] {gene}: {reason}")
 
+    @staticmethod
+    def _expected_seconds(genes, models) -> Dict[str, Dict[str, float]]:
+        """Expected codeml time of each gene and model from the benchmark fit
+        (timeouts.estimate_seconds); used for progress, not for results."""
+        out = {}
+        for gene, path in genes:
+            try:
+                aln = read_alignment(path)
+                taxa, codons = len(aln.names), aln.length // 3
+            except Exception:
+                taxa, codons = 10, 300
+            out[gene] = {m: estimate_seconds(m, taxa, codons) for m in models}
+        return out
+
+    # measured/expected time before any run ends: the benchmark ran 8 jobs at once
+    # under nice on a laptop, so a free core is usually faster than the fit
+    _SPEED_PRIOR = 0.35
+
+    def progress_snapshot(self) -> Dict:
+        """Fraction done, elapsed seconds, seconds left (None before any progress)
+        and the runs going on, weighting each run by its expected time. The speed of
+        this machine relative to the benchmark is taken from the runs that ended;
+        a running model counts with its elapsed time, up to 90% of what it should
+        take at that speed."""
+        now = time.time()
+        with self._results_lock:
+            running = dict(self.running)
+            done = self.expected_done
+            speed = (self.actual_finished / self.expected_finished
+                     if getattr(self, 'expected_finished', 0) > 0 else self._SPEED_PRIOR)
+        speed = max(speed, 0.01)
+        exp = getattr(self, 'expected', {})
+        partial = sum(min((now - t0) / speed, 0.9 * exp.get(g, {}).get(m, 60.0))
+                      for g, (m, t0) in running.items())
+        frac = min(1.0, (done + partial) / getattr(self, 'expected_total', 1.0))
+        elapsed = now - self.run_start_time
+        left = elapsed / frac * (1 - frac) if frac > 0.002 and elapsed > 5 else None
+        return {'frac': frac, 'elapsed': elapsed, 'left': left, 'running': running}
+
+    def _start_heartbeat(self, every: float) -> Optional[threading.Event]:
+        """On the command line, print the progress every `every` seconds while
+        codeml runs, since nothing else is printed until a model finishes."""
+        if every <= 0:
+            return None
+        done = threading.Event()
+
+        def _beat():
+            while not done.wait(every):
+                snap = self.progress_snapshot()
+                running = ", ".join(f"{m} ({g})" for g, (m, _) in sorted(snap['running'].items())[:3])
+                left = self._t('progress_left', left=_clock(snap['left'])) if snap['left'] else ""
+                self._emit('info', self._t('progress_line', pct=int(snap['frac'] * 100),
+                                           elapsed=_clock(snap['elapsed']), left=left,
+                                           running=running or "…"))
+        threading.Thread(target=_beat, daemon=True).start()
+        return done
+
     def _process_gene(self, idx: int, gene: str, fas_file: Path, n_total: int):
         cfg = self.config
         pause_event = cfg.get('pause_event')
         stop_event = cfg.get('stop_event')
 
         runs_counted = [0]
+        counted_models = set()
+        gene_expected = getattr(self, 'expected', {}).get(gene, {})
 
-        def _run_finished():
+        def _run_finished(model, result):
             with self._results_lock:
                 runs_counted[0] += 1
                 self.runs_done += 1
+                counted_models.add(model)
+                self.expected_done += gene_expected.get(model, 0.0)
+                if result.get('status') == 'success' and not result.get('reused'):
+                    t0 = self.running.get(gene, (None, None))[1]
+                    if t0 is not None:
+                        self.expected_finished += gene_expected.get(model, 0.0)
+                        self.actual_finished += time.time() - t0
 
         def _done():
             with self._results_lock:
                 self.runs_done += max(0, len(cfg['models']) - runs_counted[0])
+                self.expected_done += sum(v for m, v in gene_expected.items()
+                                          if m not in counted_models)
                 self.running.pop(gene, None)
                 self.current_processed_genes += 1
                 done = self.current_processed_genes
@@ -916,7 +1001,7 @@ class CodemlBatchAnalysis:
                                                    fitted_tree=fitted_for_this, aln=aln)
             gene_results[model_name] = result
             if result.get('status') != 'stopped':
-                _run_finished()
+                _run_finished(model_name, result)
             if result.get('status') == 'success':
                 if result.get('reused'):
                     self._emit('ok', self._t('model_reused', gene=gene, model=model_name,

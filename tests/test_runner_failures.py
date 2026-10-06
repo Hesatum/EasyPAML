@@ -469,3 +469,26 @@ def test_multistart_keeps_the_files_of_the_best_start(tmp_path, fake_codeml, mon
     out = tmp_path / 'out' / 'M8'
     assert '-4100.000000' in (out / 'gene_M8_results.txt').read_text()
     assert re.search(r'^\s*omega\s*=\s*1(\.0*)?\b', (out / 'gene_M8.ctl').read_text(), re.M)
+
+
+def test_progress_moves_during_a_model_and_heartbeat_prints_it(tmp_path, fake_codeml, monkeypatch):
+    """The fraction grows while codeml runs (expected-time weighting), reaches 1 at the
+    end, and the command line prints it periodically."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'busy')
+    monkeypatch.setenv('FAKE_BUSY_S', '2.5')
+    app = _app(tmp_path, fake_codeml, models=('M7',))
+    app.config['heartbeat'] = 0.5
+    seen = []
+
+    def _watch():
+        for _ in range(40):
+            if getattr(app, 'running', None):
+                seen.append(app.progress_snapshot()['frac'])
+            time.sleep(0.1)
+    th = threading.Thread(target=_watch)
+    th.start()
+    app.run_batch_analysis()
+    th.join()
+    assert seen and max(seen) > min(seen) > 0
+    assert app.progress_snapshot()['frac'] == pytest.approx(1.0)
+    assert any('% ·' in t and 'elapsed' in t for _, t in app._test_log)
