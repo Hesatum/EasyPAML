@@ -2556,11 +2556,16 @@ class App(ctk.CTk):
             # a running model counts as half done
             partial = 0.5 * len(running)
         self.progress_bar.set(min(1.0, (a.runs_done + partial) / a.runs_total))
-        if running:
-            what = ", ".join(f"{model} ({gene}, {self._clock(now - t0)})"
-                             for gene, (model, t0) in sorted(running.items())[:2])
-            if len(running) > 2:
-                what += f" +{len(running) - 2}"
+        if len(running) == 1:
+            gene, (model, t0) = next(iter(running.items()))
+            short = gene if len(gene) <= 24 else gene[:23] + "…"
+            what = f"{model} ({short}, {self._clock(now - t0)})"
+        elif running:
+            by_model: dict = {}
+            for model, _ in running.values():
+                by_model[model] = by_model.get(model, 0) + 1
+            what = ", ".join(TEXTS["progress_model_genes" if n > 1 else "progress_model_gene"].format(
+                model=m, n=n) for m, n in by_model.items())
         else:
             what = "…"
         text = TEXTS["progress_running"].format(done=a.current_processed_genes,
