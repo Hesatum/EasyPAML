@@ -312,8 +312,9 @@ TEXTS_PT: dict[str, object] = {
     "dialog_select_results_folder": "Selecione a pasta com resultados para atualizar síntese",
 
     # ── App — troca de idioma ────────────────────────────────────────────
-    "lang_switch_message":  "Reinicie o EasyPAML para aplicar o novo idioma.",
-    "lang_switch_confirm":  "Reiniciar agora?",
+    "lang_switch_message":  "O novo idioma é aplicado quando o EasyPAML reabre. As pastas e os modelos escolhidos são mantidos.",
+    "lang_switch_confirm":  "Reabrir agora?",
+    "msg_wait_for_run": "Espere a análise terminar (ou pare-a) antes de trocar o idioma ou o tema.",
     "lang_switch_err":      "Não foi possível reiniciar automaticamente:\n{error}\n\nReabra manualmente.",
 
     # ── ResultsViewerWindow — mensagens inline ───────────────────────────
@@ -499,7 +500,7 @@ TEXTS_PT: dict[str, object] = {
     "theme_system": "Auto",
     "theme_light": "Claro",
     "theme_dark": "Escuro",
-    "theme_restart": "O novo tema é aplicado quando o EasyPAML reabre. Reabrir agora?",
+    "theme_restart": "O novo tema é aplicado quando o EasyPAML reabre. As pastas e os modelos escolhidos são mantidos. Reabrir agora?",
     "lang_restart_title": "Idioma",
     "viewer_tab_summary": "Resumo",
     "viewer_btn_open_output": "Abrir pasta de resultados",
@@ -889,8 +890,9 @@ TEXTS_EN: dict[str, object] = {
     "dialog_select_results_folder": "Select results folder to update summary",
 
     # ── App — language switch ────────────────────────────────────────────
-    "lang_switch_message":  "Restart EasyPAML to apply the language change.",
-    "lang_switch_confirm":  "Restart now?",
+    "lang_switch_message":  "The new language is applied when EasyPAML reopens. The folders and models you chose are kept.",
+    "lang_switch_confirm":  "Reopen now?",
+    "msg_wait_for_run": "Wait for the analysis to finish (or stop it) before changing the language or theme.",
     "lang_switch_err":      "Could not restart automatically:\n{error}\n\nPlease reopen manually.",
 
     # ── ResultsViewerWindow — inline messages ────────────────────────────
@@ -1075,7 +1077,7 @@ TEXTS_EN: dict[str, object] = {
     "theme_system": "Auto",
     "theme_light": "Light",
     "theme_dark": "Dark",
-    "theme_restart": "The new theme is applied when EasyPAML reopens. Reopen now?",
+    "theme_restart": "The new theme is applied when EasyPAML reopens. The folders and models you chose are kept. Reopen now?",
     "lang_restart_title": "Language",
     "viewer_tab_summary": "Summary",
     "viewer_btn_open_output": "Open results folder",

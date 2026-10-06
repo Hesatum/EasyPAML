@@ -1313,6 +1313,7 @@ class App(ctk.CTk):
         backend_messages.set_language(get_language())
 
         self._update_models_state()
+        self._restore_state()
         self._poll_stop_count()
         self._refresh_visual_state()
         self.bind_all("<Control-q>", lambda e: self.destroy())
@@ -1805,22 +1806,25 @@ class App(ctk.CTk):
         start = str(self.input_folder) if self.input_folder else str(Path.home())
         path = ask_directory(self, TEXTS["btn_input_folder"], start)
         if path:
-            self.input_folder = Path(path)
-            files = list_alignment_files(self.input_folder)
-            chosen, _ = group_by_gene(files)
-            self.per_gene_trees = discover_per_gene_trees(self.input_folder, genes=set(chosen))
-            if files:
-                names = ", ".join(f.name for f in files[:4]) + (" …" if len(files) > 4 else "")
-                text = TEXTS["label_found_alignments"].format(n=len(files), names=names)
-                if self.per_gene_trees:
-                    text += "\n" + TEXTS["label_per_gene_trees"].format(n=len(self.per_gene_trees),
-                                                                       total=len(chosen))
-                color = self.COLORS['text_secondary']
-            else:
-                text = TEXTS["label_no_alignments"]
-                color = self.COLORS['warning']
-            self.label_input.configure(text=f"{self.input_folder.name}\n{text}", text_color=color)
-            self._update_models_state()
+            self._use_input_folder(path)
+
+    def _use_input_folder(self, path):
+        self.input_folder = Path(path)
+        files = list_alignment_files(self.input_folder)
+        chosen, _ = group_by_gene(files)
+        self.per_gene_trees = discover_per_gene_trees(self.input_folder, genes=set(chosen))
+        if files:
+            names = ", ".join(f.name for f in files[:4]) + (" …" if len(files) > 4 else "")
+            text = TEXTS["label_found_alignments"].format(n=len(files), names=names)
+            if self.per_gene_trees:
+                text += "\n" + TEXTS["label_per_gene_trees"].format(n=len(self.per_gene_trees),
+                                                                   total=len(chosen))
+            color = self.COLORS['text_secondary']
+        else:
+            text = TEXTS["label_no_alignments"]
+            color = self.COLORS['warning']
+        self.label_input.configure(text=f"{self.input_folder.name}\n{text}", text_color=color)
+        self._update_models_state()
 
     def select_tree_file(self):
         start = str(self.tree_file.parent) if self.tree_file else (
@@ -1828,10 +1832,13 @@ class App(ctk.CTk):
         path = ask_open_file(self, TEXTS["btn_tree_file"], start,
                              filetypes=[('Newick', '*.nwk *.tree *.tre *.newick *.nh *.txt')])
         if path:
-            self.tree_file = Path(path)
-            self.label_tree.configure(text=str(self.tree_file.name),
-                                      text_color=self.COLORS['text_secondary'])
-            self._update_models_state()
+            self._use_tree_file(path)
+
+    def _use_tree_file(self, path):
+        self.tree_file = Path(path)
+        self.label_tree.configure(text=str(self.tree_file.name),
+                                  text_color=self.COLORS['text_secondary'])
+        self._update_models_state()
 
     def select_output_folder(self):
         """Choose the output folder, creating it if needed."""
@@ -1839,8 +1846,10 @@ class App(ctk.CTk):
                     (self.input_folder.parent if self.input_folder else Path.home()))
         path = ask_directory(self, TEXTS["dialog_choose_output"], start,
                              allow_new=True, must_exist=False)
-        if not path:
-            return
+        if path:
+            self._use_output_folder(path)
+
+    def _use_output_folder(self, path):
         folder = Path(path)
         created = not folder.exists()
         try:
@@ -2030,9 +2039,47 @@ class App(ctk.CTk):
         seg.pack(side='left', fill='x', expand=True)
         self._theme_seg = seg
 
+    _RESTORE_ENV = 'EASYPAML_RESTORE'
+
+    def _reopen(self) -> None:
+        """Start a new window with the same folders and models, then close this one."""
+        import json
+        import subprocess
+        state = {'input': str(self.input_folder or ''), 'tree': str(self.tree_file or ''),
+                 'output': str(self.output_folder or ''),
+                 'models': [k for k, v in self.model_vars.items() if v.get()]}
+        env = dict(os.environ, **{self._RESTORE_ENV: json.dumps(state)})
+        try:
+            subprocess.Popen([sys.executable] + sys.argv, env=env)
+            self.destroy()
+        except Exception as exc:
+            show_message(self, "EasyPAML", TEXTS["lang_switch_err"].format(error=exc), 'error')
+
+    def _restore_state(self) -> None:
+        import json
+        try:
+            state = json.loads(os.environ.pop(self._RESTORE_ENV, '') or '{}')
+        except ValueError:
+            return
+        if state.get('input') and Path(state['input']).is_dir():
+            self._use_input_folder(state['input'])
+        if state.get('tree') and Path(state['tree']).is_file():
+            self._use_tree_file(state['tree'])
+        if state.get('output') and Path(state['output']).is_dir():
+            self._use_output_folder(state['output'])
+        for name in state.get('models', []):
+            if name in self.model_vars:
+                self.model_vars[name].set(True)
+        self._update_models_state()
+
+    def _analysis_running(self) -> bool:
+        if self.analysis_thread and self.analysis_thread.is_alive():
+            show_message(self, "EasyPAML", TEXTS["msg_wait_for_run"], 'warning')
+            return True
+        return False
+
     def _switch_theme(self, choice: str) -> None:
         """Save the chosen theme and reopen the program to apply it."""
-        import subprocess
         if choice == CURRENT_THEME['choice']:
             return
         save_theme_pref(choice)
@@ -2040,30 +2087,22 @@ class App(ctk.CTk):
         if new_mode == CURRENT_THEME['mode']:
             CURRENT_THEME['choice'] = choice
             return
-        if ask_yes_no(self, TEXTS['theme_label'], TEXTS['theme_restart']):
-            try:
-                subprocess.Popen([sys.executable] + sys.argv)
-                self.destroy()
-            except Exception as exc:
-                show_message(self, "EasyPAML", TEXTS["lang_switch_err"].format(error=exc), 'error')
+        if not self._analysis_running() and ask_yes_no(self, TEXTS['theme_label'], TEXTS['theme_restart']):
+            self._reopen()
 
     def _switch_language(self, lang: str) -> None:
         """Save the chosen language and reopen the program to apply it."""
-        import subprocess
         current = get_language()
         if lang == current:
             return
         self._save_language_pref(lang)
         set_language(lang)
 
-        restart = ask_yes_no(self, TEXTS['lang_restart_title'],
-                             f"{TEXTS['lang_switch_message']}\n\n{TEXTS['lang_switch_confirm']}")
-        if restart:
-            try:
-                subprocess.Popen([sys.executable] + sys.argv)
-                self.destroy()
-            except Exception as exc:
-                show_message(self, "EasyPAML", TEXTS["lang_switch_err"].format(error=exc), 'error')
+        if self._analysis_running():
+            return
+        if ask_yes_no(self, TEXTS['lang_restart_title'],
+                      f"{TEXTS['lang_switch_message']}\n\n{TEXTS['lang_switch_confirm']}"):
+            self._reopen()
 
     def _open_results_viewer(self):
         """Open the results panel; ask for a results folder when the current one has
