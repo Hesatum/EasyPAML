@@ -8,6 +8,20 @@ of genes (Benjamini-Hochberg), and lists the sites under selection (BEB).
 [METHODS.md](METHODS.md) describes what the program does to the data, for a methods
 section or a review. [CHANGELOG.md](CHANGELOG.md) lists the changes in each version.
 
+## Mistakes EasyPAML catches for you
+
+A codeml analysis can go wrong without any error message. EasyPAML is built so that
+the common mistakes are stopped or explained before they reach your results:
+
+| Common mistake | What EasyPAML does |
+|---|---|
+| A stop codon, a sequence name that is not in the tree, or a length that is not a multiple of 3 | Checks every gene before running, says where the problem is and suggests the closest name |
+| Running M8 vs M7 only, which neutral sites alone can make significant | Adds M8a for you and marks such genes "Not confirmed by M8a" |
+| Calling a gene selected from p when many genes were tested | Corrects p for the number of genes (q) and uses q everywhere |
+| Reading the mean ω of the gene as evidence | Bases the answer on q, the positive class and the sites |
+| A run that crashed or stalled counted as a result | Stops codeml when it hangs and leaves failed runs out of the tests, with the reason |
+| Not knowing later which settings were used | Writes the .ctl of every run, the versions and a methods paragraph to the output folder |
+
 ## Installation
 
 **Linux (Ubuntu/Debian).**
@@ -71,9 +85,6 @@ The results panel opens at the end:
   alignment and in the codeml output.
 - **Branch** (when Branch or Branch-site ran): the tree with the labelled branches and
   their ω.
-
-The mean ω of a gene does not decide anything: it often stays below 1 when a few
-sites are under strong selection. Use q and the sites.
 
 ## Models
 
