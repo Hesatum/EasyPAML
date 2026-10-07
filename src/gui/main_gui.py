@@ -1488,6 +1488,8 @@ class App(ctk.CTk):
                    int(self.cores_var.get()), str(self.status_indicator.cget('text_color')),
                    str(self.stop_label.cget('text')),
                    self.codonfreq_var.get(), self.entry_omega.get(), self.entry_ncatg.get(),
+                   self.cleandata_var.get(), self.warm_start_var.get(), self.ignore_stop_codons_var.get(),
+                   self.auto_prune_tree_var.get(),
                    tuple(str(s[3].cget('text')) + str(s[3].cget('text_color')) for s in self._slots.values()))
             if sig != self._visual_sig:
                 self._visual_sig = sig
@@ -1592,10 +1594,16 @@ class App(ctk.CTk):
             omega = self.entry_omega.get().strip() or '0.5'
             if get_language() == 'pt':
                 omega = omega.replace('.', ',')
+            opts = self._global_ctl_options()
+            defaults = (opts['CodonFreq'] == DEFAULT_CODONFREQ and opts['ncatG'] == DEFAULT_CTL_PARAMS['ncatG']
+                        and omega.replace(',', '.') in ('0.5', '.5') and self.cleandata_var.get()
+                        and not self.warm_start_var.get() and not self.ignore_stop_codons_var.get()
+                        and self.auto_prune_tree_var.get())
             self._settings_summary.configure(text=" · ".join((
                 cf, f"ncatG {self.entry_ncatg.get().strip()}", f"ω {omega}",
                 f"κ {DEFAULT_CTL_PARAMS['kappa']}",
-                TEXTS["run_summary_cpus"].format(n=int(self.cores_var.get())))))
+                TEXTS["run_summary_cpus"].format(n=int(self.cores_var.get()))))
+                + ("\n" + TEXTS["settings_defaults_note"] if defaults else ""))
         except Exception:
             pass
 
