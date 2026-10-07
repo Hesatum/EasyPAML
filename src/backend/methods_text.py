@@ -25,7 +25,8 @@ def build_methods_text(*, version: str, codeml_version: Optional[str], models: L
                        family_sizes: Dict[Tuple[str, str], int], n_genes: int,
                        beb: bool = True, masked_stops: Optional[Dict[str, int]] = None,
                        excluded_taxa: Optional[Dict[str, List[str]]] = None,
-                       warm_start: bool = False, omega_starts: Sequence[float] = ()) -> str:
+                       warm_start: bool = False, omega_starts: Sequence[float] = (),
+                       n_own_trees: int = 0) -> str:
     cf = ctl.get('CodonFreq')
     cf_name = CODONFREQ_NAMES.get(int(cf), str(cf)) if cf is not None else '?'
     site = [m for m in _SITE_MODELS if m in models]
@@ -44,6 +45,11 @@ def build_methods_text(*, version: str, codeml_version: Optional[str], models: L
              + ("alignment columns with gaps, ambiguous characters or stop codons removed "
                 "(cleandata = 1)." if int(ctl.get('cleandata', 1)) == 1
                 else "all alignment columns kept (cleandata = 0)."))
+    if n_own_trees:
+        s.append(("Each gene was analysed with its own tree" if n_own_trees >= n_genes else
+                  f"{n_own_trees} of the {n_genes} gene(s) were analysed with their own tree and the "
+                  "others with a single tree")
+                 + " (the gene-tree pairs are listed in run_config.json).")
     tree = "Input trees were unrooted for the site models"
     if pruned:
         tree += " and pruned to the taxa present in each alignment"

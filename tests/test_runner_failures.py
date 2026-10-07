@@ -545,3 +545,17 @@ def test_branch_model_uses_the_labels_of_a_per_gene_tree(tmp_path, fake_codeml, 
     written = (tmp_path / 'out' / 'Branch' / 'gene_Branch_tree.nwk').read_text()
     assert 'Gorilla_gorilla #1' in written or 'Gorilla_gorilla#1' in written
     assert '#1' not in (tmp_path / 'out' / 'M0' / 'gene_M0_tree.nwk').read_text()
+
+
+def test_per_gene_trees_are_recorded_for_the_methods(tmp_path, fake_codeml, monkeypatch):
+    import json
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    trees = tmp_path / 'trees'
+    trees.mkdir()
+    (trees / 'RAxML_bestTree.gene').write_text((DATA / 'gene_example.nwk').read_text())
+    app = _app(tmp_path, fake_codeml, models=('M7', 'M8'))
+    app.config.update(tree_file=None, tree_folder=trees)
+    app.run_batch_analysis()
+    cfg = json.loads((tmp_path / 'out' / 'run_config.json').read_text())
+    assert cfg['per_gene_trees'] == {'gene': str(trees / 'RAxML_bestTree.gene')}
+    assert 'Each gene was analysed with its own tree' in (tmp_path / 'out' / 'methods_text.txt').read_text()

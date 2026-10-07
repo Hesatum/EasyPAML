@@ -14,10 +14,14 @@ gene has both a FASTA and a PHYLIP file, the FASTA file is used and the other is
 reported as ignored.
 
 Tree: Newick, rooted or unrooted, with or without branch lengths and with or
-without an `N 1` header. A per-gene tree (`GENE.nwk`, `.tree`, `.tre`, `.newick`,
-`.treefile`, in the alignments folder or in `--tree-folder`) replaces the general
-tree for that gene. Branch labels for the Branch and Branch-site models (`#1`, `#2`
-…) are set in the "Label branches" window.
+without an `N 1` header. A per-gene tree (in the tree folder or the alignments
+folder) replaces the general tree for that gene. It is paired with the gene by file
+name, without extensions and the names IQ-TREE and RAxML give (`GENE.nwk`,
+`GENE.fasta.treefile`, `GENE.contree`, `RAxML_bestTree.GENE`, `GENE.raxml.bestTree`)
+and ignoring case; near names are reported, never paired. The pairs are listed in
+`run_config.json` (`per_gene_trees`). Branch labels for the Branch and Branch-site
+models (`#1`, `#2` …) are set in the "Label branches" window, or come from a per-gene
+tree that has them (`Name#1` or `Name #1`); site models get the tree without labels.
 
 codeml is searched in this order: `--codeml` or the setting in the window, the
 `EASYPAML_CODEML` variable, `bin/codeml(.exe)`, then `PATH`.
