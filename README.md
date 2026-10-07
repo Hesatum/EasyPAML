@@ -105,8 +105,9 @@ The results panel has these tabs:
 - Summary: pick a test (M8 vs M8a, M8 vs M7, M2a vs M1a, Branch-site, Branch). Its
   hypotheses and df are shown above a chart, either the 2Δℓ distribution across genes or
   ω per gene (move the mouse along the x axis to see the genes; "Export chart…" saves it
-  as vector PDF/SVG, 600 dpi TIFF or 300 dpi PNG). Below, one row per gene: result of
-  the test, the gene's conclusion over all positive-selection tests, q, p, 2Δℓ, mean ω
+  as vector PDF/SVG, 600 dpi TIFF or 300 dpi PNG). Below, one row per gene: the evidence
+  over all positive-selection tests (Supported, Weak signal, Not confirmed by M8a,
+  Possible, Not detected; see METHODS.md), q, p, 2Δℓ, mean ω
   of the alternative model, positive-class ω and p₁, sites with Pr(ω>1) ≥ 0.95 and the
   lnL of both models. Click a column title to sort; double-click a gene to open its
   sites. The table, all tests (Excel) or an HTML report can be exported, and the

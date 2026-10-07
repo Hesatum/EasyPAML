@@ -16,6 +16,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Results panel: the Summary shows one test at a time with its chart and a sortable gene
   table, and holds the exports; the LRT, Export and Candidates & GO tabs are gone
   (copy the significant genes to an enrichment tool such as g:Profiler instead).
+- Summary: "Evidence (all tests)" replaces "Gene conclusion", with milder labels
+  (Supported, Not confirmed by M8a, Not detected); `sites_BEB.tsv` lists genes without
+  sites as "none"; ⚠ marks genes whose data was changed before the run.
 
 ## [0.3.0] 2026-10-07
 

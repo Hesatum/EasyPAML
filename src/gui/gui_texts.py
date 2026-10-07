@@ -487,7 +487,7 @@ TEXTS_PT: dict[str, object] = {
         "A evidência vem do q, da classe positiva e dos sítios."
     ),
     "summary_test": "Teste:",
-    "summary_pick_gene": "Clique num gene para ver a conclusão; clique duas vezes para abrir os sítios.",
+    "summary_pick_gene": "Clique num gene para ver os detalhes; clique duas vezes para abrir os sítios.",
     "summary_warn_hint": "⚠ = o dado foi alterado antes da análise (clique no gene para ver).",
     "summary_open_sites": "Ver sítios",
     "summary_export_table": "Exportar tabela…",
@@ -502,15 +502,15 @@ TEXTS_PT: dict[str, object] = {
     "chart_mean_w": "ω médio ({model})",
     "col_gene": "Gene",
     "col_result": "Neste teste",
-    "col_conclusion": "Conclusão do gene",
+    "col_conclusion": "Evidência (todos os testes)",
     "col_mean_w": "ω médio ({model})",
     "col_w_pos": "ω classe +",
     "col_sites": "Sítios ≥0,95",
     "col_w_tags": "ω por marca",
     "result_failed": "falhou",
     "conclusion_short": {
-        "positive": "Seleção positiva", "weak": "Sinal fraco", "neutral": "Não sustentada",
-        "no_m8a": "Possível (sem M8a)", "none": "Sem seleção", "failed": "Falhou", "sig": ""},
+        "positive": "Sustentada", "weak": "Sinal fraco", "neutral": "Não confirmada pelo M8a",
+        "no_m8a": "Possível (sem M8a)", "none": "Não detectada", "failed": "Falhou", "sig": ""},
     "summary_col_hints": {
         "q": "p corrigido para o número de genes testados (Benjamini-Hochberg). q < 0,05 é significativo.",
         "p": "Probabilidade de uma melhora tão grande sem seleção positiva (distribuição χ²).",
@@ -519,7 +519,7 @@ TEXTS_PT: dict[str, object] = {
         "w_pos": "ω da classe de sítios que pode estar sob seleção positiva.",
         "p1": "Proporção de sítios nessa classe.",
         "sites": "Sítios com Pr(ω>1) ≥ 0,95 no BEB.",
-        "conclusion": "Conclusão juntando os testes de seleção positiva do gene (M8 vs M8a, M8 vs M7, M2a vs M1a).",
+        "conclusion": "Evidência de seleção positiva juntando os testes de sítio do gene (M8 vs M8a, M8 vs M7, M2a vs M1a).",
         "result": "Significativo (q < 0,05) neste teste?",
         "lnl0": "Log-verossimilhança do modelo nulo; maior (menos negativo) é melhor ajuste.",
         "lnl1": "Log-verossimilhança do modelo alternativo.",
@@ -535,13 +535,13 @@ TEXTS_PT: dict[str, object] = {
     "summary_sig": "{test}: significativo (p = {p}, q = {q}) — {sites} sítio(s) com Pr(ω>1) ≥ 0,95",
     "summary_nonsig": "{test}: não significativo (p = {p}, q = {q})",
     "summary_posclass": "classe positiva: ω = {w}, p₁ = {p1}",
-    "conclusion_supported": "Seleção positiva: {tests} significativo(s) (q < 0,05){sites}.",
+    "conclusion_supported": "Seleção positiva sustentada: {tests} significativo(s) (q < 0,05){sites}.",
     "conclusion_sites": ", {n} sítio(s) com Pr(ω>1) ≥ 0,95",
     "conclusion_neutral": (
-        "Não sustentada: M8 vs M7 é significativo mas M8a vs M8 não, então o sinal pode vir "
+        "Não confirmada pelo M8a: M8 vs M7 é significativo mas M8a vs M8 não, então o sinal pode vir "
         "de sítios neutros (ω = 1)."
     ),
-    "conclusion_none": "Sem seleção positiva detectada (nenhum teste com q < 0,05).",
+    "conclusion_none": "Seleção positiva não detectada (nenhum teste com q < 0,05).",
     "conclusion_weak": (
         "Sinal fraco: {tests} significativo(s), mas nenhum sítio com Pr(ω>1) ≥ 0,95{detail}. "
         "Sinais assim costumam vir de poucos códons mal alinhados; confira o alinhamento."
@@ -1106,7 +1106,7 @@ TEXTS_EN: dict[str, object] = {
         "The evidence comes from q, the positive class and the sites."
     ),
     "summary_test": "Test:",
-    "summary_pick_gene": "Click a gene to see its conclusion; double-click to open its sites.",
+    "summary_pick_gene": "Click a gene to see the details; double-click to open its sites.",
     "summary_warn_hint": "⚠ = the data was changed before the run (click the gene to see how).",
     "summary_open_sites": "View sites",
     "summary_export_table": "Export table…",
@@ -1121,15 +1121,15 @@ TEXTS_EN: dict[str, object] = {
     "chart_mean_w": "mean ω ({model})",
     "col_gene": "Gene",
     "col_result": "This test",
-    "col_conclusion": "Gene conclusion",
+    "col_conclusion": "Evidence (all tests)",
     "col_mean_w": "mean ω ({model})",
     "col_w_pos": "positive-class ω",
     "col_sites": "Sites ≥0.95",
     "col_w_tags": "ω per label",
     "result_failed": "failed",
     "conclusion_short": {
-        "positive": "Positive selection", "weak": "Weak signal", "neutral": "Not supported",
-        "no_m8a": "Possible (no M8a)", "none": "No selection", "failed": "Failed", "sig": ""},
+        "positive": "Supported", "weak": "Weak signal", "neutral": "Not confirmed by M8a",
+        "no_m8a": "Possible (no M8a)", "none": "Not detected", "failed": "Failed", "sig": ""},
     "summary_col_hints": {
         "q": "p corrected for the number of genes tested (Benjamini-Hochberg). q < 0.05 is significant.",
         "p": "The chance of an improvement this large without positive selection (χ² distribution).",
@@ -1138,7 +1138,7 @@ TEXTS_EN: dict[str, object] = {
         "w_pos": "ω of the class of sites that may be under positive selection.",
         "p1": "Proportion of sites in that class.",
         "sites": "Sites with Pr(ω>1) ≥ 0.95 in BEB.",
-        "conclusion": "Conclusion from all positive-selection tests of the gene (M8 vs M8a, M8 vs M7, M2a vs M1a).",
+        "conclusion": "Evidence for positive selection from all site tests of the gene (M8 vs M8a, M8 vs M7, M2a vs M1a).",
         "result": "Significant (q < 0.05) in this test?",
         "lnl0": "Log-likelihood of the null model; higher (less negative) is a better fit.",
         "lnl1": "Log-likelihood of the alternative model.",
@@ -1154,13 +1154,13 @@ TEXTS_EN: dict[str, object] = {
     "summary_sig": "{test}: significant (p = {p}, q = {q}) — {sites} site(s) with Pr(ω>1) ≥ 0.95",
     "summary_nonsig": "{test}: not significant (p = {p}, q = {q})",
     "summary_posclass": "positive class: ω = {w}, p₁ = {p1}",
-    "conclusion_supported": "Positive selection: {tests} significant (q < 0.05){sites}.",
+    "conclusion_supported": "Positive selection supported: {tests} significant (q < 0.05){sites}.",
     "conclusion_sites": ", {n} site(s) with Pr(ω>1) ≥ 0.95",
     "conclusion_neutral": (
-        "Not supported: M8 vs M7 is significant but M8a vs M8 is not, so the signal may "
+        "Not confirmed by M8a: M8 vs M7 is significant but M8a vs M8 is not, so the signal may "
         "come from neutral sites (ω = 1)."
     ),
-    "conclusion_none": "No positive selection detected (no test with q < 0.05).",
+    "conclusion_none": "Positive selection not detected (no test with q < 0.05).",
     "conclusion_weak": (
         "Weak signal: {tests} significant, but no site has Pr(ω>1) ≥ 0.95{detail}. Signals "
         "like this often come from a few misaligned codons; check the alignment."

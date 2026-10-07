@@ -311,7 +311,7 @@ class SummaryTab:
         null, alt = pair
         cols = [('gene', TEXTS["col_gene"], 132, 'w')]
         if pair in POSITIVE_PAIRS:
-            cols.append(('conclusion', TEXTS["col_conclusion"], 165, 'w'))
+            cols.append(('conclusion', TEXTS["col_conclusion"], 195, 'w'))
         else:
             cols.append(('result', TEXTS["col_result"], 132, 'w'))
         cols += [('q', 'q (BH)', 74, 'e'), ('p', 'p', 74, 'e'), ('lrt', '2Δℓ', 70, 'e')]
@@ -552,7 +552,7 @@ class SummaryTab:
             out = self._build_export_df(col)
             verdicts = self._gene_verdicts() if (null, alt) in POSITIVE_PAIRS else {}
             if verdicts:
-                out.insert(1, 'conclusion', [TEXTS["conclusion_short"].get(verdicts.get(g, ('',))[0], '')
+                out.insert(1, 'evidence_all_tests', [TEXTS["conclusion_short"].get(verdicts.get(g, ('',))[0], '')
                                               for g in out['Gene']])
             if path.lower().endswith('.xlsx'):
                 out.to_excel(path, index=False, sheet_name=test_label((null, alt))[:31])

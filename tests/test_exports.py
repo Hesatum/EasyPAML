@@ -61,7 +61,7 @@ def test_m8_vs_m7_alone_is_not_called_positive_selection():
     assert text.startswith('⚠')
     text, _ = W._conclusion({('M7', 'M8'): True, ('M8a', 'M8'): True},
                             rows + [('M8 vs M8a', True, '1e-4', '1e-4', '', 3)])
-    assert text.startswith('Positive selection')
+    assert text.startswith('Positive selection supported')
 
 
 @pytest.mark.parametrize('n', [3, 40])

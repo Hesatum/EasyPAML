@@ -166,19 +166,19 @@ lengths as starting values for the site models (`fix_blength = 1`), with ω star
 from 0.2, 1.0 and 2.5 and the best lnL kept. Results are not guaranteed to match a
 fit from scratch.
 
-## Gene conclusion in the results panel
+## Evidence column in the results panel
 
-Each gene gets one conclusion from its positive-selection tests (q < 0.05):
+Each gene gets one entry in "Evidence (all tests)" from its positive-selection tests (q < 0.05):
 
-| Conclusion | When |
+| Evidence | When |
 |---|---|
-| Positive selection | M8 vs M8a or M2a vs M1a significant, with at least one BEB site at Pr(ω>1) ≥ 0.95 |
+| Supported | M8 vs M8a or M2a vs M1a significant, with at least one BEB site at Pr(ω>1) ≥ 0.95 |
 | Weak signal | a test significant but no site at Pr(ω>1) ≥ 0.95 |
-| Not supported | M8 vs M7 significant but M8 vs M8a not (and M2a vs M1a not) |
+| Not confirmed by M8a | M8 vs M7 significant but M8 vs M8a not (and M2a vs M1a not) |
 | Possible (no M8a) | M8 vs M7 significant and M8a not run |
-| No selection | no test significant |
+| Not detected | no test significant; this is not evidence that the gene is free of selection |
 
-"Copy significant genes" copies the genes with "Positive selection" for the selected
+"Copy significant genes" copies the genes marked "Supported" for the selected
 site test, or the genes significant in the selected branch or branch-site test.
 
 ## Citing
