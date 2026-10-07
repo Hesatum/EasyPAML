@@ -2,39 +2,48 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.4.0] 2026-10-08
 
-- Summary: one sentence with the answer at the top, and a plain line saying what
-  "significant" means for each test (hypotheses and df under "?").
-- Branch and Branch-site use the `#1` labels inside a per-gene tree. Labels written
-  as `Name #1` (with a space, as in the PAML manual) no longer exclude that taxon,
-  and site models get the tree without labels.
-- Per-gene trees: the tree button takes one tree or a folder with one tree per gene,
-  paired by file name (also IQ-TREE and RAxML names); the data check says which
-  file to rename.
-- English is the default language of the window and the command line; Portuguese
-  only when chosen (PT button or `--lang pt`), not from the system language.
-- "Try the example" in the window loads two simulated genes with a known answer
-  (`examples/quick/`).
+### Changes that affect results
+
 - Warm start from M0 is an option (`--warm-start-m0`, or "Start from M0" in the
   window), off by default. Before, selecting M0 with other models started them from
   the M0 κ and branch lengths with three initial ω, which METHODS.md did not say;
-  results of runs with M0 can change slightly.
+  runs that included M0 can give slightly different lnL.
+- Tree labels written as `Name #1` (with a space, as in the PAML manual) no longer
+  exclude that taxon, and site models get the tree without labels.
+
+### Added
+
+- Per-gene trees: the tree button takes one tree or a folder with one tree per gene,
+  paired by file name (also IQ-TREE and RAxML names); a window and the data check say
+  which file to rename. Branch and Branch-site use the `#1` labels inside a per-gene
+  tree. The pairs are recorded in `run_config.json` and `methods_text.txt`.
+- "Try the example" in the window loads two simulated genes with a known answer
+  (`examples/quick/`).
+- Summary: one sentence with the answer at the top, a plain line saying what
+  "significant" means for each test (hypotheses and df under "?"), and "Evidence (all
+  tests)" with the labels Supported, Not confirmed by M8a and Not detected.
+- Results panel: the Summary shows one test at a time with its chart and a sortable
+  gene table, and holds the exports; the LRT, Export and Candidates & GO tabs are gone
+  (copy the significant genes to an enrichment tool such as g:Profiler instead).
+- Positive Sites: chart of the sites along the CDS (exportable) next to the table, and
+  only significant genes in the gene list unless "Show all genes" is ticked.
+- HTML report with the sites, evidence and data warnings of each gene.
 - Progress weighted by the expected time of each run, with a time left from the
   start; the command line prints it every minute.
-- A significant test with no site at Pr(ω>1) ≥ 0.95 is shown as a weak signal.
-- The LRT tab explains each column when the mouse is over its title.
 - The command line adds null models like the window (`--no-auto-nulls` to turn off).
 - The installers use the tested versions of the dependencies (`requirements-lock.txt`).
+- The version shows the commits after the release tag (`0.4.0+3`).
+
+### Changed
+
+- English is the default language of the window and the command line; Portuguese
+  only when chosen (PT button or `--lang pt`).
+- A significant test with no site at Pr(ω>1) ≥ 0.95 is shown as a weak signal.
 - `LRT_results.txt` uses only q < 0.05 to call a result significant.
-- Positive Sites: chart of the sites along the CDS (exportable), and only significant
-  genes in the gene list unless "Show all genes" is ticked.
-- Results panel: the Summary shows one test at a time with its chart and a sortable gene
-  table, and holds the exports; the LRT, Export and Candidates & GO tabs are gone
-  (copy the significant genes to an enrichment tool such as g:Profiler instead).
-- Summary: "Evidence (all tests)" replaces "Gene conclusion", with milder labels
-  (Supported, Not confirmed by M8a, Not detected); `sites_BEB.tsv` lists genes without
-  sites as "none"; ⚠ marks genes whose data was changed before the run.
+- `sites_BEB.tsv` lists genes without sites as "none"; ⚠ marks genes whose data was
+  changed before the run.
 
 ## [0.3.0] 2026-10-07
 

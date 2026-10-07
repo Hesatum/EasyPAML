@@ -15,8 +15,10 @@ with Benjamini-Hochberg correction, and lists the sites under selection (BEB).
 - With git: `git clone https://github.com/Hesatum/EasyPAML.git`
 - Without git: [download the ZIP](https://github.com/Hesatum/EasyPAML/archive/refs/heads/main.zip)
   and extract it.
-- To repeat a published analysis, use the commit it cites: after cloning, run
-  `git checkout COMMIT` inside the EasyPAML folder, then install as below.
+- To repeat a published analysis, use the version or commit it cites: after
+  cloning, run `git checkout v0.4.0` (or `git checkout COMMIT`) inside the EasyPAML
+  folder, then install as below. A version like `0.4.0+3` means 3 commits after
+  0.4.0; cite its commit.
 
 ### Windows
 

@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 _ROOT = Path(__file__).resolve().parents[2]
 _COMMIT_FILE = Path(__file__).with_name('_commit.txt')
