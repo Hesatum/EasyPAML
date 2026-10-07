@@ -76,7 +76,7 @@ def _dots(ax, rows, c, compact):
         ax.annotate(gene, (x, y), xytext=(-6 if right else 6, 0), textcoords='offset points',
                     va='center', ha='right' if right else 'left',
                     fontsize=9, color=c['text'])
-    ax.set_ylim(0, 1.25)
+    ax.set_ylim(0, 1.7)     # room above the dots for the count box
 
 
 def _rug(ax, xs, y, color, compact, strong=False):
@@ -117,7 +117,7 @@ def draw_lrt(ax, test: TestData, c: Dict[str, str], compact: bool = False,
         _dots(ax, [(max(0.0, p.x), p.gene, c['sig'] if p.significant else c['ns'])
                    for p in sorted(test.points, key=lambda p: -p.x)], c, compact)
         ax.axvspan(crit05, hi, color=c['reject'], alpha=0.12, lw=0, zorder=0)
-        top = 1.13
+        top = 1.55
 
     ax.axvline(crit05, color=c['crit'], lw=1.1, ls='--', zorder=5)
     ax.annotate(f"χ²₀.₀₅ = {crit05:.2f}", (crit05, top), xytext=(4, 0), textcoords='offset points',
