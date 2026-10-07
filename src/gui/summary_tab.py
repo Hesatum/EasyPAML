@@ -309,19 +309,20 @@ class SummaryTab:
     def _summary_columns(self, pair) -> List[Tuple[str, str, int, str]]:
         """(id, title, width, anchor) of the table for a test."""
         null, alt = pair
-        cols = [('gene', TEXTS["col_gene"], 200, 'w'), ('result', TEXTS["col_result"], 132, 'w')]
+        cols = [('gene', TEXTS["col_gene"], 132, 'w'), ('result', TEXTS["col_result"], 132, 'w')]
         if pair in POSITIVE_PAIRS:
             cols.append(('conclusion', TEXTS["col_conclusion"], 165, 'w'))
-        cols += [('q', 'q (BH)', 85, 'e'), ('p', 'p', 85, 'e'), ('lrt', '2Δℓ', 70, 'e')]
+        cols += [('q', 'q (BH)', 74, 'e'), ('p', 'p', 74, 'e'), ('lrt', '2Δℓ', 70, 'e')]
         if pair == ('M0', 'Branch'):
             cols.append(('df', 'df', 40, 'e'))
         cols.append(('mean_w', TEXTS["col_mean_w"].format(model=alt), 84 + 8 * len(alt), 'e'))
         if alt in SITE_ALTS:
-            cols += [('w_pos', TEXTS["col_w_pos"], 130, 'e'), ('p1', 'p₁', 60, 'e'),
+            cols += [('w_pos', TEXTS["col_w_pos"], 122, 'e'), ('p1', 'p₁', 55, 'e'),
                      ('sites', TEXTS["col_sites"], 95, 'e')]
         if pair == ('M0', 'Branch'):
             cols.append(('w_tags', TEXTS["col_w_tags"], 220, 'w'))
-        cols += [('lnl0', f"lnL {null.replace('_null', ' null')}", 105, 'e'), ('lnl1', f"lnL {alt}", 105, 'e')]
+        for cid, model in (('lnl0', null.replace('_null', ' null')), ('lnl1', alt)):
+            cols.append((cid, f"lnL {model}", max(88, 8 * len(model) + 36), 'e'))
         return cols
 
     def _summary_rows(self, pair) -> List[dict]:
@@ -401,7 +402,7 @@ class SummaryTab:
         tree.configure(columns=[c[0] for c in cols])
         for cid, title, width, anchor in cols:
             tree.heading(cid, text=title, anchor=anchor, command=lambda c=cid: self._summary_sort(c))
-            tree.column(cid, width=width, minwidth=width if cid == 'gene' else 40, anchor=anchor, stretch=False)
+            tree.column(cid, width=width, minwidth=width if cid == 'gene' else 40, anchor=anchor, stretch=cid == 'gene')
         rows = self._summary_rows(pair)
         key, rev = self._sum['sort']
         num = {'q': 'q_num'}.get(key)
