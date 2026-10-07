@@ -11,6 +11,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The command line adds null models like the window (`--no-auto-nulls` to turn off).
 - The installers use the tested versions of the dependencies (`requirements-lock.txt`).
 - `LRT_results.txt` uses only q < 0.05 to call a result significant.
+- Positive Sites: chart of the sites along the CDS (exportable), and only significant
+  genes in the gene list unless "Show all genes" is ticked.
 
 ## [0.3.0] 2026-10-07
 

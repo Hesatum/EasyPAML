@@ -224,6 +224,12 @@ TEXTS_PT: dict[str, object] = {
     "sites_file_not_found": "Arquivo não encontrado: {filename}",
     "sites_parse_error":    "Erro ao ler o arquivo:\n{error}",
     "sites_no_sites":       "Nenhum sítio com Pr(ω>1) ≥ {threshold}",
+    "sites_chart_title":    "● {n1} *  Pr(ω>1) ≥ 0,95      ◆ {n2} **  Pr(ω>1) ≥ 0,99",
+    "sites_chart_removed":  "Hachurado: {n} códon(s) removido(s) pelo cleandata (gap, ambiguidade ou stop em alguma sequência); o codeml não os analisa.",
+    "sites_show_all":       "Mostrar todos os genes",
+    "sites_genes_significant": "{n} gene(s) significativo(s) (q < 0,05)",
+    "sites_genes_shown":    "{n} gene(s)",
+    "sites_no_significant_genes": "Nenhum gene com teste significativo (q < 0,05) para o {model}. Marque \"Mostrar todos os genes\" para ver os sítios dos outros.",
 
     "sites_table_headers": [
         "Pos. alinhamento",
@@ -541,6 +547,7 @@ TEXTS_PT: dict[str, object] = {
     ),
     "sites_btn_copy": "Copiar sítios (TSV)",
     "sites_btn_export": "Exportar TSV…",
+    "sites_btn_figure": "Exportar figura…",
     "sites_copied": "{n} sítio(s) copiado(s) para a área de transferência.",
     "lrt_headers": ["Gene", "lnL nulo", "lnL alternativo", "2Δℓ", "p", "q (BH)", "ω classe + (p₁)", "Sig."],
     "lrt_plain": (
@@ -820,6 +827,12 @@ TEXTS_EN: dict[str, object] = {
     "sites_file_not_found": "File not found: {filename}",
     "sites_parse_error":    "Error reading the file:\n{error}",
     "sites_no_sites":       "No site with Pr(ω>1) ≥ {threshold}",
+    "sites_chart_title":    "● {n1} *  Pr(ω>1) ≥ 0.95      ◆ {n2} **  Pr(ω>1) ≥ 0.99",
+    "sites_chart_removed":  "Hatched: {n} codon(s) removed by cleandata (gap, ambiguity or stop codon in some sequence); codeml does not analyse them.",
+    "sites_show_all":       "Show all genes",
+    "sites_genes_significant": "{n} significant gene(s) (q < 0.05)",
+    "sites_genes_shown":    "{n} gene(s)",
+    "sites_no_significant_genes": "No gene with a significant test (q < 0.05) for {model}. Tick \"Show all genes\" to see the sites of the others.",
 
     "sites_table_headers": [
         "Aln. pos.",
@@ -1136,6 +1149,7 @@ TEXTS_EN: dict[str, object] = {
     ),
     "sites_btn_copy": "Copy sites (TSV)",
     "sites_btn_export": "Export TSV…",
+    "sites_btn_figure": "Export figure…",
     "sites_copied": "{n} site(s) copied to the clipboard.",
     "lrt_headers": ["Gene", "lnL null", "lnL alternative", "2Δℓ", "p", "q (BH)", "positive-class ω (p₁)", "Sig."],
     "lrt_plain": (

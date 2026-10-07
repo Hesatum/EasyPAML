@@ -84,3 +84,16 @@ def test_significant_without_sites_is_a_weak_signal():
             ('M8 vs M8a', True, '0.009', '0.028', '', 0, 100.6, 0.0115)]
     text, _ = W._conclusion({('M7', 'M8'): False, ('M8a', 'M8'): True}, rows)
     assert text.startswith('⚠ Weak signal') and 'ω = 101' in text and '1.1%' in text
+
+
+def test_sites_figure_marks_one_and_two_stars(tmp_path):
+    from matplotlib.figure import Figure
+    from src.gui import charts
+    fig = Figure(figsize=(11, 4))
+    charts.draw_sites(fig, [10, 39, 85, 120, 200], [0.986, 0.994, 0.990, 0.7, 0.999],
+                      ['*', '**', '*', '', '**'], 300, [150, 151], charts.LIGHT, title="t")
+    out = tmp_path / 'sites.png'
+    fig.savefig(out, dpi=100)
+    assert out.stat().st_size > 5_000
+    lollipops = fig.axes[0]
+    assert len(lollipops.lines) >= 3     # grey, * and ** markers

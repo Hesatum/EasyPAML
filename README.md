@@ -108,10 +108,12 @@ The results panel has these tabs:
   p₁ of the positive class for each test.
 - LRT and p-values: lnL of each model, 2Δℓ, p (in scientific notation), q (BH), and
   ω and proportion of the positive class.
-- Positive Sites: the position in your alignment and the position in the codeml
-  file (they differ when columns with gaps or stop codons are removed), amino acid,
-  Pr(ω>1), `*` (≥ 0.95) or `**` (≥ 0.99), and mean ω ± SE. Buttons copy or export the
-  table as TSV.
+- Positive Sites: for each significant gene (tick "Show all genes" for the others), a
+  chart of where the sites fall along the CDS, with `*` (Pr(ω>1) ≥ 0.95) and `**`
+  (≥ 0.99) in different colours, then the table: position in your alignment and in the
+  codeml file (they differ when columns with gaps or stop codons are removed), amino
+  acid, Pr(ω>1) and mean ω ± SE. The chart is drawn only when you open a gene; "Export
+  figure…" saves it, and the table can be copied or exported as TSV.
 - Export: Excel, CSV, HTML and a figure (PNG or PDF) with those charts, one panel per
   test. "Open results folder" opens the folder itself.
 - Candidates & GO: significant genes, and GO enrichment (Fisher's exact test) if you load a GO annotation TSV.

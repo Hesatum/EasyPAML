@@ -280,3 +280,73 @@ def export_figure(path, tests: Sequence[TestData], whole: Sequence[Point],
                    label=letters[len(tests)])
     dpi = 600 if str(path).lower().endswith(('.tif', '.tiff')) else 300
     fig.savefig(path, dpi=dpi, facecolor=c['bg'], bbox_inches='tight')
+
+
+def draw_sites(fig: Figure, positions, probs, marks, length: int, removed: Sequence[int],
+               c: Dict[str, str], title: str = "") -> None:
+    """Where the sites under selection sit along the CDS, in the user's alignment
+    numbering: Pr(ω>1) of each site listed by BEB/NEB (* orange circle, ** red
+    diamond, the rest grey), the CDS with columns removed by cleandata hatched,
+    and the number of * and ** sites per 30 codons."""
+    pos = np.asarray(positions, float)
+    pr = np.asarray(probs, float)
+    marks = np.asarray(marks, dtype=object)
+    two, one = marks == '**', marks == '*'
+    low = ~(two | one)
+    one_c, two_c = c.get('site_one', '#e69f00'), c.get('site_two', '#c23b0f')
+    grid = fig.add_gridspec(3, 1, height_ratios=[3.0, 0.5, 1.2], hspace=0.1,
+                            left=0.07, right=0.95, top=0.88, bottom=0.17)
+    ax, tr, de = (fig.add_subplot(grid[i]) for i in range(3))
+    for ax_ in (ax, tr, de):
+        ax_.set_facecolor(c['bg'])
+        ax_.set_xlim(0, length + 1)
+
+    for m, col, mk, ms, z in ((low, c['ns'], 'o', 2.5, 2), (one, one_c, 'o', 5.5, 4), (two, two_c, 'D', 5.5, 5)):
+        if m.any():
+            ax.vlines(pos[m], 0.5, pr[m], color=col, lw=0.8 if z == 2 else 1.1, zorder=z - 1)
+            ax.plot(pos[m], pr[m], mk, color=col, ms=ms, zorder=z, mec=c['bg'], mew=0.6)
+    for y, ls in ((0.95, '--'), (0.99, ':')):
+        ax.axhline(y, color=c['muted'], lw=0.8, ls=ls, zorder=0)
+        ax.annotate(f"{y:.2f}", (1, y), xycoords=('axes fraction', 'data'), xytext=(3, 0),
+                    textcoords='offset points', fontsize=7, color=c['muted'], va='center')
+    ax.set_ylim(0.5, 1.03)
+    ax.set_xticks([])
+    ax.set_ylabel("Pr(ω>1)", fontsize=8, color=c['muted'])
+    for side in ('top', 'right', 'bottom'):
+        ax.spines[side].set_visible(False)
+    ax.spines['left'].set_color(c['axis'])
+    ax.tick_params(colors=c['muted'], labelsize=7.5)
+    ax.yaxis.set_major_locator(MaxNLocator(3))
+    if title:
+        ax.set_title(title, fontsize=9, fontweight='bold', color=c['text'], loc='left', pad=6)
+
+    from matplotlib.patches import Rectangle
+    tr.add_patch(Rectangle((0.5, 0.2), length, 0.6, fc=c['fill'], ec=c['axis'], lw=0.8))
+    for r in removed:
+        tr.add_patch(Rectangle((r - 0.5, 0.2), 1, 0.6, fc=c['bg'], ec=c['ns'], hatch='////', lw=0))
+    tr.vlines(pos[one], 0.2, 0.8, color=one_c, lw=1.5)
+    tr.vlines(pos[two], 0.2, 0.8, color=two_c, lw=1.9)
+    tr.set_ylim(0, 1)
+    tr.set_xticks([])
+    tr.set_yticks([])
+    for sp in tr.spines.values():
+        sp.set_visible(False)
+
+    sig = pos[one | two]
+    xs = np.linspace(1, length, 600)
+    if sig.size >= 3 and np.ptp(sig) > 0:
+        kde = stats.gaussian_kde(sig, bw_method=12 / max(float(np.std(sig)), 1.0))
+        ys = kde(xs) * sig.size * 30
+        de.fill_between(xs, ys, color=c['fill'], lw=0)
+        de.plot(xs, ys, color=c['line'], lw=1.2)
+        de.set_ylim(0, None)
+    else:
+        de.set_yticks([])
+    de.set_ylabel("sites per\n30 codons", fontsize=7, color=c['muted'])
+    for side in ('top', 'right'):
+        de.spines[side].set_visible(False)
+    for side in ('left', 'bottom'):
+        de.spines[side].set_color(c['axis'])
+    de.tick_params(colors=c['muted'], labelsize=7.5)
+    de.yaxis.set_major_locator(MaxNLocator(2))
+    de.set_xlabel(f"codon position in your alignment (1–{length})", fontsize=8, color=c['muted'])

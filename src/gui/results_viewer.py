@@ -589,6 +589,67 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                      text_color=PALETTE['text_tertiary']).pack(fill='x', padx=SPACE['md'],
                                                               pady=(0, SPACE['sm']))
 
+    def _sites_chart(self, parent, df_sites, results_file, gene, model, method) -> None:
+        """Positions of the sites along the CDS (charts.draw_sites), above the table."""
+        import json
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg as _Canvas
+        from matplotlib.figure import Figure as _Figure
+        if df_sites is None or df_sites.empty:
+            return
+        sitemap = Path(results_file).with_name(f"{gene}_{model}_sitemap.json")
+        removed: list = []
+        length = None
+        try:
+            sm = json.loads(sitemap.read_text(encoding='utf-8'))
+            length = int(sm['n_codons_in_alignment'])
+            removed = sorted(set(range(1, length + 1)) - set(sm.get('kept_codons', [])))
+        except Exception:
+            pass
+        pos_col = 'position_original' if 'position_original' in df_sites.columns and \
+            df_sites['position_original'].notna().all() else 'position'
+        positions = df_sites[pos_col].astype(float)
+        length = length or int(positions.max())
+        marks = df_sites['significance'].fillna('') if 'significance' in df_sites.columns else \
+            np.where(df_sites['pr_w_gt_1'] >= 0.99, '**', np.where(df_sites['pr_w_gt_1'] >= 0.95, '*', ''))
+        marks = list(marks)
+        n1, n2 = marks.count('*'), marks.count('**')
+        legend = TEXTS["sites_chart_title"].format(model=model, method=method, n=n1 + n2, n1=n1, n2=n2)
+        self._last_sites_chart = dict(gene=gene, model=model, method=method, positions=list(positions),
+                                      probs=list(df_sites['pr_w_gt_1'].astype(float)), marks=marks,
+                                      length=length, removed=removed, legend=legend)
+        c = charts.DARK if CURRENT_THEME['mode'] == 'dark' else charts.LIGHT
+        c = dict(c, bg=PALETTE['bg_panel'])
+        fig = _Figure(figsize=(11, 2.6), facecolor=c['bg'])
+        charts.draw_sites(fig, positions, df_sites['pr_w_gt_1'].astype(float), marks, length, removed, c,
+                          title=legend)
+        canvas = _Canvas(fig, master=parent)
+        widget = canvas.get_tk_widget()
+        widget.configure(height=250, highlightthickness=0, bg=c['bg'])
+        widget.pack(fill='x', pady=(0, SPACE['sm']))
+        scroller = getattr(parent, '_parent_canvas', None)
+        if scroller is not None:
+            widget.bind('<Button-4>', lambda e: scroller.yview_scroll(-1, 'units'))
+            widget.bind('<Button-5>', lambda e: scroller.yview_scroll(1, 'units'))
+            widget.bind('<MouseWheel>', lambda e: scroller.yview_scroll(-1 if e.delta > 0 else 1, 'units'))
+        canvas.draw()
+        if removed:
+            ctk.CTkLabel(parent, text=TEXTS["sites_chart_removed"].format(n=len(removed)),
+                         font=self._font('xs'), anchor='w',
+                         text_color=PALETTE['text_tertiary']).pack(fill='x', padx=SPACE['sm'])
+
+    _SITE_TESTS = {'M8': (('M8a', 'M8'), ('M7', 'M8')), 'M2a': (('M1a', 'M2a'),),
+                   'Branch-site': (('Branch-site_null', 'Branch-site'),)}
+
+    def _significant_for(self, model: str) -> set:
+        """Genes with q < 0.05 in the main test of this model."""
+        genes = set()
+        # the first test that ran: M8 vs M8a before M8 vs M7, as in the Summary conclusion
+        pair = next((p for p in self._SITE_TESTS.get(model, ()) if self._pair_values(*p)), None)
+        for gene, (_, _, q) in (self._pair_values(*pair) or {}).items() if pair else ():
+            if pd.notna(q) and q < 0.05:
+                genes.add(gene)
+        return genes
+
     def _sort_by_significance(self) -> None:
         """Order genes by their smallest q (then p) over the positive-selection tests,
         or over every test when there is none; failed genes go last."""
@@ -1006,7 +1067,9 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         method_combo = self._style_combo(ctk.CTkComboBox(line1, values=['BEB', 'NEB'], width=90))
         method_combo.pack(side='left', padx=(0, SPACE['lg']))
         method_combo.set('BEB')
-        ctk.CTkLabel(line1, text=TEXTS["sites_label_filter"], **lab).pack(side='left', padx=(0, SPACE['sm']))
+        filter_lbl = ctk.CTkLabel(line1, text=TEXTS["sites_label_filter"], **lab)
+        filter_lbl.pack(side='left', padx=(0, SPACE['sm']))
+        add_tooltip(filter_lbl, TEXTS["sites_legend"])
         p_filter = ctk.CTkEntry(line1, width=70, fg_color=PALETTE['bg_inset'], border_width=1,
                                 border_color=PALETTE['control_border'], corner_radius=RADIUS['field'],
                                 font=self._mono('sm'), text_color=PALETTE['text_primary'])
@@ -1015,9 +1078,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         line2 = ctk.CTkFrame(ctrl, fg_color='transparent')
         line2.pack(fill='x', pady=(SPACE['xs'], 0))
-        ctk.CTkLabel(line2, text=TEXTS["sites_legend"], font=self._font('xs'),
-                     text_color=PALETTE['text_secondary'], wraplength=820,
-                     justify='left').pack(side='left')
+        show_all = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(line2, text=TEXTS["sites_show_all"], variable=show_all, font=self._font('sm'),
+                        text_color=PALETTE['text_secondary'], checkbox_width=18, checkbox_height=18,
+                        command=lambda: update_gene_list()).pack(side='left')
+        n_label = ctk.CTkLabel(line2, text="", font=self._font('xs'), text_color=PALETTE['text_tertiary'])
+        n_label.pack(side='left', padx=(SPACE['sm'], SPACE['lg']))
         state = {'df': None, 'gene': '', 'model': ''}
 
         def _tsv(df):
@@ -1046,7 +1112,29 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 Path(path).write_text(_tsv(df), encoding='utf-8')
                 show_message(self, TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=path))
 
-        for text, cmd in ((TEXTS["sites_btn_export"], export_sites),
+        def export_figure():
+            args = getattr(self, '_last_sites_chart', None)
+            if not args:
+                return
+            path = ask_save_file(self, TEXTS["sites_btn_figure"], self.output_folder,
+                                 initialfile=f"{args['gene']}_{args['model']}_sites.png",
+                                 defaultextension='.png', filetypes=[('PNG / PDF / SVG', '*.png *.pdf *.svg')])
+            if not path:
+                return
+            try:
+                from matplotlib.figure import Figure as _Figure
+                c = charts.LIGHT
+                fig = _Figure(figsize=(11, 4), facecolor=c['bg'])
+                charts.draw_sites(fig, args['positions'], args['probs'], args['marks'], args['length'],
+                                  args['removed'], c, title=f"{args['gene']} · {args['model']} · {args['method']}   "
+                                  + args['legend'])
+                fig.savefig(path, dpi=300, facecolor=c['bg'], bbox_inches='tight')
+                show_message(self, TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=path))
+            except Exception as e:
+                show_message(self, TEXTS["msg_error"], TEXTS["msg_export_err"].format(error=e), 'error')
+
+        for text, cmd in ((TEXTS["sites_btn_figure"], export_figure),
+                          (TEXTS["sites_btn_export"], export_sites),
                           (TEXTS["sites_btn_copy"], copy_sites)):
             ctk.CTkButton(line2, text=text, command=cmd, height=28, fg_color='transparent',
                           border_width=1, border_color=PALETTE['control_border'],
@@ -1071,6 +1159,11 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 genes = sorted({m.group(1) for f in folder.glob('*_results.txt')
                                 for m in [re.match(r'(.+?)_[A-Za-z0-9\-]+_results\.txt', f.name)] if m},
                                key=lambda g: (rank.get(g, len(rank)), g))
+                if not show_all.get():
+                    sig = self._significant_for(model)
+                    genes = [g for g in genes if g in sig]
+            n_label.configure(text=TEXTS["sites_genes_shown"].format(n=len(genes)) if show_all.get()
+                              else TEXTS["sites_genes_significant"].format(n=len(genes)))
             gene_combo.configure(values=genes)
             gene_combo.set(genes[0] if genes else '')
             update_sites_table()
@@ -1078,11 +1171,19 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         def update_sites_table(*args):
             for w in table_frame.winfo_children() + head_host.winfo_children():
                 w.destroy()
+            self._last_sites_chart = None
             try:
                 thr = float(p_filter.get().replace(',', '.'))
             except ValueError:
                 thr = 0.95
             state['gene'], state['model'] = gene_combo.get(), model_combo.get()
+            if not gene_combo.get():
+                ctk.CTkLabel(table_frame, text=TEXTS["sites_no_significant_genes"].format(
+                                 model=model_combo.get()),
+                             font=self._font('md'), text_color=PALETTE['text_secondary'],
+                             wraplength=900, justify='left').pack(pady=30, padx=SPACE['lg'])
+                state['df'] = None
+                return
             state['df'] = self._render_sites_table(table_frame, gene_combo.get(), model_combo.get(),
                                                    method_combo.get(), thr)
             try:
@@ -1145,6 +1246,10 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                          fg_color=PALETTE['warning_subtle'], corner_radius=RADIUS['field'],
                          padx=SPACE['sm']).pack(anchor='w', fill='x', pady=(SPACE['xs'], 0))
 
+        try:
+            self._sites_chart(parent, df_sites, results_file, gene_name, model_name, method)
+        except Exception as exc:
+            print(f"[WARN] sites chart: {exc}")
         if df_f.empty:
             ctk.CTkLabel(top, text=TEXTS["sites_no_sites"].format(threshold=p_threshold),
                          font=self._font('md', 'bold'), text_color=PALETTE['text_primary'],
@@ -1153,12 +1258,13 @@ class ResultsViewerWindow(ctk.CTkToplevel):
 
         cols = [(140, 'e'), (110, 'e'), (50, 'center'), (90, 'e'), (60, 'center'), (170, 'e')]
         cell_pad = (SPACE['xs'], SPACE['xs'])
-        th = ctk.CTkFrame(top, fg_color='transparent', corner_radius=0)
+        # column titles under the chart, in the scrolling area
+        th = ctk.CTkFrame(parent, fg_color='transparent', corner_radius=0)
         th.pack(fill='x', padx=(SPACE['sm'], 0), pady=(SPACE['xs'], SPACE['xs']))
         for i, (h, (w, anchor)) in enumerate(zip(TEXTS["sites_table_headers"], cols)):
             ctk.CTkLabel(th, text=h, font=self._font('xs', 'bold'), width=w, anchor=anchor,
                          text_color=PALETTE['text_secondary']).grid(row=0, column=i, padx=cell_pad, sticky='w')
-        ctk.CTkFrame(top, fg_color=PALETTE['divider'], height=1, corner_radius=0).pack(fill='x')
+        ctk.CTkFrame(parent, fg_color=PALETTE['divider'], height=1, corner_radius=0).pack(fill='x')
         mono = self._mono('sm')
         for k, (_, row) in enumerate(df_f.iterrows()):
             pr = row['pr_w_gt_1']
