@@ -8,7 +8,9 @@ of genes (Benjamini-Hochberg), and lists the sites under selection (BEB).
 [METHODS.md](METHODS.md) describes what the program does to the data, for a methods
 section or a review. [CHANGELOG.md](CHANGELOG.md) lists the changes in each version.
 
-## Quick start (Linux)
+## Installation
+
+**Linux (Ubuntu/Debian).**
 
 ```bash
 sudo apt update && sudo apt install -y git python3-pip python3-venv python3-tk paml
@@ -18,48 +20,31 @@ cd EasyPAML
 ./EasyPAML.sh
 ```
 
-In the window, click "Try the example" and then Run. The example has two simulated
-genes with a known answer and takes a few minutes.
+On Fedora, the first line is `sudo dnf install git python3-pip python3-tkinter paml`.
+The installer keeps everything inside the EasyPAML folder and creates `EasyPAML.sh`
+(the window) and `easypaml-cli.sh` (the command line). If something is missing, it
+prints the command to run.
 
-The same analysis from the command line:
-
-```bash
-./easypaml-cli.sh --input examples/quick --tree examples/quick/tree.nwk \
-    --output example_results --models M8
-```
-
-## Installation
-
-**Linux.** Run the first line of the quick start once (Fedora: `sudo dnf install git
-python3-pip python3-tkinter paml`). `INSTALL_LINUX_MAC.sh` puts the tested versions of
-the dependencies in a `.venv/` folder, leaves the system Python alone, and creates
-`EasyPAML.sh` (the window) and `easypaml-cli.sh` (the command line). If something is
-missing, it prints the command to run.
-
-**macOS.** `brew install python-tk brewsci/bio/paml`, then the `git clone`,
-`./INSTALL_LINUX_MAC.sh` and `./EasyPAML.sh` lines of the quick start.
+**macOS.** Run `brew install python-tk brewsci/bio/paml`, then the last four lines
+above.
 
 **Windows.** Install Python 3.8 or newer from [python.org](https://www.python.org/downloads/)
 with "Add Python to PATH" ticked. Download the
 [ZIP](https://github.com/Hesatum/EasyPAML/archive/refs/heads/main.zip), extract it,
-double-click `INSTALL_WINDOWS.bat` (1 to 3 minutes) and open EasyPAML from the desktop
-shortcut or `EasyPAML.bat`, which the installer creates. `codeml.exe` (PAML 4.9j)
-comes in `bin/`. If Windows shows "Windows protected your PC", click "More info" and
-"Run anyway": the installer is an unsigned text script you can open and read.
+double-click `INSTALL_WINDOWS.bat`, and open EasyPAML from the desktop shortcut or
+`EasyPAML.bat`. If Windows shows "Windows protected your PC", click "More info" and
+"Run anyway": the installer is a text script you can open and read. codeml comes in
+`bin/`.
 
-**codeml.** On Linux it comes from the `paml` package; if there is none, the installer
-downloads PAML 4.10.10 to `bin/codeml`. EasyPAML was tested with PAML 4.9j and
-4.10.10. Another codeml can be set with `EASYPAML_CODEML=/path/to/codeml` or
-`--codeml`.
-
-**A cited version.** To repeat a published analysis, run `git checkout v0.4.0` (or
-the commit it cites) in the EasyPAML folder before installing (versions up to 0.4.0
-use `./install.sh`). A version shown as
-`0.4.0+3` is 3 commits after 0.4.0; cite its commit.
+**A cited version.** To repeat a published analysis, run `git checkout v0.4.0` (or the
+commit it cites) in the EasyPAML folder before installing; versions up to 0.4.0 install
+with `./install.sh`. A version shown as `0.4.0+3` is 3 commits after 0.4.0, so cite
+its commit.
 
 ## Using the window
 
-The window opens in English; PT/EN and the theme are at the bottom left.
+To see how it works, click "Try the example" and then Run: two simulated genes, one
+under positive selection and one not.
 
 1. **Alignments folder**: one aligned codon file per gene (`.fasta`, `.fas`, `.phy`,
    `.phylip`).
@@ -72,22 +57,18 @@ The window opens in English; PT/EN and the theme are at the bottom left.
 4. **Models**. With "Automatic null models" on, M8 adds M7 and M8a and M2a adds M1a.
    Click an added null to leave it out.
 5. **Run**. A data check comes first: stop codons, names missing from the tree (with
-   the closest name), duplicate files and lengths that are not a multiple of 3.
-
-With 10 sequences a model takes 1 to 5 minutes per gene; with 30, M8 can take over
-an hour ([measured times](docs/timing_benchmark.md)). Stop asks first and keeps the
-genes already done.
+   the closest name), duplicate files and lengths that are not a multiple of 3. Stop
+   keeps the genes already done.
 
 The results panel opens at the end:
 
 - **Summary**: one sentence with the answer, then one test at a time. Each gene has
   its evidence over all tests (Supported, Weak signal, Not confirmed by M8a, Possible,
   Not detected; the rules are in METHODS.md), q, p, 2Δℓ, ω and the number of sites.
-  The chart of 2Δℓ or ω per gene can be shown or hidden and exported for a journal
-  (PDF, SVG, 600 dpi TIFF). The table, all tests (Excel) and an HTML report can be
-  exported.
-- **Positive sites**: where the sites fall along the CDS, and their positions in your
-  alignment and in the codeml output, Pr(ω>1) and ω.
+  The chart can be exported for a journal (PDF, SVG, 600 dpi TIFF), and the table,
+  all tests (Excel) and an HTML report can be saved.
+- **Positive sites**: where the sites fall along the CDS, with their positions in your
+  alignment and in the codeml output.
 - **Branch** (when Branch or Branch-site ran): the tree with the labelled branches and
   their ω.
 
@@ -113,6 +94,8 @@ For sites under positive selection, run M8 and read both of its tests.
 ./easypaml-cli.sh --input FOLDER --tree TREE.nwk --output OUT --models M8 --workers 8
 ```
 
+On Windows, use `easypaml-cli.bat` with the same options.
+
 | Option | Default | Meaning |
 |---|---|---|
 | `--models` | `M1a,M2a,M7,M8,M8a` | models to run; the null of each is added unless `--no-auto-nulls` |
@@ -125,8 +108,7 @@ For sites under positive selection, run M8 and read both of its tests.
 | `--rerun-all` | | run again models already in OUT with the same input |
 | `--lang pt` | `en` | messages in Portuguese |
 
-`--help` lists every option; on Windows use `easypaml-cli.bat`. The exit code is 0 when every gene ran and 1 when any
-failed.
+`--help` lists every option.
 
 ## Output folder
 
@@ -143,19 +125,14 @@ OUT/
   M8/GENE_M8_results.txt raw codeml output
 ```
 
-## Example data
-
-`examples/quick/` has the two simulated genes of "Try the example".
-`examples/alignments/` has 25 *Cereus* (cactus) genes with the 21-taxon tree
-`examples/tree.nwk`; with M8 they take about 1 hour on 12 CPUs.
-
 ## Troubleshooting
 
 - `./EasyPAML.sh: No such file or directory`: run `./INSTALL_LINUX_MAC.sh` first, in
   the EasyPAML folder; it creates `EasyPAML.sh`.
 - `No module named 'tkinter'`: `sudo apt install python3-tk`.
 - "codeml not found": `sudo apt install paml` on Linux; on Windows, run
-  `INSTALL_WINDOWS.bat` again.
+  `INSTALL_WINDOWS.bat` again. Another codeml can be set with
+  `EASYPAML_CODEML=/path/to/codeml`.
 - A gene FAILED: the reason is in the window, in `genes_status.tsv` and in the log. A
   codeml that uses no CPU for 5 minutes is stopped and reported.
 - Windows, the window closes at once: run `INSTALL_WINDOWS.bat` again; to see the
