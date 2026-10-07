@@ -145,3 +145,15 @@ def test_results_window_fits_small_screens():
     src = (ROOT / 'src' / 'gui' / 'results_viewer.py').read_text(encoding='utf-8')
     assert 'fit_to_screen(self, 1400, 900' in src
     assert '<Escape>' in src
+
+
+def test_english_is_the_default_language_on_a_portuguese_system(tmp_path, monkeypatch):
+    from src.gui import main_gui
+    from src.gui.gui_texts import get_language, set_language
+    monkeypatch.setenv('LANG', 'pt_BR.UTF-8')
+    monkeypatch.setattr(main_gui.App, '_lang_pref_path', staticmethod(lambda: tmp_path / 'none'))
+    try:
+        main_gui.App.load_language_pref()
+        assert get_language() == 'en'
+    finally:
+        set_language('en')

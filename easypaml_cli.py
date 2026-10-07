@@ -76,7 +76,7 @@ def parse_args():
                          "alignment, tree and .ctl (by default their results are reused)")
     ap.add_argument('--strict', action='store_true',
                     help="run nothing if the data check finds errors or warnings")
-    ap.add_argument('--lang', choices=('pt', 'en'), help="language of the messages (default: system language)")
+    ap.add_argument('--lang', choices=('pt', 'en'), help="language of the messages (default: en)")
     ap.add_argument('--verbose', action='store_true', help="show debug messages")
     ap.add_argument('--workers', type=int, default=4, help="genes run in parallel (default: 4)")
     ap.add_argument('--timeout', type=int, default=0,
@@ -238,7 +238,7 @@ def run_two_pass(cfg):
 
 def main():
     cfg = parse_args()
-    messages.set_language(cfg.get('lang') or messages.system_language())
+    messages.set_language(cfg.get('lang') or 'en')
     lang = messages.get_language()
 
     bad_models = set(cfg['models']) - VALID_MODELS

@@ -4,6 +4,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+- English is the default language of the window and the command line; Portuguese
+  only when chosen (PT button or `--lang pt`), not from the system language.
 - "Try the example" in the window loads two simulated genes with a known answer
   (`examples/quick/`).
 - Warm start from M0 is an option (`--warm-start-m0`, or "Start from M0" in the

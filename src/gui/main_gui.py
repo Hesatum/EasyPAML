@@ -2036,8 +2036,7 @@ class App(ctk.CTk):
 
     @staticmethod
     def load_language_pref() -> None:
-        """Saved language, or the system language (Portuguese -> PT, anything
-        else -> EN)."""
+        """Saved language, otherwise English."""
         lang = None
         try:
             p = App._lang_pref_path()
@@ -2046,7 +2045,7 @@ class App(ctk.CTk):
         except Exception:
             lang = None
         if lang not in ('pt', 'en'):
-            lang = backend_messages.system_language()
+            lang = 'en'
         set_language(lang)
         backend_messages.set_language(lang)
 

@@ -72,9 +72,9 @@ with Benjamini-Hochberg correction, and lists the sites under selection (BEB).
 
 ## Using the window
 
-The window follows the system language (English or Portuguese) and the system
-light or dark theme. The PT/EN buttons and the Theme setting (Auto, Light, Dark)
-at the bottom left change them, and the choice is kept for the next session.
+The window opens in English and follows the system light or dark theme. The PT/EN
+buttons and the Theme setting (Auto, Light, Dark) at the bottom left change them,
+and the choice is kept for the next session.
 
 1. Alignments folder: a folder with one file per gene (`.fasta`, `.fas`, `.phy`,
    `.phylip`) containing aligned codon sequences. The program shows how many
@@ -167,7 +167,7 @@ Main options (`--help` lists all of them):
 | `--codeml` | | path to codeml |
 | `--rerun-all` | | run every model again; by default runs already in OUTPUT with the same alignment, tree and `.ctl` are reused |
 | `--strict` | | run nothing if the initial check finds problems |
-| `--lang pt\|en` | system language | language of the messages |
+| `--lang pt\|en` | en | language of the messages |
 | `--config file.json` | | the same options as JSON |
 | `--version` | | EasyPAML version and commit |
 

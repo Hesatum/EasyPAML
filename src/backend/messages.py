@@ -1,8 +1,6 @@
 """Backend messages shown in the window log and on the command line, in English
 and Portuguese."""
 
-import locale
-import os
 
 _LANG = 'en'
 
@@ -187,27 +185,6 @@ def set_language(lang: str) -> None:
 
 def get_language() -> str:
     return _LANG
-
-
-def system_language() -> str:
-    """'pt' if the system language is Portuguese, otherwise 'en'."""
-    candidates = [os.environ.get(k, '') for k in ('LC_ALL', 'LC_MESSAGES', 'LANG', 'LANGUAGE')]
-    try:
-        loc = locale.getlocale()[0] or ''
-        candidates.append(loc)
-    except Exception:
-        pass
-    try:  # Windows: user interface language
-        import ctypes
-        lcid = ctypes.windll.kernel32.GetUserDefaultUILanguage()  # type: ignore[attr-defined]
-        if (lcid & 0x3FF) == 0x16:  # LANG_PORTUGUESE
-            return 'pt'
-    except Exception:
-        pass
-    for c in candidates:
-        if c and c.lower().startswith(('pt', 'portuguese')):
-            return 'pt'
-    return 'en'
 
 
 def t(key: str, **kw) -> str:
