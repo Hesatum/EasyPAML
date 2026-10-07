@@ -369,6 +369,7 @@ class SummaryTab:
             if failed:
                 r['sentence'] = self._compact_reason(self._failure_reason(gene)).replace("\n", "; ")
             notes = self._gene_notes(gene)
+            r['warn'] = bool(notes)
             if notes:
                 r['sentence'] = (r['sentence'] + "   ⚠ " + notes.replace(' | ', '; ')).strip()
             rows.append(r)
@@ -420,10 +421,16 @@ class SummaryTab:
         self._sum_rows = {}
         for i, r in enumerate(rows):
             kind = r['kind'] if pair in POSITIVE_PAIRS else ('failed' if r['failed'] else ('sig' if r['sig'] else 'none'))
-            iid = tree.insert('', 'end', values=[r.get(c[0], '') for c in cols],
+            values = [r.get(c[0], '') for c in cols]
+            if r['warn']:
+                values[0] = "⚠ " + values[0]
+            iid = tree.insert('', 'end', values=values,
                               tags=(kind,) + (('odd',) if i % 2 else ()))
             self._sum_rows[iid] = r
-        self._sum_detail.configure(text=TEXTS["summary_pick_gene"], text_color=PALETTE['text_tertiary'])
+        hint = TEXTS["summary_pick_gene"]
+        if any(r['warn'] for r in rows):
+            hint += "   " + TEXTS["summary_warn_hint"]
+        self._sum_detail.configure(text=hint, text_color=PALETTE['text_tertiary'])
         self._sum_sites_btn.pack_forget()
 
     def _summary_sort(self, col):
