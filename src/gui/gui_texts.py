@@ -1149,7 +1149,7 @@ TEXTS_EN: dict[str, object] = {
     "col_result": "This test",
     "col_conclusion": "Evidence (all tests)",
     "col_mean_w": "mean ω ({model})",
-    "col_w_pos": "positive-class ω",
+    "col_w_pos": "ω pos. class",
     "col_sites": "Sites ≥0.95",
     "col_w_tags": "ω per label",
     "result_failed": "failed",

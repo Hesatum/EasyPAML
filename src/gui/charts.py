@@ -57,7 +57,7 @@ def _style(ax, c, compact: bool):
         ax.spines[side].set_visible(False)
     for side in ('left', 'bottom'):
         ax.spines[side].set_color(c['axis'])
-    ax.tick_params(colors=c['muted'], labelsize=8 if compact else 8.5)
+    ax.tick_params(colors=c['muted'], labelsize=9.5)
     ax.xaxis.label.set_color(c['muted'])
     ax.yaxis.label.set_color(c['muted'])
     ax.yaxis.set_major_locator(MaxNLocator(3 if compact else 4))
@@ -75,7 +75,7 @@ def _dots(ax, rows, c, compact):
         right = to_axes((x, y))[0] > 0.7     # label on the left near the right edge
         ax.annotate(gene, (x, y), xytext=(-6 if right else 6, 0), textcoords='offset points',
                     va='center', ha='right' if right else 'left',
-                    fontsize=7.5 if compact else 8, color=c['text'])
+                    fontsize=9, color=c['text'])
     ax.set_ylim(0, 1.25)
 
 
@@ -121,21 +121,21 @@ def draw_lrt(ax, test: TestData, c: Dict[str, str], compact: bool = False,
 
     ax.axvline(crit05, color=c['crit'], lw=1.1, ls='--', zorder=5)
     ax.annotate(f"χ²₀.₀₅ = {crit05:.2f}", (crit05, top), xytext=(4, 0), textcoords='offset points',
-                color=c['crit'], fontsize=7.5, ha='left', va='bottom')
+                color=c['crit'], fontsize=9, ha='left', va='bottom')
     if not compact:
         ax.axvline(crit01, color=c['crit'], lw=0.9, ls=':', zorder=5)
 
     n_sig = len(sig)
     info = f"{len(test.points)} gene(s)\n{n_sig} significant (q < 0.05)"
     ax.text(0.98, 0.95, info, transform=ax.transAxes, ha='right', va='top',
-            fontsize=7.5 if compact else 8, color=c['text'], linespacing=1.4,
+            fontsize=9, color=c['text'], linespacing=1.4,
             bbox=dict(boxstyle='round,pad=0.4', fc=c['box'], ec=c['box_edge'], lw=0.6))
     if not compact:
-        ax.set_title(test.title + ("" if compact else f"  (df = {test.df})"), fontsize=9.5,
+        ax.set_title(test.title + ("" if compact else f"  (df = {test.df})"), fontsize=10.5,
                      fontweight='bold', color=c['text'], pad=6)
-    ax.set_xlabel("LRT statistic, 2Δℓ", fontsize=8.5)
+    ax.set_xlabel("LRT statistic, 2Δℓ", fontsize=9.5)
     if not compact and ys is not None:
-        ax.set_ylabel("density", fontsize=8.5)
+        ax.set_ylabel("density", fontsize=9.5)
     if label:
         ax.text(-0.09, 1.04, label, transform=ax.transAxes, fontsize=12, fontweight='bold',
                 color=c['text'], va='bottom', ha='left')
@@ -171,10 +171,10 @@ def draw_omega(ax, whole: Sequence[Point], positive: Sequence[Point], c: Dict[st
                  for p in positive if p.x and p.x > 0]
         _dots(ax, rows, c, compact)
         ax.annotate("ω = 1 (neutral)", (1.0, 1.13), xytext=(4, 0), textcoords='offset points',
-                    color=c['crit'], fontsize=7.5, ha='left', va='bottom')
+                    color=c['crit'], fontsize=9, ha='left', va='bottom')
         if not compact:
-            ax.set_title("ω per gene", fontsize=9.5, fontweight='bold', color=c['text'], pad=6)
-        ax.set_xlabel("ω (dN/dS), log scale", fontsize=8.5)
+            ax.set_title("ω per gene", fontsize=10.5, fontweight='bold', color=c['text'], pad=6)
+        ax.set_xlabel("ω (dN/dS), log scale", fontsize=9.5)
         if label:
             ax.text(-0.09, 1.04, label, transform=ax.transAxes, fontsize=12, fontweight='bold',
                     color=c['text'], va='bottom', ha='left')
@@ -194,24 +194,24 @@ def draw_omega(ax, whole: Sequence[Point], positive: Sequence[Point], c: Dict[st
     ax.set_xlim(lo, hi)
     ax.axhline(0, color=c['axis'], lw=0.6, zorder=0)
     ax.annotate("ω = 1 (neutral)", (1.0, ymax * 1.16), xytext=(4, 0), textcoords='offset points',
-                color=c['crit'], fontsize=7.5, ha='left', va='bottom')
+                color=c['crit'], fontsize=9, ha='left', va='bottom')
 
     _rug(ax, [p.x for p in whole if p.x and p.x > 0], y_w, c['ns'], compact)
     _rug(ax, [p.x for p in positive if p.x and p.x > 0 and not p.significant], y_p, c['ns'], compact)
     _rug(ax, [p.x for p in positive if p.x and p.x > 0 and p.significant], y_p, c['sig'], compact,
          strong=True)
     if not compact:
-        ax.text(lo, y_w, f" {whole_label}", fontsize=7, color=c['muted'], va='center', ha='left')
-        ax.text(lo, y_p, f" {positive_label}", fontsize=7, color=c['muted'], va='center', ha='left')
+        ax.text(lo, y_w, f" {whole_label}", fontsize=8.5, color=c['muted'], va='center', ha='left')
+        ax.text(lo, y_p, f" {positive_label}", fontsize=8.5, color=c['muted'], va='center', ha='left')
     if peaks:
-        leg = ax.legend(loc='upper right', fontsize=7.5, frameon=True, facecolor=c['box'],
+        leg = ax.legend(loc='upper right', fontsize=9, frameon=True, facecolor=c['box'],
                         edgecolor=c['box_edge'], labelcolor=c['text'])
         leg.get_frame().set_linewidth(0.6)
     if not compact:
-        ax.set_title("ω per gene", fontsize=9.5, fontweight='bold', color=c['text'], pad=6)
-    ax.set_xlabel("ω (dN/dS), log scale", fontsize=8.5)
+        ax.set_title("ω per gene", fontsize=10.5, fontweight='bold', color=c['text'], pad=6)
+    ax.set_xlabel("ω (dN/dS), log scale", fontsize=9.5)
     if not compact:
-        ax.set_ylabel("density", fontsize=8.5)
+        ax.set_ylabel("density", fontsize=9.5)
     if label:
         ax.text(-0.09, 1.04, label, transform=ax.transAxes, fontsize=12, fontweight='bold',
                 color=c['text'], va='bottom', ha='left')
@@ -223,7 +223,7 @@ def enable_hover(fig: Figure, ax, points: Sequence[Point], c: Dict[str, str],
     """Show a box with the genes near the mouse along the x axis. Returns the
     callback id, for mpl_disconnect when the axes are redrawn."""
     box = ax.annotate("", xy=(0, 0), xycoords='axes fraction', xytext=(0, 0),
-                      textcoords='offset points', fontsize=8, color=c['text'], zorder=20,
+                      textcoords='offset points', fontsize=9, color=c['text'], zorder=20,
                       annotation_clip=False, linespacing=1.35,
                       bbox=dict(boxstyle='round,pad=0.5', fc=c['box'], ec=c['box_edge'], lw=0.8))
     box.set_visible(False)
@@ -294,17 +294,17 @@ def draw_sites(fig: Figure, positions, probs, marks, length: int, removed: Seque
     for y, ls in ((0.95, '--'), (0.99, ':')):
         ax.axhline(y, color=c['muted'], lw=0.8, ls=ls, zorder=0)
         ax.annotate(f"{y:.2f}", (1, y), xycoords=('axes fraction', 'data'), xytext=(3, 0),
-                    textcoords='offset points', fontsize=7, color=c['muted'], va='center')
+                    textcoords='offset points', fontsize=8.5, color=c['muted'], va='center')
     ax.set_ylim(0.5, 1.03)
     ax.set_xticks([])
-    ax.set_ylabel("Pr(ω>1)", fontsize=8, color=c['muted'])
+    ax.set_ylabel("Pr(ω>1)", fontsize=9, color=c['muted'])
     for side in ('top', 'right', 'bottom'):
         ax.spines[side].set_visible(False)
     ax.spines['left'].set_color(c['axis'])
-    ax.tick_params(colors=c['muted'], labelsize=7.5)
+    ax.tick_params(colors=c['muted'], labelsize=9)
     ax.yaxis.set_major_locator(MaxNLocator(3))
     if title:
-        ax.set_title(title, fontsize=9, fontweight='bold', color=c['text'], loc='left', pad=6)
+        ax.set_title(title, fontsize=10, fontweight='bold', color=c['text'], loc='left', pad=6)
 
     from matplotlib.patches import Rectangle
     tr.add_patch(Rectangle((0.5, 0.2), length, 0.6, fc=c['fill'], ec=c['axis'], lw=0.8))
@@ -328,11 +328,11 @@ def draw_sites(fig: Figure, positions, probs, marks, length: int, removed: Seque
         de.set_ylim(0, None)
     else:
         de.set_yticks([])
-    de.set_ylabel("sites per\n30 codons", fontsize=7, color=c['muted'])
+    de.set_ylabel("sites per\n30 codons", fontsize=8.5, color=c['muted'])
     for side in ('top', 'right'):
         de.spines[side].set_visible(False)
     for side in ('left', 'bottom'):
         de.spines[side].set_color(c['axis'])
-    de.tick_params(colors=c['muted'], labelsize=7.5)
+    de.tick_params(colors=c['muted'], labelsize=9)
     de.yaxis.set_major_locator(MaxNLocator(2))
-    de.set_xlabel(f"codon position in your alignment (1–{length})", fontsize=8, color=c['muted'])
+    de.set_xlabel(f"codon position in your alignment (1–{length})", fontsize=9, color=c['muted'])

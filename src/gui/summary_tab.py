@@ -314,12 +314,12 @@ class SummaryTab:
             cols.append(('conclusion', TEXTS["col_conclusion"], 195, 'w'))
         else:
             cols.append(('result', TEXTS["col_result"], 132, 'w'))
-        cols += [('q', 'q (BH)', 74, 'e'), ('p', 'p', 74, 'e'), ('lrt', '2Δℓ', 70, 'e')]
+        cols += [('q', 'q (BH)', 74, 'e'), ('p', 'p', 74, 'e'), ('lrt', '2Δℓ', 66, 'e')]
         if pair == ('M0', 'Branch'):
             cols.append(('df', 'df', 40, 'e'))
-        cols.append(('mean_w', TEXTS["col_mean_w"].format(model=alt), 84 + 8 * len(alt), 'e'))
+        cols.append(('mean_w', TEXTS["col_mean_w"].format(model=alt), 92 + 8 * len(alt), 'e'))
         if alt in SITE_ALTS:
-            cols += [('w_pos', TEXTS["col_w_pos"], 122, 'e'), ('p1', 'p₁', 55, 'e'),
+            cols += [('w_pos', TEXTS["col_w_pos"], 122, 'e'), ('p1', 'p₁', 51, 'e'),
                      ('sites', TEXTS["col_sites"], 95, 'e')]
         if pair == ('M0', 'Branch'):
             cols.append(('w_tags', TEXTS["col_w_tags"], 220, 'w'))

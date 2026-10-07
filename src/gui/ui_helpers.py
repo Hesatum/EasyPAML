@@ -174,7 +174,7 @@ apply_theme()
 SPACE = {'xs': 4, 'sm': 8, 'md': 12, 'lg': 16, 'xl': 24, 'xxl': 32}
 RADIUS = {'field': 6, 'card': 8, 'panel': 12}
 # font sizes (pt), none below 11
-FONT_SIZE = {'xs': 12, 'sm': 13, 'md': 14, 'lg': 16, 'xl': 18, 'xxl': 21}
+FONT_SIZE = {'xs': 13, 'sm': 13, 'md': 14, 'lg': 16, 'xl': 18, 'xxl': 21}
 
 
 def mix(color_a: str, color_b: str, t: float) -> str:
