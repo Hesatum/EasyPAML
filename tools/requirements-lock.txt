@@ -1,6 +1,6 @@
 # Exact versions EasyPAML 0.3.0 was tested with (Linux, Python 3.12.3).
 # To reproduce that environment:
-#   .venv/bin/python -m pip install -r requirements-lock.txt
+#   .venv/bin/python -m pip install -r tools/requirements-lock.txt
 biopython==1.88
 contourpy==1.4.0
 customtkinter==6.0.0

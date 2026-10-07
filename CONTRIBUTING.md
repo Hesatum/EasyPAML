@@ -3,7 +3,7 @@
 ## Running from the source
 
 ```bash
-./install.sh                      # creates .venv
+./INSTALL_LINUX_MAC.sh            # creates .venv and the launchers
 .venv/bin/python -m pytest -q     # tests
 ```
 
@@ -28,16 +28,14 @@ When investigating a run, start with `OUT/run_config.json` and `OUT/genes_status
 
 ```
 EasyPAML/
-├── EasyPAML.py           entry point (window)
-├── easypaml_cli.py       command-line mode
-├── install.sh / EasyPAML.sh     Linux/macOS installer and launcher
-├── install.bat / EasyPAML.bat   Windows installer and launcher
-├── requirements.txt      dependencies (minimum versions); requirements-lock.txt (exact tested versions)
+├── INSTALL_LINUX_MAC.sh  installer; writes EasyPAML.sh and easypaml-cli.sh
+├── INSTALL_WINDOWS.bat   installer; writes EasyPAML.bat, easypaml-cli.bat and a shortcut
 ├── bin/codeml.exe        codeml for Windows (PAML 4.9j)
-├── src/                  code
+├── src/                  code; entry points easypaml_window.py and easypaml_cli.py
 ├── tests/                tests (pytest) and simulated data
 ├── examples/             example data
-├── tools/                developer tools
+├── tools/                requirements.txt (minimum versions), requirements-lock.txt
+│                         (tested versions) and developer tools
 ├── docs/                 timing benchmark
 ├── METHODS.md            detailed methods
 ├── CONTRIBUTING.md       notes for developers

@@ -2,6 +2,17 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+- The top folder shows only `INSTALL_LINUX_MAC.sh`, `INSTALL_WINDOWS.bat`, the
+  documents and the folders. The installer writes the launchers for its own system
+  (`EasyPAML.sh` and `easypaml-cli.sh`, or `EasyPAML.bat` and `easypaml-cli.bat`);
+  the Python entry points are in `src/` and the requirements in `tools/`.
+- The Windows installer creates the desktop shortcut without changing the PowerShell
+  execution policy.
+- Branch tree: the ω of a label is written once per labelled clade, and labelled
+  branches are coloured along their whole length.
+
 ## [0.4.0] 2026-10-08
 
 ### Changes that affect results

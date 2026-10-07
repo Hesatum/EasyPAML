@@ -4,10 +4,12 @@ EasyPAML command-line mode, for servers and many genes.
 
 Examples:
 
-  python3 easypaml_cli.py --input examples/alignments --tree examples/tree.nwk \\
+  ./easypaml-cli.sh --input examples/alignments --tree examples/tree.nwk \\
       --output results/ --models M7,M8,M8a --workers 24
 
-  python3 easypaml_cli.py --config my_run.json    # the same options as JSON
+  ./easypaml-cli.sh --config my_run.json    # the same options as JSON
+
+(easypaml-cli.bat on Windows; both are created by the installer.)
 
 --skip-beb stops M2a and M8 when codeml starts the BEB step, the slowest part.
 lnL, np and omega, which the LRT uses, are already written by then, so the test
@@ -25,7 +27,7 @@ import shutil
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.backend import messages
 from src.backend.codeml_backend import CodemlBatchAnalysis, codeml_version, find_codeml
 from src.backend.ctl_params import CODONFREQ_OPTIONS, DEFAULT_CODONFREQ, codonfreq_label
@@ -38,6 +40,7 @@ _CODONFREQ_HELP = ", ".join(f"{v}={n}" for v, n, _ in CODONFREQ_OPTIONS)
 
 def parse_args():
     ap = argparse.ArgumentParser(
+        prog="easypaml-cli",
         description="EasyPAML: batch codeml analyses without the window.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,

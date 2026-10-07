@@ -662,7 +662,7 @@ class CodemlBatchAnalysis:
         if not self.config:
             raise ValueError(
                 "self.config is empty: set input_folder, tree_file, output_folder and models "
-                "before calling run_batch_analysis() (see easypaml_cli.py or the GUI)."
+                "before calling run_batch_analysis() (see src/easypaml_cli.py or the GUI)."
             )
 
         cfg = self.config

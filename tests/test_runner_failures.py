@@ -515,7 +515,7 @@ def test_progress_moves_during_a_model_and_heartbeat_prints_it(tmp_path, fake_co
                                              (['--no-m8a'], {'M7', 'M8'}),
                                              (['--no-auto-nulls'], {'M8'})])
 def test_cli_adds_null_models_like_the_window(tmp_path, fake_codeml, monkeypatch, capsys, extra, expected):
-    import easypaml_cli
+    from src import easypaml_cli
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     inp = tmp_path / 'in'
     inp.mkdir()

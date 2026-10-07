@@ -23,8 +23,14 @@ outputs/
 resultados/
 examples/results/
 
-# codeml downloaded by install.sh
+# codeml downloaded by INSTALL_LINUX_MAC.sh
 bin/codeml
+
+# launchers written by the installers
+/EasyPAML.sh
+/easypaml-cli.sh
+/EasyPAML.bat
+/easypaml-cli.bat
 
 # OS and editors
 .DS_Store

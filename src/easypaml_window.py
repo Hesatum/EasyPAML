@@ -10,11 +10,11 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-# Always run from the directory where this file lives, so relative paths work
-# regardless of how the user launched the app (double-click, shortcut, terminal).
-_HERE = Path(__file__).resolve().parent
-os.chdir(_HERE)
-sys.path.insert(0, str(_HERE))
+# Run from the EasyPAML folder (one above src/), so relative paths work however
+# the program was opened (double-click, shortcut, terminal).
+_ROOT = Path(__file__).resolve().parents[1]
+os.chdir(_ROOT)
+sys.path.insert(0, str(_ROOT))
 
 try:
     import tkinter  # noqa: F401
@@ -23,7 +23,7 @@ except ImportError:
           "  Ubuntu/Debian: sudo apt install python3-tk\n"
           "  Fedora:        sudo dnf install python3-tkinter\n"
           "  macOS (brew):  brew install python-tk\n"
-          "The command line works without it: python3 easypaml_cli.py --help")
+          "The command line works without it: ./easypaml-cli.sh --help")
     sys.exit(1)
 def _import_app():
     from src.gui.main_gui import App
@@ -38,8 +38,8 @@ try:
         App = _import_app()
 except ImportError as exc:
     print(f"Missing dependency: {exc}\n"
-          "Run the installer (Linux/macOS: ./install.sh · Windows: install.bat)\n"
-          "and open the program with EasyPAML.sh / EasyPAML.bat (or .venv/bin/python EasyPAML.py).")
+          "Run the installer (Linux/macOS: ./INSTALL_LINUX_MAC.sh · Windows: INSTALL_WINDOWS.bat),\n"
+          "then open the program with the EasyPAML.sh or EasyPAML.bat it creates.")
     sys.exit(1)
 
 

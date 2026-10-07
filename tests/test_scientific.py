@@ -156,7 +156,7 @@ def test_m8a_can_be_left_out():
     assert set(CodemlBatchAnalysis.auto_complete_null_models(['M8'])) == {'M8', 'M7', 'M8a'}
     # an M8a chosen by hand stays
     assert 'M8a' in CodemlBatchAnalysis.auto_complete_null_models(['M8', 'M8a'], include_m8a=False)
-    cli = (ROOT / 'easypaml_cli.py').read_text(encoding='utf-8')
+    cli = (ROOT / 'src' / 'easypaml_cli.py').read_text(encoding='utf-8')
     assert '--no-m8a' in cli
 
 

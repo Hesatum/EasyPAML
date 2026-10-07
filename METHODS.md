@@ -192,7 +192,7 @@ site test, or the genes significant in the selected branch or branch-site test.
 Each run writes `methods_text.txt`: a methods paragraph filled in with that run's
 EasyPAML version and commit, codeml version, models, parameters, tests with df,
 and the number of genes in each BH correction. The commit is also shown under
-About, by `easypaml_cli.py --version`, and in `run_config.json` (`easypaml_commit`).
+About, by `easypaml-cli.sh --version`, and in `run_config.json` (`easypaml_commit`).
 
 ## References
 

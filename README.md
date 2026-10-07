@@ -14,7 +14,7 @@ section or a review. [CHANGELOG.md](CHANGELOG.md) lists the changes in each vers
 sudo apt update && sudo apt install -y git python3-pip python3-venv python3-tk paml
 git clone https://github.com/Hesatum/EasyPAML.git
 cd EasyPAML
-./install.sh
+./INSTALL_LINUX_MAC.sh
 ./EasyPAML.sh
 ```
 
@@ -24,34 +24,37 @@ genes with a known answer and takes a few minutes.
 The same analysis from the command line:
 
 ```bash
-.venv/bin/python easypaml_cli.py --input examples/quick \
-    --tree examples/quick/tree.nwk --output example_results --models M8
+./easypaml-cli.sh --input examples/quick --tree examples/quick/tree.nwk \
+    --output example_results --models M8
 ```
 
 ## Installation
 
 **Linux.** Run the first line of the quick start once (Fedora: `sudo dnf install git
-python3-pip python3-tkinter paml`). `install.sh` puts the tested versions of the
-dependencies in a `.venv/` folder and leaves the system Python alone; if something is
-missing, it prints the command to run. If `./EasyPAML.sh` fails, run
-`.venv/bin/python EasyPAML.py`.
+python3-pip python3-tkinter paml`). `INSTALL_LINUX_MAC.sh` puts the tested versions of
+the dependencies in a `.venv/` folder, leaves the system Python alone, and creates
+`EasyPAML.sh` (the window) and `easypaml-cli.sh` (the command line). If something is
+missing, it prints the command to run.
 
 **macOS.** `brew install python-tk brewsci/bio/paml`, then the `git clone`,
-`./install.sh` and `./EasyPAML.sh` lines of the quick start.
+`./INSTALL_LINUX_MAC.sh` and `./EasyPAML.sh` lines of the quick start.
 
 **Windows.** Install Python 3.8 or newer from [python.org](https://www.python.org/downloads/)
 with "Add Python to PATH" ticked. Download the
 [ZIP](https://github.com/Hesatum/EasyPAML/archive/refs/heads/main.zip), extract it,
-double-click `install.bat` (1 to 3 minutes) and open EasyPAML from the desktop
-shortcut. `codeml.exe` (PAML 4.9j) comes in `bin/`.
+double-click `INSTALL_WINDOWS.bat` (1 to 3 minutes) and open EasyPAML from the desktop
+shortcut or `EasyPAML.bat`, which the installer creates. `codeml.exe` (PAML 4.9j)
+comes in `bin/`. If Windows shows "Windows protected your PC", click "More info" and
+"Run anyway": the installer is an unsigned text script you can open and read.
 
-**codeml.** On Linux it comes from the `paml` package; if there is none, `install.sh`
+**codeml.** On Linux it comes from the `paml` package; if there is none, the installer
 downloads PAML 4.10.10 to `bin/codeml`. EasyPAML was tested with PAML 4.9j and
 4.10.10. Another codeml can be set with `EASYPAML_CODEML=/path/to/codeml` or
 `--codeml`.
 
 **A cited version.** To repeat a published analysis, run `git checkout v0.4.0` (or
-the commit it cites) in the EasyPAML folder before `./install.sh`. A version shown as
+the commit it cites) in the EasyPAML folder before installing (versions up to 0.4.0
+use `./install.sh`). A version shown as
 `0.4.0+3` is 3 commits after 0.4.0; cite its commit.
 
 ## Using the window
@@ -107,7 +110,7 @@ For sites under positive selection, run M8 and read both of its tests.
 ## Command line
 
 ```bash
-.venv/bin/python easypaml_cli.py --input FOLDER --tree TREE.nwk --output OUT --models M8 --workers 8
+./easypaml-cli.sh --input FOLDER --tree TREE.nwk --output OUT --models M8 --workers 8
 ```
 
 | Option | Default | Meaning |
@@ -122,7 +125,7 @@ For sites under positive selection, run M8 and read both of its tests.
 | `--rerun-all` | | run again models already in OUT with the same input |
 | `--lang pt` | `en` | messages in Portuguese |
 
-`--help` lists every option. The exit code is 0 when every gene ran and 1 when any
+`--help` lists every option; on Windows use `easypaml-cli.bat`. The exit code is 0 when every gene ran and 1 when any
 failed.
 
 ## Output folder
@@ -148,14 +151,15 @@ OUT/
 
 ## Troubleshooting
 
-- `./EasyPAML.sh: No such file or directory`: run it from the EasyPAML folder.
+- `./EasyPAML.sh: No such file or directory`: run `./INSTALL_LINUX_MAC.sh` first, in
+  the EasyPAML folder; it creates `EasyPAML.sh`.
 - `No module named 'tkinter'`: `sudo apt install python3-tk`.
-- "codeml not found": `sudo apt install paml` on Linux; on Windows, run `install.bat`
-  again.
+- "codeml not found": `sudo apt install paml` on Linux; on Windows, run
+  `INSTALL_WINDOWS.bat` again.
 - A gene FAILED: the reason is in the window, in `genes_status.tsv` and in the log. A
   codeml that uses no CPU for 5 minutes is stopped and reported.
-- Windows, the window closes at once: run `install.bat`; to see the error, run
-  `.venv\Scripts\python.exe EasyPAML.py` in `cmd`.
+- Windows, the window closes at once: run `INSTALL_WINDOWS.bat` again; to see the
+  error, run `EasyPAML.bat` from `cmd`.
 
 ## License and citation
 

@@ -1,4 +1,4 @@
-# Installed into .venv by install.sh / install.bat. These are minimum versions:
+# Installed into .venv by INSTALL_LINUX_MAC.sh / INSTALL_WINDOWS.bat. These are minimum versions:
 # scipy.stats.false_discovery_control (Benjamini-Hochberg) needs SciPy 1.11.
 # Exact tested versions: requirements-lock.txt
 customtkinter>=5.2.0

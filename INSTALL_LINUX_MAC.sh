@@ -65,7 +65,7 @@ MISSING_TK=0
 if [ ! -x ".venv/bin/python" ]; then
     if ! "$PYTHON" -c 'import venv, ensurepip' >/dev/null 2>&1; then
         err "The Python 'venv' module is not installed (needed to install the dependencies)."
-        echo "      Run this command, then run ./install.sh again:"
+        echo "      Run this command, then run ./INSTALL_LINUX_MAC.sh again:"
         pkg_hint "python3-venv python3-tk" "python3-tkinter" "python-tk@$PYVER"
         exit 1
     fi
@@ -95,14 +95,14 @@ VENV_PY="$SCRIPT_DIR/.venv/bin/python"
     warn "could not update pip; continuing with the current version"
 # the exact versions EasyPAML was tested with; the minimum versions when they have
 # no package for this Python
-if "$VENV_PY" -m pip install -r requirements-lock.txt --disable-pip-version-check --quiet; then
+if "$VENV_PY" -m pip install -r tools/requirements-lock.txt --disable-pip-version-check --quiet; then
     ok "Dependencies installed in .venv/ (tested versions, requirements-lock.txt)"
-elif "$VENV_PY" -m pip install -r requirements.txt --disable-pip-version-check; then
+elif "$VENV_PY" -m pip install -r tools/requirements.txt --disable-pip-version-check; then
     warn "the tested versions are not available for this Python; newer ones were installed (requirements.txt)"
     ok "Dependencies installed in .venv/"
 else
     err "Installing the dependencies failed (see the message above). Common causes: no internet, a proxy."
-    echo "      To try again: ./install.sh"
+    echo "      To try again: ./INSTALL_LINUX_MAC.sh"
     exit 1
 fi
 
@@ -145,11 +145,28 @@ else
     fi
 fi
 
-# ── 5. Launcher ──────────────────────────────────────────────────────────────
+# ── 5. Launchers ─────────────────────────────────────────────────────────────
+# written here, so the folder shows only the installer until EasyPAML is installed
 echo ""
-echo "[5/5] Launcher..."
-chmod +x "$SCRIPT_DIR/EasyPAML.sh" 2>/dev/null || true
-ok "EasyPAML.sh ready"
+echo "[5/5] Launchers..."
+cat > "$SCRIPT_DIR/EasyPAML.sh" <<'LAUNCHER'
+#!/usr/bin/env bash
+# Opens the EasyPAML window. Created by INSTALL_LINUX_MAC.sh.
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ ! -x "$DIR/.venv/bin/python" ]; then
+    echo "EasyPAML is not installed in this folder. Run ./INSTALL_LINUX_MAC.sh first."
+    exit 1
+fi
+exec "$DIR/.venv/bin/python" "$DIR/src/easypaml_window.py" "$@"
+LAUNCHER
+cat > "$SCRIPT_DIR/easypaml-cli.sh" <<'LAUNCHER'
+#!/usr/bin/env bash
+# EasyPAML command line (./easypaml-cli.sh --help). Created by INSTALL_LINUX_MAC.sh.
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "$DIR/.venv/bin/python" "$DIR/src/easypaml_cli.py" "$@"
+LAUNCHER
+chmod +x "$SCRIPT_DIR/EasyPAML.sh" "$SCRIPT_DIR/easypaml-cli.sh"
+ok "EasyPAML.sh (window) and easypaml-cli.sh (command line) created"
 if [ "$OS" = "Linux" ] && [ -n "${HOME:-}" ]; then
     DESKTOP_DIR="$HOME/.local/share/applications"
     if mkdir -p "$DESKTOP_DIR" 2>/dev/null; then
@@ -175,9 +192,8 @@ echo " ============================================================"
 echo ""
 echo " To open EasyPAML:"
 cmd "./EasyPAML.sh"
-echo "   (or: .venv/bin/python EasyPAML.py)"
 echo " Command line:"
-cmd ".venv/bin/python easypaml_cli.py --help"
+cmd "./easypaml-cli.sh --help"
 if [ "$MISSING_TK" -eq 1 ]; then
     echo ""
     warn "install tkinter so the window can open:"
