@@ -15,7 +15,7 @@ from src.backend import lrt_stats
 from . import charts
 from .gui_texts import TEXTS
 from .ui_helpers import (CURRENT_THEME, FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE,
-                         add_tooltip, ask_save_file, mix, show_message)
+                         ask_save_file, mix, show_message)
 
 # order of the test selector: the stricter site test first
 TEST_ORDER = [('M8a', 'M8'), ('M1a', 'M2a'), ('M7', 'M8'),
@@ -199,9 +199,20 @@ class SummaryTab:
                                      text_color=PALETTE['text_secondary'], wraplength=1100)
         self._sum_hyp.pack(side='left')
         info = ctk.CTkLabel(hyp, text=" ? ", font=self._font('xs', 'bold'), corner_radius=8,
-                            fg_color=PALETTE['bg_elevated'], text_color=PALETTE['text_primary'])
+                            fg_color=PALETTE['bg_elevated'], text_color=PALETTE['text_primary'], cursor='hand2')
         info.pack(side='left', padx=(SPACE['sm'], 0))
-        add_tooltip(info, TEXTS["summary_explain"], wraplength=420)
+        explain = ctk.CTkLabel(parent, text=TEXTS["summary_explain"], font=self._font('sm'), anchor='w',
+                               justify='left', wraplength=1150, fg_color=PALETTE['bg_elevated'],
+                               corner_radius=RADIUS['field'], text_color=PALETTE['text_primary'],
+                               padx=SPACE['sm'], pady=SPACE['xs'])
+
+        def _toggle(_e=None):
+            if explain.winfo_ismapped():
+                explain.pack_forget()
+            else:
+                explain.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']), after=hyp)
+        info.bind('<Button-1>', _toggle)
+        explain.bind('<Button-1>', _toggle)
 
         self._summary_chart_card(parent)
         self._summary_table(parent)
