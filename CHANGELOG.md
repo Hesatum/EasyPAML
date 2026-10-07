@@ -4,6 +4,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+- "Try the example" in the window loads two simulated genes with a known answer
+  (`examples/quick/`).
 - Warm start from M0 is an option (`--warm-start-m0`, or "Start from M0" in the
   window), off by default. Before, selecting M0 with other models started them from
   the M0 κ and branch lengths with three initial ω, which METHODS.md did not say;

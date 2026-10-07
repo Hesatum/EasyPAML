@@ -198,7 +198,11 @@ To repeat a run by hand: `cd OUT/M8 && codeml GENE_M8.ctl`.
 
 ## Example data
 
-`examples/` has 25 *Cereus* (cactus) genes, with 8 to 21 sequences each, and a
+"Try the example" in the window loads `examples/quick/`: two simulated genes with a
+known answer (one under positive selection, one not), their tree and M8 with its
+null models. Click Run; it takes a few minutes.
+
+`examples/` also has 25 *Cereus* (cactus) genes, with 8 to 21 sequences each, and a
 21-taxon tree whose names match the alignments exactly:
 
 1. Alignments folder: `examples/alignments/`
@@ -206,12 +210,11 @@ To repeat a run by hand: `cd OUT/M8 && codeml GENE_M8.ctl`.
 3. Output folder: a new folder
 4. Switch M8 on and click Run
 
-The 25 genes take about 1 hour with 12 CPUs. For a quick try, copy two or three
-alignments to another folder and choose that folder instead. From the command line:
+The 25 genes take about 1 hour with 12 CPUs. The quick example from the command line:
 
 ```bash
-.venv/bin/python easypaml_cli.py --input examples/alignments \
-    --tree examples/tree.nwk --output examples/results --workers 8
+.venv/bin/python easypaml_cli.py --input examples/quick \
+    --tree examples/quick/tree.nwk --output example_results --models M8
 ```
 
 `tests/data` has a simulated data set with a known answer.

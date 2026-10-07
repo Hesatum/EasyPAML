@@ -960,6 +960,12 @@ class App(ctk.CTk):
             self._slots[key] = (card, title, btn, detail, shown)
             setattr(self, f"label_{key}", detail)
             setattr(self, f"btn_{key}", btn)
+        if self._EXAMPLE_DIR.is_dir():
+            ctk.CTkButton(fi, text=TEXTS["btn_try_example"], height=24, corner_radius=RADIUS['field'],
+                          fg_color='transparent', hover_color=C['bg_card_hover'],
+                          text_color=C['accent_blue_light'], border_width=1, border_color=C['border'],
+                          font=(_FONT_UI, fs['sm'], "bold"),
+                          command=self._load_example).pack(fill='x')
 
         # ── 2 · Models ─────────
         mi, self._step2_circle, _ = _step(_sb, 2, TEXTS["step_models"])
@@ -1824,6 +1830,21 @@ class App(ctk.CTk):
         except Exception as e:
             self.append_log(tr("Erro ao abrir a marcação de ramos: ", "Error opening branch labelling: ") + f"{e}", "error")
             self.append_log(traceback.format_exc(), "debug")
+
+    _EXAMPLE_DIR = Path(__file__).resolve().parents[2] / 'examples' / 'quick'
+
+    def _load_example(self):
+        """The two simulated genes of examples/quick, their tree, a results folder in
+        the home folder and M8 (with its nulls) switched on."""
+        if self._analysis_running():
+            return
+        self._use_input_folder(self._EXAMPLE_DIR)
+        self._use_tree_file(self._EXAMPLE_DIR / 'tree.nwk')
+        self._use_output_folder(Path.home() / 'EasyPAML_example_results')
+        if not self.model_vars['M8'].get():
+            self.model_vars['M8'].set(True)
+            self._on_model_switch('M8')
+        self.append_log(TEXTS["log_example_loaded"].format(out=self.output_folder), 'info')
 
     def select_input_folder(self):
         start = str(self.input_folder) if self.input_folder else str(Path.home())
