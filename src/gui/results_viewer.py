@@ -1,5 +1,8 @@
 """Results panel: summary, LRT tables, sites, branch analysis, export."""
 
+import tkinter as tk
+from tkinter import ttk
+
 import customtkinter as ctk
 from pathlib import Path
 import pandas as pd
@@ -20,7 +23,7 @@ from src.backend import lrt_stats
 from src.backend.site_map import attach_original_positions
 from src.backend.version import version_string
 from . import charts
-from .summary_tab import SummaryTab, gene_verdict
+from .summary_tab import SummaryTab, ensure_tree_style, gene_verdict
 from .branch_tab import BranchTab
 from .gui_texts import TEXTS, get_language, tr
 from .ui_helpers import (CURRENT_THEME, FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE, fit_to_screen,
@@ -556,23 +559,18 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
                                       length=length, removed=removed, legend=legend)
         c = charts.DARK if CURRENT_THEME['mode'] == 'dark' else charts.LIGHT
         c = dict(c, bg=PALETTE['bg_panel'])
-        fig = _Figure(figsize=(11, 2.6), facecolor=c['bg'])
+        fig = _Figure(figsize=(7.5, 3.4), facecolor=c['bg'])
         charts.draw_sites(fig, positions, df_sites['pr_w_gt_1'].astype(float), marks, length, removed, c,
                           title=legend)
-        canvas = _Canvas(fig, master=parent)
-        widget = canvas.get_tk_widget()
-        widget.configure(height=250, highlightthickness=0, bg=c['bg'])
-        widget.pack(fill='x', pady=(0, SPACE['sm']))
-        scroller = getattr(parent, '_parent_canvas', None)
-        if scroller is not None:
-            widget.bind('<Button-4>', lambda e: scroller.yview_scroll(-1, 'units'))
-            widget.bind('<Button-5>', lambda e: scroller.yview_scroll(1, 'units'))
-            widget.bind('<MouseWheel>', lambda e: scroller.yview_scroll(-1 if e.delta > 0 else 1, 'units'))
-        canvas.draw()
         if removed:
             ctk.CTkLabel(parent, text=TEXTS["sites_chart_removed"].format(n=len(removed)),
                          font=self._font('xs'), anchor='w',
-                         text_color=PALETTE['text_tertiary']).pack(fill='x', padx=SPACE['sm'])
+                         text_color=PALETTE['text_tertiary']).pack(side='bottom', fill='x', padx=SPACE['sm'])
+        canvas = _Canvas(fig, master=parent)
+        widget = canvas.get_tk_widget()
+        widget.configure(height=240, highlightthickness=0, bg=c['bg'])
+        widget.pack(fill='both', expand=True)
+        canvas.draw()
 
     _SITE_TESTS = {'M8': (('M8a', 'M8'), ('M7', 'M8')), 'M2a': (('M1a', 'M2a'),),
                    'Branch-site': (('Branch-site_null', 'Branch-site'),)}
@@ -803,7 +801,7 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
 
         head_host = ctk.CTkFrame(parent, fg_color='transparent')
         head_host.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], 0))
-        table_frame = ctk.CTkScrollableFrame(parent, fg_color=PALETTE['bg_panel'], corner_radius=RADIUS['card'])
+        table_frame = ctk.CTkFrame(parent, fg_color=PALETTE['bg_panel'], corner_radius=RADIUS['card'])
         table_frame.pack(fill='both', expand=True, padx=SPACE['md'], pady=(0, SPACE['md']))
         self._sites_head_host = head_host
 
@@ -845,10 +843,6 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
                 return
             state['df'] = self._render_sites_table(table_frame, gene_combo.get(), model_combo.get(),
                                                    method_combo.get(), thr)
-            try:
-                table_frame._parent_canvas.yview_moveto(0)
-            except Exception:
-                pass
 
         def goto(gene, model):
             """Show a gene of a model (from the Summary)."""
@@ -918,8 +912,14 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
                          fg_color=PALETTE['warning_subtle'], corner_radius=RADIUS['field'],
                          padx=SPACE['sm']).pack(anchor='w', fill='x', pady=(SPACE['xs'], 0))
 
+        table_host = None
+        if not df_f.empty:
+            table_host = tk.Frame(parent, bg=PALETTE['bg_panel'])
+            table_host.pack(side='right', fill='y', padx=(SPACE['sm'], SPACE['sm']), pady=SPACE['sm'])
+        chart_host = ctk.CTkFrame(parent, fg_color='transparent')
+        chart_host.pack(side='left', fill='both', expand=True, padx=(SPACE['sm'], 0), pady=SPACE['sm'])
         try:
-            self._sites_chart(parent, df_sites, results_file, gene_name, model_name, method)
+            self._sites_chart(chart_host, df_sites, results_file, gene_name, model_name, method)
         except Exception as exc:
             print(f"[WARN] sites chart: {exc}")
         if df_f.empty:
@@ -928,16 +928,20 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
                          anchor='w').pack(fill='x', pady=(SPACE['sm'], 0))
             return df_f
 
-        cols = [(140, 'e'), (110, 'e'), (50, 'center'), (90, 'e'), (60, 'center'), (170, 'e')]
-        cell_pad = (SPACE['xs'], SPACE['xs'])
-        # column titles under the chart, in the scrolling area
-        th = ctk.CTkFrame(parent, fg_color='transparent', corner_radius=0)
-        th.pack(fill='x', padx=(SPACE['sm'], 0), pady=(SPACE['xs'], SPACE['xs']))
-        for i, (h, (w, anchor)) in enumerate(zip(TEXTS["sites_table_headers"], cols)):
-            ctk.CTkLabel(th, text=h, font=self._font('xs', 'bold'), width=w, anchor=anchor,
-                         text_color=PALETTE['text_secondary']).grid(row=0, column=i, padx=cell_pad, sticky='w')
-        ctk.CTkFrame(parent, fg_color=PALETTE['divider'], height=1, corner_radius=0).pack(fill='x')
-        mono = self._mono('sm')
+        ensure_tree_style(self)
+        cols = [('aln', 82, 'e'), ('codeml', 100, 'e'), ('aa', 40, 'center'), ('pr', 70, 'e'),
+                ('sig', 44, 'center'), ('w', 120, 'e')]
+        tree = ttk.Treeview(table_host, style='EP.Treeview', show='headings', selectmode='browse',
+                            columns=[c[0] for c in cols])
+        sb = ctk.CTkScrollbar(table_host, command=tree.yview)
+        tree.configure(yscrollcommand=sb.set)
+        sb.pack(side='right', fill='y')
+        tree.pack(side='left', fill='y', expand=True)
+        for (cid, w, anchor), title in zip(cols, TEXTS["sites_table_headers"]):
+            tree.heading(cid, text=title, anchor=anchor)
+            tree.column(cid, width=w, minwidth=w, anchor=anchor, stretch=False)
+        tree.tag_configure('odd', background=PALETTE['row_alt'])
+        tree.tag_configure('strong', foreground=PALETTE['success_fg'])
         for k, (_, row) in enumerate(df_f.iterrows()):
             pr = row['pr_w_gt_1']
             # codeml's own mark: it uses the unrounded value (0.990* is below 0.99)
@@ -949,21 +953,8 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
             omega_txt = f"{mean:.3f} ± {se:.3f}" if pd.notna(mean) and pd.notna(se) else "—"
             cells = [str(int(row['position_original'])) if pd.notna(row.get('position_original')) else "?",
                      str(int(row['position'])), row.get('amino_acid', '?'), f"{pr:.3f}", sig, omega_txt]
-            fr = ctk.CTkFrame(parent, fg_color=PALETTE['row_alt'] if k % 2 else PALETTE['bg_panel'],
-                              corner_radius=RADIUS['field'])
-            fr.pack(fill='x', padx=0, pady=0)
-            for i, (c, (w, anchor)) in enumerate(zip(cells, cols)):
-                if i == 4 and sig:
-                    lbl = (self._chip(fr, c, 'success', font=self._mono('sm', 'bold')) if sig == '**' else
-                           ctk.CTkLabel(fr, text=c, font=self._mono('sm', 'bold'),
-                                        text_color=PALETTE['success_fg']))
-                    lbl.configure(width=w)
-                    lbl.grid(row=0, column=i, padx=cell_pad, pady=2, sticky='w')
-                    continue
-                font = self._mono('sm', 'bold') if i == 0 else mono
-                color = PALETTE['text_primary'] if i in (0, 2, 3) else PALETTE['text_secondary']
-                ctk.CTkLabel(fr, text=c, font=font, width=w, anchor=anchor,
-                             text_color=color).grid(row=0, column=i, padx=cell_pad, pady=2, sticky='w')
+            tags = (('odd',) if k % 2 else ()) + (('strong',) if sig == '**' else ())
+            tree.insert('', 'end', values=cells, tags=tags)
         return df_f
 
     def _parse_sites_manual(self, filepath: Path, method: str):
