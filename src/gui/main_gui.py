@@ -1840,6 +1840,7 @@ class App(ctk.CTk):
             self.append_log(traceback.format_exc(), "debug")
 
     _EXAMPLE_DIR = Path(__file__).resolve().parents[2] / 'examples' / 'quick'
+    _EXAMPLE_OUT = Path.home() / 'EasyPAML_example_results'
 
     def _load_example(self):
         """The two simulated genes of examples/quick, their tree, a results folder in
@@ -1848,14 +1849,18 @@ class App(ctk.CTk):
             return
         self._use_input_folder(self._EXAMPLE_DIR)
         self._use_tree_file(self._EXAMPLE_DIR / 'tree.nwk')
-        self._use_output_folder(Path.home() / 'EasyPAML_example_results')
+        self._use_output_folder(self._EXAMPLE_OUT)
         if not self.model_vars['M8'].get():
             self.model_vars['M8'].set(True)
             self._on_model_switch('M8')
         self.append_log(TEXTS["log_example_loaded"].format(out=self.output_folder), 'info')
 
+    def _start_dir(self, folder) -> str:
+        """Where a chooser opens: the folder in use, except the example's."""
+        return str(folder) if folder and folder != self._EXAMPLE_DIR else str(Path.home())
+
     def select_input_folder(self):
-        start = str(self.input_folder) if self.input_folder else str(Path.home())
+        start = self._start_dir(self.input_folder)
         path = ask_directory(self, TEXTS["btn_input_folder"], start)
         if path:
             self._use_input_folder(path)
@@ -1887,6 +1892,9 @@ class App(ctk.CTk):
         if self.tree_file and previous in self.tree_file.parents and self.input_folder not in self.tree_file.parents:
             self.tree_file = None
             self.label_tree.configure(text=TEXTS["label_not_selected"], text_color=self.COLORS['text_tertiary'])
+        if previous == self._EXAMPLE_DIR and self.output_folder == self._EXAMPLE_OUT:
+            self.output_folder = None
+            self.label_output.configure(text=TEXTS["label_not_selected"], text_color=self.COLORS['text_tertiary'])
         if self.analysis_thread and self.analysis_thread.is_alive():
             return
         self.progress_bar.set(0)
@@ -1895,8 +1903,7 @@ class App(ctk.CTk):
         self.log.insert("end", TEXTS["log_welcome"])
 
     def select_tree_file(self):
-        start = str(self.tree_file.parent) if self.tree_file else (
-            str(self.input_folder) if self.input_folder else str(Path.home()))
+        start = self._start_dir(self.tree_file.parent if self.tree_file else self.input_folder)
         path = ask_open_file(self, TEXTS["btn_tree_file"], start,
                              filetypes=[('Newick', '*.nwk *.tree *.tre *.newick *.nh *.txt')])
         if path:
@@ -1910,8 +1917,9 @@ class App(ctk.CTk):
 
     def select_output_folder(self):
         """Choose the output folder, creating it if needed."""
-        start = str(self.output_folder.parent if self.output_folder else
-                    (self.input_folder.parent if self.input_folder else Path.home()))
+        start = str(self.output_folder.parent) if self.output_folder else (
+            self._start_dir(self.input_folder.parent) if self.input_folder and self.input_folder != self._EXAMPLE_DIR
+            else str(Path.home()))
         path = ask_directory(self, TEXTS["dialog_choose_output"], start,
                              allow_new=True, must_exist=False)
         if path:
