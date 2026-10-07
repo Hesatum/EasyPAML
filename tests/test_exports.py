@@ -125,3 +125,15 @@ def test_hover_box_is_short_and_fast_with_thousands_of_genes():
     box = [t for t in ax.texts if t.get_visible() and '…' in t.get_text()]
     assert box and len(box[0].get_text().splitlines()) == 8
     assert box[0].get_text().splitlines()[-1].startswith('… +')
+
+
+def test_newick_with_codeml_omega_labels_and_branch_marks():
+    from src.gui.branch_tab import parse_newick, preorder
+    w = parse_newick("((A #0.5 , B #0.5 ) #0.5 , ((C #0.5 , D #0.5 ) #2.1 , E #0.5 ) #0.5 );")
+    marks = parse_newick("((A,B),((C,D)#1,E));")
+    assert len(preorder(w)) == len(preorder(marks)) == 9
+    stem = [n for n in preorder(marks) if n.label == 1]
+    assert len(stem) == 1 and [c.name for c in stem[0].children] == ['C', 'D']
+    assert [n.w for n in preorder(w)][5] == 2.1
+    clade = parse_newick("((A,B),((C,D)$1,E));")
+    assert sorted(n.name for n in preorder(clade) if n.label == 1) == ['', 'C', 'D']

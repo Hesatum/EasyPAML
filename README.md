@@ -117,6 +117,9 @@ The results panel has these tabs:
   codeml file (they differ when columns with gaps or stop codons are removed), amino
   acid, Pr(ω>1) and mean ω ± SE. The chart is drawn only when you open a gene; "Export
   figure…" saves it, and the table can be copied or exported as TSV.
+- Branch (when Branch or Branch-site ran): the tree of a gene with the labelled branches
+  in colour and their ω, the Branch and Branch-site tests, a table of the branch groups
+  and the share of foreground sites with ω > 1. "Export tree…" saves the figure.
 
 > The mean ω of a gene is not a criterion for positive selection. It stays below 1
 > even when a few sites are under strong selection. Use the LRT (q) and the site table.

@@ -58,6 +58,22 @@ def gene_verdict(sig_by_pair: dict, rows: list) -> Tuple[str, str]:
     return 'positive', TEXTS["conclusion_supported"].format(tests=", ".join(sig_tests), sites=sites)
 
 
+def ensure_tree_style(widget) -> None:
+    """ttk style 'EP.Treeview' in the program's theme (tables of the results panel)."""
+    style = ttk.Style(widget)
+    rowh = int(FONT_SIZE['sm'] * 2.1)
+    style.configure('EP.Treeview', background=PALETTE['bg_panel'], fieldbackground=PALETTE['bg_panel'],
+                    foreground=PALETTE['text_primary'], rowheight=rowh, borderwidth=0,
+                    font=(FONT_MONO, -FONT_SIZE['sm']))
+    style.configure('EP.Treeview.Heading', background=PALETTE['bg_elevated'],
+                    foreground=PALETTE['text_secondary'], relief='flat', borderwidth=0,
+                    font=(FONT_UI, -FONT_SIZE['xs'], 'bold'), padding=(6, 6))
+    style.map('EP.Treeview.Heading', background=[('active', PALETTE['bg_elevated_hover'])])
+    style.map('EP.Treeview', background=[('selected', PALETTE['accent_fill'])],
+              foreground=[('selected', '#ffffff')])
+    style.layout('EP.Treeview', [('Treeview.treearea', {'sticky': 'nswe'})])
+
+
 class SummaryTab:
     """Mixin for ResultsViewerWindow."""
 
@@ -218,20 +234,7 @@ class SummaryTab:
                              corner_radius=RADIUS['field'], font=self._font('sm', 'bold'))
 
     def _summary_table(self, parent):
-        style = ttk.Style(self)
-        style.theme_use(style.theme_use())
-        rowh = int(FONT_SIZE['sm'] * 2.1)
-        style.configure('EP.Treeview', background=PALETTE['bg_panel'], fieldbackground=PALETTE['bg_panel'],
-                        foreground=PALETTE['text_primary'], rowheight=rowh, borderwidth=0,
-                        font=(FONT_MONO, -FONT_SIZE['sm']))
-        style.configure('EP.Treeview.Heading', background=PALETTE['bg_elevated'],
-                        foreground=PALETTE['text_secondary'], relief='flat', borderwidth=0,
-                        font=(FONT_UI, -FONT_SIZE['xs'], 'bold'), padding=(6, 6))
-        style.map('EP.Treeview.Heading', background=[('active', PALETTE['bg_elevated_hover'])])
-        style.map('EP.Treeview', background=[('selected', PALETTE['accent_fill'])],
-                  foreground=[('selected', '#ffffff')])
-        style.layout('EP.Treeview', [('Treeview.treearea', {'sticky': 'nswe'})])
-
+        ensure_tree_style(self)
         # the detail line stays visible; the table takes what is left
         detail = ctk.CTkFrame(parent, fg_color='transparent')
         detail.pack(side='bottom', fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))

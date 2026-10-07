@@ -240,17 +240,16 @@ TEXTS_PT: dict[str, object] = {
         "no ramo foreground para aquela classe de sítios"
     ),
 
-    "branch_tab_title":  "Branch Analysis — Cladograma por dN/dS",
-    "branch_tab_legend": (
-        "Vermelho (w<1) · Amarelo (w=1) · Azul (w>1)"
-        "   |   Clique num nó interno para girar"
-    ),
     "branch_no_data_title": "Sem dados do Branch Model",
     "branch_no_data_hint":  "Execute o modelo Branch com uma árvore marcada.",
+    "branch_export": "Exportar árvore…",
+    "branch_groups": "Grupos de ramos (modelo Branch)",
+    "branch_col_group": "Grupo",
+    "branch_col_n": "Ramos",
+    "branch_col_w": "ω",
+    "branch_background": "fundo",
+    "branch_bs_info": "Branch-site, ramos marcados: {p2}% dos sítios na classe com ω > 1 (ω = {w2}); {n} sítio(s) com Pr(ω>1) ≥ 0,95 no BEB.",
     "branch_label_gene":     "Gene:",
-    "branch_label_outgroup": "Outgroup:",
-    "branch_outgroup_none":  "(nenhum)",
-    "branch_btn_export_png": "Exportar PNG",
 
 
 
@@ -300,7 +299,6 @@ TEXTS_PT: dict[str, object] = {
     "msg_warning":              "Aviso",
     "msg_success":              "Sucesso",
     "msg_error":                "Erro",
-    "msg_no_figure":            "Nenhuma figura para exportar.",
     "msg_exported_to":          "Exportado para:\n{path}",
     "msg_export_err":           "Erro ao exportar:\n{error}",
     "msg_no_lrt":               "Nenhum resultado LRT encontrado.",
@@ -310,7 +308,6 @@ TEXTS_PT: dict[str, object] = {
     "msg_html_err":             "Erro ao exportar HTML:\n{error}",
 
     # ── ResultsViewerWindow file dialogs ────────────────────────
-    "dialog_export_cladogram":  "Exportar cladograma",
     "dialog_save_as":           "Salvar como",
 
     # ── Charts (matplotlib) ─────────────────────────────────────────────
@@ -858,17 +855,16 @@ TEXTS_EN: dict[str, object] = {
         "on the foreground branch for that site class"
     ),
 
-    "branch_tab_title":  "Branch Analysis — Cladogram by dN/dS",
-    "branch_tab_legend": (
-        "Red (w<1) · Yellow (w=1) · Blue (w>1)"
-        "   |   Click an internal node to rotate"
-    ),
     "branch_no_data_title": "No Branch Model data",
     "branch_no_data_hint":  "Run the Branch model with a labeled tree.",
+    "branch_export": "Export tree…",
+    "branch_groups": "Branch groups (Branch model)",
+    "branch_col_group": "Group",
+    "branch_col_n": "Branches",
+    "branch_col_w": "ω",
+    "branch_background": "background",
+    "branch_bs_info": "Branch-site, labelled branches: {p2}% of sites in the class with ω > 1 (ω = {w2}); {n} site(s) with Pr(ω>1) ≥ 0.95 in BEB.",
     "branch_label_gene":     "Gene:",
-    "branch_label_outgroup": "Outgroup:",
-    "branch_outgroup_none":  "(none)",
-    "branch_btn_export_png": "Export PNG",
 
 
 
@@ -918,7 +914,6 @@ TEXTS_EN: dict[str, object] = {
     "msg_warning":              "Warning",
     "msg_success":              "Success",
     "msg_error":                "Error",
-    "msg_no_figure":            "No figure to export.",
     "msg_exported_to":          "Exported to:\n{path}",
     "msg_export_err":           "Export error:\n{error}",
     "msg_no_lrt":               "No LRT results found.",
@@ -928,7 +923,6 @@ TEXTS_EN: dict[str, object] = {
     "msg_html_err":             "Error exporting HTML:\n{error}",
 
     # ── ResultsViewerWindow — file dialogs ───────────────────────────────
-    "dialog_export_cladogram":  "Export cladogram",
     "dialog_save_as":           "Save as",
 
     # ── Charts (matplotlib) ───────────────────────────────────────────────
