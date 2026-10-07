@@ -169,6 +169,7 @@ class SummaryTab:
                          text_color=PALETTE['text_secondary']).pack(pady=40)
             return
         self._sum = {'test': tests[0], 'chart': 'lrt', 'sort': ('q', False)}
+        self._summary_answer(parent)
 
         bar = ctk.CTkFrame(parent, fg_color='transparent')
         bar.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], 0))
@@ -217,6 +218,49 @@ class SummaryTab:
         self._summary_chart_card(parent)
         self._summary_table(parent)
         self._summary_select(tests[0])
+
+    def _summary_answer_text(self):
+        """(sentence, any_supported) over all positive-selection tests, from the
+        same rules as the Evidence column; None when no such test ran."""
+        verdicts = self._gene_verdicts()
+        if not verdicts:
+            return None
+        by_kind: Dict[str, List[str]] = {}
+        for gene, (kind, _) in verdicts.items():
+            by_kind.setdefault(kind, []).append(gene)
+        rank = getattr(self, '_gene_rank', {})
+        for genes in by_kind.values():
+            genes.sort(key=lambda g: (rank.get(g, len(rank)), g))
+        counts = self._site_counts('M8') or self._site_counts('M2a')
+
+        def names(genes, with_sites=False):
+            """Up to three genes by name; more than that only as a count."""
+            if len(genes) > 3:
+                return ""
+            return ": " + ", ".join(f"{g} ({TEXTS['answer_sites'].format(n=counts.get(g, 0))})"
+                                    if with_sites else g for g in genes)
+
+        pos = by_kind.get('positive', [])
+        parts = [TEXTS['answer_positive'].format(n=len(pos), total=len(verdicts), genes=names(pos, True))
+                 if pos else TEXTS['answer_none'].format(total=len(verdicts))]
+        for kind in ('neutral', 'no_m8a', 'weak'):
+            genes = by_kind.get(kind, [])
+            if genes:
+                parts.append(TEXTS[f'answer_{kind}'].format(n=len(genes), genes=names(genes)))
+        return " ".join(parts), bool(pos)
+
+    def _summary_answer(self, parent):
+        found = self._summary_answer_text()
+        if not found:
+            return
+        text, supported = found
+        tone = PALETTE['success_fg'] if supported else PALETTE['text_secondary']
+        box = ctk.CTkFrame(parent, fg_color=mix(PALETTE['bg_panel'], tone, 0.10), corner_radius=RADIUS['card'])
+        box.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], 0))
+        label = ctk.CTkLabel(box, text=text, font=self._font('sm', 'bold'), anchor='w', justify='left',
+                             wraplength=1150, text_color=PALETTE['text_primary'])
+        label.pack(fill='x', padx=SPACE['md'], pady=SPACE['xs'])
+        box.bind('<Configure>', lambda e: label.configure(wraplength=max(300, e.width - 2 * SPACE['md'])), add='+')
 
     def _summary_chart_card(self, parent):
         from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg as _Canvas

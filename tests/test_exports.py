@@ -139,3 +139,8 @@ def test_newick_with_codeml_omega_labels_and_branch_marks():
     assert [n.w for n in preorder(w)][5] == 2.1
     clade = parse_newick("((A,B),((C,D)$1,E));")
     assert sorted(n.name for n in preorder(clade) if n.label == 1) == ['', 'C', 'D']
+
+
+def test_summary_answer_says_when_nothing_is_supported(viewer):
+    text, supported = viewer._summary_answer_text()
+    assert not supported and 'supported in none of the 1 gene(s)' in text
