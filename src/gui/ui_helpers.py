@@ -214,18 +214,39 @@ def disable_mouse_wheel(widget) -> None:
             pass
 
 
-def open_folder(path) -> bool:
+def open_folder(path, parent=None) -> bool:
+    """Open a folder in the file manager. With parent, a failure (also one that
+    xdg-open or open reports a moment later) shows the path, copied to the clipboard."""
     path = str(Path(path))
+
+    def _failed():
+        if parent is None:
+            return
+        try:
+            parent.clipboard_clear()
+            parent.clipboard_append(path)
+        except Exception:
+            pass
+        show_message(parent, "EasyPAML", TEXTS["msg_open_folder_failed"].format(path=path), 'warning')
+
     try:
         if _ON_WIN:
             os.startfile(path)  # type: ignore[attr-defined]
-        elif sys.platform == 'darwin':
-            subprocess.Popen(['open', path])
-        else:
-            subprocess.Popen(['xdg-open', path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True
+            return True
+        cmd = ['open', path] if sys.platform == 'darwin' else ['xdg-open', path]
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
+        _failed()
         return False
+    if parent is not None:
+        def _check(tries=20):
+            code = proc.poll()
+            if code is None and tries:
+                parent.after(150, lambda: _check(tries - 1))
+            elif code:
+                _failed()
+        parent.after(150, _check)
+    return True
 
 
 class _Modal(ctk.CTkToplevel):

@@ -1624,7 +1624,7 @@ class App(ctk.CTk):
             self.append_log(TEXTS["log_no_output_folder"], 'warn')
             return
         self.output_folder.mkdir(parents=True, exist_ok=True)
-        open_folder(self.output_folder)
+        open_folder(self.output_folder, self)
 
     def _toggle_details(self):
         """Show or hide debug messages in the log."""

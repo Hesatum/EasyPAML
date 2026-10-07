@@ -388,7 +388,7 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
                       border_color=PALETTE['control_border'], text_color=PALETTE['text_primary'],
                       hover_color=PALETTE['bg_elevated'], corner_radius=RADIUS['field'],
                       font=self._font('sm', 'bold'),
-                      command=lambda: open_folder(self.output_folder)).pack(side='right', padx=(SPACE['md'], 0))
+                      command=lambda: open_folder(self.output_folder, self)).pack(side='right', padx=(SPACE['md'], 0))
         ctk.CTkButton(right, text=TEXTS["viewer_btn_recompute"], height=32,
                       fg_color='transparent', border_width=1,
                       border_color=PALETTE['control_border'], text_color=PALETTE['text_primary'],
