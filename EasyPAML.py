@@ -25,8 +25,17 @@ except ImportError:
           "  macOS (brew):  brew install python-tk\n"
           "The command line works without it: python3 easypaml_cli.py --help")
     sys.exit(1)
-try:
+def _import_app():
     from src.gui.main_gui import App
+    return App
+
+
+try:
+    from src.gui.splash import load_with_splash
+    try:
+        App = load_with_splash(_import_app)
+    except tkinter.TclError:     # no display for a splash window
+        App = _import_app()
 except ImportError as exc:
     print(f"Missing dependency: {exc}\n"
           "Run the installer (Linux/macOS: ./install.sh · Windows: install.bat)\n"

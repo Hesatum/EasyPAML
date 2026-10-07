@@ -788,6 +788,7 @@ class App(ctk.CTk):
 
     def __init__(self):
         super().__init__()
+        self.withdraw()          # shown complete at the end, not piece by piece
         from backend.version import __version__
         self.title(f"EasyPAML {__version__}")
         fit_to_screen(self, 1400, 850)
@@ -1298,6 +1299,8 @@ class App(ctk.CTk):
         self._poll_stop_count()
         self._refresh_visual_state()
         self.bind_all("<Control-q>", lambda e: self.destroy())
+        self.update_idletasks()
+        self.deiconify()
 
     # ── Appearance derived from the state ─────────
 

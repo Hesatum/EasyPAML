@@ -395,6 +395,7 @@ class Spinner:
                                           style='arc', outline=color or PALETTE['accent_fill'], width=width)
         self.angle = 90
         self.running = True
+        self._job = None
         self._tick()
 
     def _tick(self):
@@ -403,12 +404,18 @@ class Spinner:
         self.angle = (self.angle - 12) % 360
         try:
             self.canvas.itemconfigure(self.arc, start=self.angle)
-            self.canvas.after(30, self._tick)
+            self._job = self.canvas.after(30, self._tick)
         except Exception:
             self.running = False
 
     def stop(self):
         self.running = False
+        if self._job is not None:
+            try:
+                self.canvas.after_cancel(self._job)
+            except Exception:
+                pass
+            self._job = None
 
 
 class LoadingOverlay:
