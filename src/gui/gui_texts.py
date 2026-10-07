@@ -197,22 +197,6 @@ TEXTS_PT: dict[str, object] = {
     "pos_sel_criterion_short": "Critério: ω > 1.0  AND  p-valor < 0.05",
     "pos_sel_badge":           "* Positivo",
 
-    "viewer_tab_interpretation": "Candidatos e GO",
-    "go_tab_title":              "Candidatos e enriquecimento de GO",
-    "go_tab_criterion": (
-        "Candidatos: genes com q < 0,05 (Benjamini-Hochberg dentro de cada teste, os "
-        "mesmos q do painel) em M1a×M2a ou em M8a×M8. O M7×M8 só conta quando o "
-        "M8a×M8 não rodou, porque o M8 pode vencer o M7 só por sítios neutros. Genes "
-        "que falharam ficam fora. Enriquecimento de GO: Fisher exato, candidatos vs. "
-        "todos os genes testados, também corrigido por BH."
-    ),
-    "go_tab_load_button":    "Carregar anotação GO (.tsv)",
-    "go_tab_none_loaded":    "Nenhuma anotação carregada",
-    "go_tab_none_loaded_sub": "Carregue o TSV de anotação (colunas: gene_id_full, go_biological_process, go_cellular_component, go_molecular_function)",
-    "go_tab_no_candidates":  "Nenhum gene com LRT significativo neste resultado",
-    "go_tab_enrichment_header": "Termos GO enriquecidos entre os candidatos",
-    "go_tab_candidates_header": "Genes candidatos (ranqueados por p-valor)",
-    "go_tab_load_error":     "Falha ao carregar/processar a anotação",
 
     "sites_label_model":    "Modelo:",
     "sites_label_gene":     "Gene:",
@@ -831,22 +815,6 @@ TEXTS_EN: dict[str, object] = {
     "pos_sel_criterion_short": "Criterion: ω > 1.0  AND  p-value < 0.05",
     "pos_sel_badge":           "* Positive",
 
-    "viewer_tab_interpretation": "Candidates & GO",
-    "go_tab_title":              "Candidates and GO enrichment",
-    "go_tab_criterion": (
-        "Candidates: genes with q < 0.05 (Benjamini-Hochberg within each test, the "
-        "same q as in the panel) in M1a×M2a or in M8a×M8. M7×M8 only counts when "
-        "M8a×M8 was not run, because M8 can beat M7 through neutral sites alone. "
-        "Failed genes are left out. GO enrichment: Fisher exact test, candidates vs. "
-        "all tested genes, also BH-corrected."
-    ),
-    "go_tab_load_button":    "Load GO annotation (.tsv)",
-    "go_tab_none_loaded":    "No annotation loaded",
-    "go_tab_none_loaded_sub": "Load the annotation TSV (columns: gene_id_full, go_biological_process, go_cellular_component, go_molecular_function)",
-    "go_tab_no_candidates":  "No gene with significant LRT in this result",
-    "go_tab_enrichment_header": "GO terms enriched among candidates",
-    "go_tab_candidates_header": "Candidate genes (ranked by p-value)",
-    "go_tab_load_error":     "Failed to load/process the annotation",
 
     "sites_label_model":    "Model:",
     "sites_label_gene":     "Gene:",

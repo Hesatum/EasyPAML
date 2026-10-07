@@ -13,6 +13,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `LRT_results.txt` uses only q < 0.05 to call a result significant.
 - Positive Sites: chart of the sites along the CDS (exportable), and only significant
   genes in the gene list unless "Show all genes" is ticked.
+- Results panel: the Summary shows one test at a time with its chart and a sortable gene
+  table, and holds the exports; the LRT, Export and Candidates & GO tabs are gone
+  (copy the significant genes to an enrichment tool such as g:Profiler instead).
 
 ## [0.3.0] 2026-10-07
 

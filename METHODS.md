@@ -166,17 +166,20 @@ lengths as starting values for the site models (`fix_blength = 1`), with ω star
 from 0.2, 1.0 and 2.5 and the best lnL kept. Results are not guaranteed to match a
 fit from scratch.
 
-## Interpretation tab
+## Gene conclusion in the results panel
 
-A gene is a candidate when q < 0.05 in M1a vs M2a or in M8a vs M8, with the same p
-and q as `LRT_results.txt`. M7 vs M8 counts only when M8a vs M8 was not run. Failed
-genes are left out.
+Each gene gets one conclusion from its positive-selection tests (q < 0.05):
 
-GO enrichment uses Fisher's exact test for each term, candidates against all
-tested genes, for terms present in at least 2 candidates, with Benjamini-Hochberg
-correction across terms. The annotation is a user TSV with the columns
-`gene_id_full`, `go_biological_process`, `go_cellular_component` and
-`go_molecular_function`.
+| Conclusion | When |
+|---|---|
+| Positive selection | M8 vs M8a or M2a vs M1a significant, with at least one BEB site at Pr(ω>1) ≥ 0.95 |
+| Weak signal | a test significant but no site at Pr(ω>1) ≥ 0.95 |
+| Not supported | M8 vs M7 significant but M8 vs M8a not (and M2a vs M1a not) |
+| Possible (no M8a) | M8 vs M7 significant and M8a not run |
+| No selection | no test significant |
+
+"Copy significant genes" copies the genes with "Positive selection" for the selected
+site test, or the genes significant in the selected branch or branch-site test.
 
 ## Citing
 

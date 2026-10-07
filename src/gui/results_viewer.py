@@ -424,11 +424,9 @@ class ResultsViewerWindow(SummaryTab, ctk.CTkToplevel):
             tabs.add(TEXTS["viewer_tab_branchsite_classes"])
 
         tabs.add(TEXTS["viewer_tab_branch"])
-        tabs.add(TEXTS["viewer_tab_interpretation"])
 
         self._create_summary_tab(tabs.tab(TEXTS["viewer_tab_summary"]))
         self._create_sites_tab(tabs.tab(TEXTS["viewer_tab_sites"]))
-        self._create_go_interpretation_tab(tabs.tab(TEXTS["viewer_tab_interpretation"]))
 
         if branchsite_cols:
             self._create_branchsite_class_tab(tabs.tab(TEXTS["viewer_tab_branchsite_classes"]))
@@ -667,87 +665,6 @@ class ResultsViewerWindow(SummaryTab, ctk.CTkToplevel):
             groups.setdefault(why, []).append(model)
         return "\n".join((", ".join(x for x in ms if x) + ": " if any(ms) else "") + why
                          for why, ms in groups.items())
-
-    def _create_go_interpretation_tab(self, parent):
-        """Interpretation tab: candidate genes and GO enrichment (see go_enrichment)."""
-        info = ctk.CTkFrame(parent, fg_color=PALETTE['bg_elevated'], corner_radius=8)
-        info.pack(fill='x', padx=10, pady=(10, 2))
-        ctk.CTkLabel(info, text=TEXTS["go_tab_title"], font=(FONT_UI, 11, "bold"),
-                     text_color=self.COLORS['accent_blue_light']).pack(side="left", padx=14, pady=(10, 2))
-        ctk.CTkLabel(info, text=TEXTS["go_tab_criterion"], font=(FONT_UI, 11),
-                     text_color=self.COLORS['text_tertiary'], wraplength=900,
-                     justify='left').pack(anchor='w', padx=14, pady=(0, 10))
-
-        body = ctk.CTkFrame(parent, fg_color='transparent')
-        body.pack(fill='both', expand=True, padx=10, pady=(0, 10))
-
-        def render(annotation_path=None):
-            for w in body.winfo_children():
-                w.destroy()
-
-            if annotation_path is None:
-                empty = ctk.CTkFrame(body, fg_color='transparent')
-                empty.pack(expand=True)
-                ctk.CTkLabel(empty, text=TEXTS["go_tab_none_loaded"], font=(FONT_UI, 13, "bold"),
-                             text_color=self.COLORS['text_tertiary']).pack(pady=(40, 4))
-                ctk.CTkLabel(empty, text=TEXTS["go_tab_none_loaded_sub"], font=(FONT_UI, 11),
-                             text_color=self.COLORS['text_muted'], wraplength=700).pack(pady=(0, 14))
-                ctk.CTkButton(empty, text=TEXTS["go_tab_load_button"], width=220, height=36,
-                              fg_color=self.COLORS['accent_blue'], font=(FONT_UI, 11, "bold"),
-                              corner_radius=8, command=pick_file).pack()
-                return
-
-            try:
-                from src.backend.go_enrichment import rank_candidates
-                candidates, go_table = rank_candidates(self.output_folder / 'analysis_summary.tsv', annotation_path)
-            except Exception as e:
-                ctk.CTkLabel(body, text=f"{TEXTS['go_tab_load_error']}: {e}", font=(FONT_UI, 11),
-                             text_color=PALETTE['danger_text'], wraplength=900).pack(pady=30)
-                return
-
-            if candidates.empty:
-                ctk.CTkLabel(body, text=TEXTS["go_tab_no_candidates"], font=(FONT_UI, 12, "bold"),
-                             text_color=self.COLORS['text_tertiary']).pack(pady=40)
-                return
-
-            scroll = ctk.CTkScrollableFrame(body, fg_color='transparent', corner_radius=8)
-            scroll.pack(fill='both', expand=True)
-
-            if not go_table.empty:
-                ctk.CTkLabel(scroll, text=TEXTS["go_tab_enrichment_header"], font=(FONT_UI, 11, "bold"),
-                             text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(4, 4))
-                for _, row in go_table.head(15).iterrows():
-                    line = (f"{row['description']}  ({row['go_id']})  ·  "
-                            f"{row['n_candidates']}/{len(candidates)} candidatos  ·  "
-                            f"q = {self._fmt_pval(row['q_value'])} (p = {self._fmt_pval(row['p_value'])})")
-                    ctk.CTkLabel(scroll, text=line, font=(FONT_UI, 11),
-                                 text_color=self.COLORS['text_tertiary'], anchor='w').pack(anchor='w', pady=1)
-
-            ctk.CTkLabel(scroll, text=TEXTS["go_tab_candidates_header"], font=(FONT_UI, 11, "bold"),
-                         text_color=self.COLORS['text_secondary']).pack(anchor='w', pady=(16, 6))
-
-            for _, row in candidates.iterrows():
-                card = ctk.CTkFrame(scroll, fg_color=PALETTE['success_subtle'], corner_radius=12,
-                                     border_width=1, border_color=PALETTE['success_fill'])
-                card.pack(fill='x', pady=4, padx=4)
-                ctk.CTkFrame(card, fg_color=PALETTE['success_fill'], width=5, corner_radius=2).pack(
-                    side="left", fill="y", padx=(6, 0), pady=8)
-                content = ctk.CTkFrame(card, fg_color='transparent')
-                content.pack(side="left", fill="both", expand=True, padx=14, pady=10)
-                ctk.CTkLabel(content, text=f"{row['Gene']}   ·   {row.get('test') or ''}   ·   "
-                                            f"q = {self._fmt_pval(row['q_value'])} "
-                                            f"(p = {self._fmt_pval(row['p_value'])})",
-                             font=(FONT_UI, 12, "bold"), text_color=PALETTE['success_fg']).pack(anchor='w')
-                ctk.CTkLabel(content, text=row['go_terms'], font=(FONT_UI, 11),
-                             text_color=PALETTE['success_fg'], wraplength=850, justify='left').pack(anchor='w', pady=(3, 0))
-
-        def pick_file():
-            path = ask_open_file(self, TEXTS["go_tab_load_button"], self.output_folder,
-                                 filetypes=[("TSV", "*.tsv *.txt *.csv")])
-            if path:
-                render(Path(path))
-
-        render(None)
 
     def _create_sites_tab(self, parent):
         """Positive sites tab: BEB/NEB sites with alignment and codeml numbering."""

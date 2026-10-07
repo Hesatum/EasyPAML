@@ -117,7 +117,6 @@ The results panel has these tabs:
   codeml file (they differ when columns with gaps or stop codons are removed), amino
   acid, Pr(ω>1) and mean ω ± SE. The chart is drawn only when you open a gene; "Export
   figure…" saves it, and the table can be copied or exported as TSV.
-- Candidates & GO: significant genes, and GO enrichment (Fisher's exact test) if you load a GO annotation TSV.
 
 > The mean ω of a gene is not a criterion for positive selection. It stays below 1
 > even when a few sites are under strong selection. Use the LRT (q) and the site table.

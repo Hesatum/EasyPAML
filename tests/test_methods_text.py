@@ -1,4 +1,4 @@
-"""methods_text.txt, the version commit and the Interpretation tab criteria."""
+"""methods_text.txt and the version commit."""
 from src.backend.methods_text import build_methods_text
 from src.backend.version import source_commit, version_string
 
@@ -39,29 +39,3 @@ def test_version_string_has_commit_in_a_clone():
     assert c is None or len(c.split('-')[0]) == 40
     if c:
         assert f"commit {c[:7]}" in version_string()
-
-
-def test_interpretation_candidates_use_panel_q_and_m8a(tmp_path):
-    """Candidates use the panel q-values and M8a vs M8, and failed genes are left out."""
-    from src.backend.go_enrichment import rank_candidates
-    tsv = tmp_path / 'analysis_summary.tsv'
-    tsv.write_text(
-        "Gene\tstatus\tp_M7_vs_M8\tq_M7_vs_M8\tp_M8a_vs_M8\tq_M8a_vs_M8\n"
-        "gA\tok\t1e-10\t1e-9\t1e-8\t1e-7\n"        # candidate through M8a vs M8
-        "gB\tok\t1e-10\t1e-9\t0.4\t0.6\n"           # only M7 vs M8 (neutral sites): not a candidate
-        "gC\tfailed\t1e-20\t1e-19\t1e-20\t1e-19\n"  # failed: left out
-    )
-    ann = tmp_path / 'go.tsv'
-    ann.write_text("gene_id_full\tgo_biological_process\tgo_cellular_component\tgo_molecular_function\n"
-                   "gA\t\t\t\ngB\t\t\t\ngC\t\t\t\n")
-    cand, _ = rank_candidates(tsv, ann)
-    assert list(cand['Gene']) == ['gA']
-    assert cand.iloc[0]['test'] == 'M8 vs M8a' and abs(cand.iloc[0]['q_value'] - 1e-7) < 1e-12
-
-
-def test_go_enrichment_q_values(tmp_path):
-    from src.backend.go_enrichment import enrich
-    gene_to_go = {f"g{i}": ({'GO:1': 'term one'} if i < 10 else {'GO:2': 'term two'}) for i in range(40)}
-    table = enrich({f"g{i}" for i in range(8)}, set(gene_to_go), gene_to_go)
-    assert list(table['go_id'])[0] == 'GO:1'
-    assert ((table['q_value'] >= table['p_value']) & (table['p_value'] <= 1)).all()
