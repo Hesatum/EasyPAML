@@ -4,7 +4,7 @@ Positive Sites tab."""
 
 import tkinter as tk
 from tkinter import ttk
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import customtkinter as ctk
 import numpy as np

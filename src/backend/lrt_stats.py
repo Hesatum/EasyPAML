@@ -6,7 +6,7 @@ p-values use chi2.sf: 1 - chi2.cdf(x) rounds to 0.0 for large x, sf stays
 accurate down to about 1e-300.
 """
 
-from typing import Dict, List, Optional, Sequence
+from typing import List, Optional, Sequence
 
 import numpy as np
 from scipy import stats

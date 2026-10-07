@@ -32,7 +32,7 @@ from src.backend import messages
 from src.backend.codeml_backend import CodemlBatchAnalysis, codeml_version, find_codeml
 from src.backend.ctl_params import CODONFREQ_OPTIONS, DEFAULT_CODONFREQ, codonfreq_label
 from src.backend.preflight import run_preflight
-from src.backend.version import __version__, version_string
+from src.backend.version import version_string
 
 VALID_MODELS = {'M0', 'M1a', 'M2a', 'M7', 'M8', 'M8a', 'Branch', 'Branch-site', 'Branch-site_null'}
 _CODONFREQ_HELP = ", ".join(f"{v}={n}" for v, n, _ in CODONFREQ_OPTIONS)

@@ -9,26 +9,19 @@ import pandas as pd
 import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-from matplotlib.colors import TwoSlopeNorm, LinearSegmentedColormap
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from scipy import stats
 import re
-import sys
 import threading
 from html import escape as html_escape
-from src.backend.branch_extractor import BranchExtractor
 from src.backend import lrt_stats
 from src.backend.site_map import attach_original_positions
 from src.backend.version import version_string
 from . import charts
 from .summary_tab import SummaryTab, ensure_tree_style, gene_verdict
 from .branch_tab import BranchTab
-from .gui_texts import TEXTS, get_language, tr
+from .gui_texts import TEXTS, tr
 from .ui_helpers import (CURRENT_THEME, FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE, fit_to_screen,
-                         add_tooltip, LoadingOverlay, ask_open_file, ask_save_file, hover_tint, mix, open_folder,
-                         show_message)
+                         add_tooltip, LoadingOverlay, ask_save_file, open_folder, show_message)
 
 
 class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
@@ -73,35 +66,6 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
     @staticmethod
     def _mono(size: str = 'sm', weight: str = 'normal'):
         return (FONT_MONO, FONT_SIZE[size], weight)
-
-    def _fit(self, text: str, px: int, font) -> str:
-        """Shorten text with '…' to fit a width in pixels."""
-        import tkinter.font as tkfont
-        scale = ctk.ScalingTracker.get_widget_scaling(self)
-        cache = self.__dict__.setdefault('_tkfonts', {})
-        f = cache.get(font)
-        if f is None:   # CTk font sizes are pixels (negative in Tk)
-            f = cache[font] = tkfont.Font(family=font[0], size=-round(font[1] * scale),
-                                          weight='bold' if 'bold' in font[2:] else 'normal')
-        px = int(px * scale)
-        if f.measure(text) <= px:
-            return text
-        while text and f.measure(text + '…') > px:
-            text = text[:-1]
-        return text + '…'
-
-    @staticmethod
-    def _chip(parent, text: str, kind: str = 'neutral', font=None):
-        """Verdict chip: tinted background with text of the same colour family."""
-        fg, bg = {
-            'success': (PALETTE['success_fg'], PALETTE['success_subtle']),
-            'warning': (PALETTE['warning_fg'], PALETTE['warning_subtle']),
-            'danger': (PALETTE['danger_fg'], PALETTE['danger_subtle']),
-            'neutral': (PALETTE['text_secondary'], PALETTE['bg_elevated']),
-        }[kind]
-        return ctk.CTkLabel(parent, text=text, text_color=fg, fg_color=bg,
-                            corner_radius=RADIUS['field'] - 2, height=22, padx=SPACE['sm'],
-                            font=font or (FONT_UI, FONT_SIZE['xs'], 'bold'))
 
     @staticmethod
     def _style_combo(combo):
@@ -242,8 +206,6 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
     def _recover_missing_omegas(self):
         """Fill missing ω values from the result files."""
         from src.backend.sites_parser import SitesParser
-        from pathlib import Path
-        
         omega_cols = [col for col in self.df.columns if '_omega' in col]
         
         for omega_col in omega_cols:
@@ -308,46 +270,6 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
                     self.tag_columns[model]['lnL'][tag] = col
         
         print(f"Tags detected: {self.tag_columns}")
-    
-    def _format_branchsite_class_data(self, gene_idx: int) -> str:
-        """Branch-site class values as text."""
-        row = self.df.iloc[gene_idx]
-        
-        class_cols = [col for col in self.df.columns if 'Branch-site_class' in col and 'null' not in col]
-        
-        if not class_cols:
-            return "N/A"
-        
-        classes = {}
-        for col in class_cols:
-            parts = col.replace('Branch-site_class', '').split('_', 1)
-            if len(parts) == 2:
-                cls, metric = parts
-                if cls not in classes:
-                    classes[cls] = {}
-                classes[cls][metric] = row[col]
-        
-        lines = ["Branch-site Classes:"]
-        
-        for cls in ['0', '1', '2a', '2b']:
-            if cls in classes:
-                data = classes[cls]
-                fg_w = data.get('fg_w', 'N/A')
-                prop = data.get('prop', 'N/A')
-                
-                if isinstance(fg_w, float):
-                    fg_w_str = f"{fg_w:.5f}"
-                else:
-                    fg_w_str = str(fg_w)
-                
-                if isinstance(prop, float):
-                    prop_str = f"{prop:.5f}"
-                else:
-                    prop_str = str(prop)
-                
-                lines.append(f"  Class {cls}: prop={prop_str}, fg_w={fg_w_str}")
-        
-        return "\n".join(lines)
     
     @staticmethod
     def _fmt_pval(p: float) -> str:
@@ -959,59 +881,6 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
             tree.insert('', 'end', values=cells, tags=tags)
         return df_f
 
-    def _parse_sites_manual(self, filepath: Path, method: str):
-        """Minimal parser used when SitesParser fails."""
-        df_sites = pd.DataFrame()
-        omega_global = None
-        
-        try:
-            with open(filepath, 'r') as f:
-                content = f.read()
-            
-            try:
-                from src.backend.sites_parser import SitesParser
-                omega_global = SitesParser.extract_omega_robust(str(filepath))
-            except Exception:
-                omega_match = re.search(r'omega \(dN/dS\)\s*=\s*([\d.]+)', content)
-                if omega_match:
-                    omega_global = float(omega_match.group(1))
-            
-            if method == 'BEB':
-                pattern = r'(\d+)\s+([A-Z])\s+([\d.]+)\*{0,2}\s+([\d.]+)\+?-\s+([\d.]+)'
-            else:
-                pattern = r'(\d+)\s+([A-Z])\s+([\d.]+)'
-            
-            sites_data = []
-            for match in re.finditer(pattern, content):
-                if method == 'BEB':
-                    pos, aa, prob, mean, se = match.groups()
-                    sites_data.append({
-                        'position': int(pos),
-                        'amino_acid': aa,
-                        'pr_w_gt_1': float(prob),
-                        'post_mean': float(mean),
-                        'omega_lower': float(mean) - float(se),
-                        'omega_upper': float(mean) + float(se),
-                        'is_significant_95': float(prob) >= 0.95,
-                        'is_significant_99': float(prob) >= 0.99
-                    })
-                else:
-                    pos, aa, omega = match.groups()
-                    sites_data.append({
-                        'position': int(pos),
-                        'amino_acid': aa,
-                        'pr_w_gt_1': 1.0 if float(omega) > 1 else 0.0,
-                        'post_mean': float(omega),
-                        'is_significant_95': False,
-                        'is_significant_99': False
-                    })
-            
-            df_sites = pd.DataFrame(sites_data)
-        except Exception as e:
-            print(f"[ERR] Fallback parser: {e}")
-        
-        return df_sites, omega_global
-    
     def _create_branchsite_class_tab(self, parent):
         """Branch-site class tab."""
         ctrl_frame = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_card'],

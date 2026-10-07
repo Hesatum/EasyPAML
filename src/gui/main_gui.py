@@ -8,7 +8,6 @@ import io
 import sys
 import os
 import re
-import signal
 import platform as _platform
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -893,18 +892,6 @@ class App(ctk.CTk):
             inner = ctk.CTkFrame(sec, fg_color='transparent')
             inner.pack(fill='x', pady=(sp['sm'], 0))
             return inner, circle, side
-
-        def _obtn(parent, text, cmd, **kw):
-            """Outlined secondary button."""
-            return ctk.CTkButton(
-                parent, text=text, command=cmd,
-                fg_color=C['bg_card'],
-                hover_color=C['bg_card_hover'],
-                text_color=C['text_primary'],
-                text_color_disabled=C['text_tertiary'],
-                border_width=1, border_color=C['border'],
-                font=(_FONT_UI, fs['md'], "bold"), height=36,
-                corner_radius=RADIUS['card'], **kw)
 
         def _help(parent, title_key, hint_key, fill=None, command=None):
             """The '?' help button."""
@@ -2038,7 +2025,6 @@ class App(ctk.CTk):
         
         info_window.configure(fg_color=self.COLORS['bg_dark'])
 
-        display_name = self.codeml_backend.MODEL_CONFIGS[model_code].get('display_name', model_code)
         header = ctk.CTkLabel(info_window, 
                              text=f"{model_code} - {model_info.get('full_name', '')}",
                              font=(_FONT_UI, FONT_SIZE['lg'], "bold"), anchor='w', justify='left',

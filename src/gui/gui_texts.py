@@ -36,9 +36,6 @@ TEXTS_PT: dict[str, object] = {
     # ── App (main window) ────────────────────────────────────
     "app_sidebar_title":    "EasyPAML",
 
-    "section_files":   "ARQUIVOS",
-    "section_results": "RESULTADOS",
-    "section_config":  "CONFIGURAÇÕES",
 
     "btn_input_folder":  "Pasta de alinhamentos",
     "btn_tree_file":     "Arquivo de árvore",
@@ -175,44 +172,23 @@ TEXTS_PT: dict[str, object] = {
     "viewer_btn_recompute": "Recalcular resumos",
 
     "viewer_tab_lrt":                "LRT e p-valores",
-    "viewer_tab_omega":              "ω > 1 Global",
     "viewer_tab_sites":              "Sítios sob seleção",
     "viewer_tab_branchsite_classes": "Classes branch-site",
     "viewer_tab_branch":             "Análise de ramos",
 
     "stats_total_genes":        "Genes",
     "stats_models_run":         "Modelos rodados",
-    "stats_positive_selection": "Seleção positiva global",
-    "stats_avg_omega":          "ω Médio",
-
-    "lrt_no_comparisons": "Nenhuma comparação LRT disponível",
-    "lrt_label_model":    "Teste:",
 
 
-    "lrt_no_data_for_comparison": "Nenhum dado de LRT para esta comparação",
 
-    "lrt_footer_template": (
-        "Total: {total} genes  ·  "
-        "significativos (q < 0,05, BH): {sig}  ·  "
-        "df = {df}  ·  "
-        "p em notação científica; q = p corrigido por Benjamini-Hochberg"
-    ),
 
-    "pos_sel_tab_title": "Seleção global: ω > 1 no gene inteiro",
-    "pos_sel_tab_criterion": (
-        "Critério: ω médio do modelo M2a ou M8 > 1.0  AND  LRT p < 0.05  ·  "
-        "Diferente de seleção em sítios específicos (aba Sítios Positivos)"
-    ),
-    "pos_sel_none_found":      "Nenhum sinal de seleção positiva detectado",
-    "pos_sel_criterion_short": "Critério: ω > 1.0  AND  p-valor < 0.05",
-    "pos_sel_badge":           "* Positivo",
+
 
 
     "sites_label_model":    "Modelo:",
     "sites_label_gene":     "Gene:",
     "sites_label_analysis": "Análise:",
     "sites_label_filter":   "Filtrar Pr(w>1) ≥",
-    "sites_btn_update":     "Atualizar",
 
     "sites_file_not_found": "Arquivo não encontrado: {filename}",
     "sites_parse_error":    "Erro ao ler o arquivo:\n{error}",
@@ -282,8 +258,6 @@ TEXTS_PT: dict[str, object] = {
     "log_no_output_folder":   "Selecione uma pasta de resultados primeiro.\n",
     
     "log_analysis_start":     "Iniciando a análise…\n",
-    "log_analysis_stopped":   "Análise interrompida.\n",
-    "log_analysis_done":      "Análise terminada.\n",
 
     # ── App file dialogs ────────────────────────────────────────
     "dialog_select_results_folder": "Escolha uma pasta de resultados do EasyPAML para abrir",
@@ -296,13 +270,6 @@ TEXTS_PT: dict[str, object] = {
 
     # ── ResultsViewerWindow — mensagens inline ───────────────────────────
     "viewer_genes_loaded":      "{n} gene(s) carregado(s)",
-    "viewer_gene_not_found":    "Gene não encontrado.",
-    "viewer_branch_no_file":    "Arquivo de resultados do modelo Branch não encontrado.",
-    "viewer_branch_read_err":   "Erro ao ler tabela: {error}",
-    "viewer_branch_no_table":   "Tabela dN & dS não encontrada no arquivo.",
-    "viewer_branch_invalid":    "Dados inválidos.",
-    "viewer_lrt_parse_err":     "Não foi possível ler esta comparação.",
-    "viewer_sites_subtitle":    "Modelo: {model}  ·  Análise: {method}  ·  {omega}",
     "viewer_sites_count":       "{n} sítio(s)",
 
     # ── ResultsViewerWindow — caixas de mensagem ─────────────────────────
@@ -321,7 +288,6 @@ TEXTS_PT: dict[str, object] = {
     "dialog_save_as":           "Salvar como",
 
     # ── Charts (matplotlib) ─────────────────────────────────────────────
-    "chart_whole_gene":         "gene inteiro",
     "chart_positive_class":     "classe positiva",
     "chart_hint":               "Passe o mouse sobre o eixo x para ver os genes. Laranja: q < 0,05.",
 
@@ -484,12 +450,10 @@ TEXTS_PT: dict[str, object] = {
     "lang_restart_title": "Idioma",
     "viewer_tab_summary": "Resumo",
     "viewer_btn_open_output": "Abrir pasta de resultados",
-    "stats_sig_genes": "Genes com seleção positiva (q < 0,05)",
     "loading_results": "Carregando os resultados…",
     "loading_app": "Carregando…",
     "stats_sig_short": "q < 0,05:",
     "stats_failed": "Genes que falharam",
-    "summary_title": "Uma linha por gene e por teste",
     "summary_explain": (
         "q é o p corrigido para o número de genes (Benjamini-Hochberg); q < 0,05 é significativo. "
         "Com um gene só não há o que corrigir e q = p. "
@@ -583,8 +547,6 @@ TEXTS_PT: dict[str, object] = {
         ("Branch-site_null", "Branch-site"): "H₀: ω = 1 no foreground   ·   H₁: sítios com ω > 1 nos ramos marcados (#1)",
         ("M0", "Branch"): "H₀ M0: um ω para todos os ramos   ·   H₁ Branch: um ω por grupo de ramos marcado",
         ("M0", "M1a"): "H₀ M0: um ω para todos os sítios   ·   H₁ M1a: classes com ω < 1 e ω = 1"},
-    "summary_sig": "{test}: significativo (p = {p}, q = {q}), {sites} sítio(s) com Pr(ω>1) ≥ 0,95",
-    "summary_nonsig": "{test}: não significativo (p = {p}, q = {q})",
     "summary_posclass": "classe positiva: ω = {w}, p₁ = {p1}",
     "conclusion_supported": "Seleção positiva sustentada: {tests} significativo(s) (q < 0,05){sites}.",
     "conclusion_sites": ", {n} sítio(s) com Pr(ω>1) ≥ 0,95",
@@ -617,32 +579,8 @@ TEXTS_PT: dict[str, object] = {
     "sites_btn_export": "Exportar TSV…",
     "sites_btn_figure": "Exportar figura…",
     "sites_copied": "{n} sítio(s) copiado(s) para a área de transferência.",
-    "lrt_headers": ["Gene", "lnL nulo", "lnL alternativo", "2Δℓ", "p", "q (BH)", "ω classe + (p₁)", "Sig."],
-    "lrt_plain": (
-        "Cada linha compara dois modelos do mesmo gene. Um q pequeno (< 0,05) quer dizer que o "
-        "modelo com seleção positiva explica os dados claramente melhor. Passe o mouse nos "
-        "títulos das colunas para ver o que cada uma significa."
-    ),
-    "lrt_header_hints": [
-        "Nome do gene (arquivo de alinhamento).",
-        "lnL do modelo nulo (sem seleção positiva). lnL é o log da verossimilhança: quanto maior "
-        "(menos negativo), melhor o modelo explica os dados.",
-        "lnL do modelo alternativo (com uma classe que pode ter ω > 1).",
-        "2Δℓ = 2 × (lnL alternativo − lnL nulo): quanto o modelo alternativo melhora o ajuste. "
-        "É a estatística do teste (LRT).",
-        "p: probabilidade de uma melhora assim aparecer sem seleção positiva, pela distribuição χ².",
-        "q: o p corrigido para os muitos genes testados (Benjamini-Hochberg). É o número que "
-        "decide: q < 0,05 é significativo.",
-        "ω e proporção (p₁) da classe de sítios que pode estar sob seleção positiva.",
-        "Significativo (q < 0,05)?",
-    ],
-    "lrt_sig_yes": "sim",
-    "lrt_sig_no": "não",
     "summary_verdict_sig": "significativo",
     "summary_verdict_nonsig": "não significativo",
-    "summary_verdict_failed": "FALHOU",
-    "summary_verdict_warning": "AVISO",
-    "summary_sites_n": "{n} sítio(s) com Pr(ω>1) ≥ 0,95",
     # ── Main window: steps, cards, summary ──
     "app_main_title":     "Análise de seleção",
     "app_main_subtitle":  "Processamento do codeml em lote",
@@ -706,9 +644,6 @@ TEXTS_EN: dict[str, object] = {
     # ── Section 3 — App (main window) ───────────────────────────────────────
     "app_sidebar_title":    "EasyPAML",
 
-    "section_files":   "FILES",
-    "section_results": "RESULTS",
-    "section_config":  "SETTINGS",
 
     "btn_input_folder":   "Alignments folder",
     "btn_tree_file":      "Tree file",
@@ -846,44 +781,23 @@ TEXTS_EN: dict[str, object] = {
     "viewer_btn_recompute": "Recompute summaries",
 
     "viewer_tab_lrt":                "LRT and p-values",
-    "viewer_tab_omega":              "ω > 1 Global",
     "viewer_tab_sites":              "Positive sites",
     "viewer_tab_branchsite_classes": "Branch-site Classes",
     "viewer_tab_branch":             "Branch analysis",
 
     "stats_total_genes":        "Genes",
     "stats_models_run":         "Models run",
-    "stats_positive_selection": "Global positive selection",
-    "stats_avg_omega":          "Average ω",
-
-    "lrt_no_comparisons": "No LRT comparison available",
-    "lrt_label_model":    "Test:",
 
 
-    "lrt_no_data_for_comparison": "No LRT data for this comparison",
 
-    "lrt_footer_template": (
-        "Total: {total} genes  ·  "
-        "significant (q < 0.05, BH): {sig}  ·  "
-        "df = {df}  ·  "
-        "p in scientific notation; q = Benjamini-Hochberg corrected p"
-    ),
 
-    "pos_sel_tab_title": "Global selection: ω > 1 across the whole gene",
-    "pos_sel_tab_criterion": (
-        "Criterion: mean ω from M2a or M8 > 1.0  AND  LRT p < 0.05  ·  "
-        "Different from site-specific selection (Positive sites tab)"
-    ),
-    "pos_sel_none_found":      "No positive selection signal detected",
-    "pos_sel_criterion_short": "Criterion: ω > 1.0  AND  p-value < 0.05",
-    "pos_sel_badge":           "* Positive",
+
 
 
     "sites_label_model":    "Model:",
     "sites_label_gene":     "Gene:",
     "sites_label_analysis": "Analysis:",
     "sites_label_filter":   "Filter Pr(w>1) ≥",
-    "sites_btn_update":     "Update",
 
     "sites_file_not_found": "File not found: {filename}",
     "sites_parse_error":    "Error reading the file:\n{error}",
@@ -953,8 +867,6 @@ TEXTS_EN: dict[str, object] = {
     "log_no_output_folder":   "Choose a results folder first.\n",
     
     "log_analysis_start":     "Starting the analysis…\n",
-    "log_analysis_stopped":   "Analysis stopped.\n",
-    "log_analysis_done":      "Analysis finished.\n",
 
     # ── App — file dialogs ───────────────────────────────────────────────
     "dialog_select_results_folder": "Choose an EasyPAML results folder to open",
@@ -967,13 +879,6 @@ TEXTS_EN: dict[str, object] = {
 
     # ── ResultsViewerWindow — inline messages ────────────────────────────
     "viewer_genes_loaded":      "{n} gene(s) loaded",
-    "viewer_gene_not_found":    "Gene not found.",
-    "viewer_branch_no_file":    "Branch results file not found.",
-    "viewer_branch_read_err":   "Error reading table: {error}",
-    "viewer_branch_no_table":   "dN & dS table not found in file.",
-    "viewer_branch_invalid":    "Invalid data.",
-    "viewer_lrt_parse_err":     "Could not read this comparison.",
-    "viewer_sites_subtitle":    "Model: {model}  ·  Analysis: {method}  ·  {omega}",
     "viewer_sites_count":       "{n} site(s)",
 
     # ── ResultsViewerWindow — messageboxes ───────────────────────────────
@@ -992,7 +897,6 @@ TEXTS_EN: dict[str, object] = {
     "dialog_save_as":           "Save as",
 
     # ── Charts (matplotlib) ───────────────────────────────────────────────
-    "chart_whole_gene":         "whole gene",
     "chart_positive_class":     "positive class",
     "chart_hint":               "Move the mouse along the x axis to see the genes. Orange: q < 0.05.",
 
@@ -1155,12 +1059,10 @@ TEXTS_EN: dict[str, object] = {
     "lang_restart_title": "Language",
     "viewer_tab_summary": "Summary",
     "viewer_btn_open_output": "Open results folder",
-    "stats_sig_genes": "Genes with positive selection (q < 0.05)",
     "loading_results": "Loading results…",
     "loading_app": "Loading…",
     "stats_sig_short": "q < 0.05:",
     "stats_failed": "Genes that failed",
-    "summary_title": "One line per gene and test",
     "summary_explain": (
         "q is p corrected for the number of genes (Benjamini-Hochberg); q < 0.05 is significant. "
         "With a single gene there is nothing to correct and q = p. "
@@ -1254,8 +1156,6 @@ TEXTS_EN: dict[str, object] = {
         ("Branch-site_null", "Branch-site"): "H₀: ω = 1 on the foreground   ·   H₁: sites with ω > 1 on the labelled branches (#1)",
         ("M0", "Branch"): "H₀ M0: one ω for all branches   ·   H₁ Branch: one ω per labelled branch group",
         ("M0", "M1a"): "H₀ M0: one ω for all sites   ·   H₁ M1a: classes with ω < 1 and ω = 1"},
-    "summary_sig": "{test}: significant (p = {p}, q = {q}), {sites} site(s) with Pr(ω>1) ≥ 0.95",
-    "summary_nonsig": "{test}: not significant (p = {p}, q = {q})",
     "summary_posclass": "positive class: ω = {w}, p₁ = {p1}",
     "conclusion_supported": "Positive selection supported: {tests} significant (q < 0.05){sites}.",
     "conclusion_sites": ", {n} site(s) with Pr(ω>1) ≥ 0.95",
@@ -1288,33 +1188,8 @@ TEXTS_EN: dict[str, object] = {
     "sites_btn_export": "Export TSV…",
     "sites_btn_figure": "Export figure…",
     "sites_copied": "{n} site(s) copied to the clipboard.",
-    "lrt_headers": ["Gene", "lnL null", "lnL alternative", "2Δℓ", "p", "q (BH)", "positive-class ω (p₁)", "Sig."],
-    "lrt_plain": (
-        "Each line compares two models of the same gene. A small q (< 0.05) means the model "
-        "with positive selection explains the data clearly better. Move the mouse over a column "
-        "title to see what it means."
-    ),
-    "lrt_header_hints": [
-        "Gene name (alignment file).",
-        "lnL of the null model (no positive selection). lnL is the log-likelihood: the higher "
-        "(less negative), the better the model explains the data.",
-        "lnL of the alternative model (with a class of sites that may have ω > 1).",
-        "2Δℓ = 2 × (alternative lnL − null lnL): how much the alternative model improves the "
-        "fit. It is the test statistic (LRT).",
-        "p: the chance of an improvement this large without positive selection, from the χ² "
-        "distribution.",
-        "q: p corrected for the many genes tested (Benjamini-Hochberg). This is the number that "
-        "decides: q < 0.05 is significant.",
-        "ω and proportion (p₁) of the class of sites that may be under positive selection.",
-        "Significant (q < 0.05)?",
-    ],
-    "lrt_sig_yes": "yes",
-    "lrt_sig_no": "no",
     "summary_verdict_sig": "significant",
     "summary_verdict_nonsig": "not significant",
-    "summary_verdict_failed": "FAILED",
-    "summary_verdict_warning": "WARNING",
-    "summary_sites_n": "{n} site(s) with Pr(ω>1) ≥ 0.95",
     # ── Main window (2nd visual pass): steps, tiles, summary ──
     "app_main_title":     "Selection Analysis",
     "app_main_subtitle":  "codeml batch processing",

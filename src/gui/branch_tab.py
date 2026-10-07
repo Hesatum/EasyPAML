@@ -16,7 +16,7 @@ from src.backend import lrt_stats
 
 from . import charts
 from .gui_texts import TEXTS
-from .ui_helpers import (CURRENT_THEME, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE,
+from .ui_helpers import (CURRENT_THEME, PALETTE, RADIUS, SPACE,
                          ask_save_file, show_message)
 from .summary_tab import CHART_FORMATS, ensure_tree_style
 
@@ -248,7 +248,7 @@ class BranchTab:
                 sig = pd.notna(q) and q < 0.05
                 parts.append(f"{pair[1]} vs {pair[0].replace('_null', ' null')}: 2Δℓ {max(0.0, lrt):.2f}, "
                              f"p {lrt_stats.format_p(p)}, q {lrt_stats.format_p(q)}"
-                             f" — {TEXTS['summary_verdict_sig'] if sig else TEXTS['summary_verdict_nonsig']}")
+                             f", {TEXTS['summary_verdict_sig'] if sig else TEXTS['summary_verdict_nonsig']}")
         self._br_tests.configure(text="   ·   ".join(parts))
 
         root = self._branch_tree(gene)

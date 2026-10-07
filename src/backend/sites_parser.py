@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 import pandas as pd
 import numpy as np
 
@@ -388,37 +388,6 @@ class SitesParser:
             return {}
     
     @staticmethod
-    def parse_sites_from_results_folder(output_folder: Path, models: List[str] = None) -> Dict[str, Dict]:
-        """{gene: {model: site table}} for the given models (all by default)."""
-        
-        if models is None:
-            models = ['M8', 'M2a', 'Branch']
-        
-        results = {}
-        
-        for results_file in output_folder.glob("*_results.txt"):
-            match = re.search(r'(.+?)_([A-Za-z0-9]+)_results\.txt', results_file.name)
-            if not match:
-                continue
-            
-            gene_name = match.group(1)
-            model_name = match.group(2)
-            
-            if model_name not in models:
-                continue
-            
-            if gene_name not in results:
-                results[gene_name] = {}
-            
-            for method in ['BEB', 'NEB']:
-                df = SitesParser.parse_sites_from_file(results_file, method=method)
-                if not df.empty:
-                    results[gene_name][f'{model_name}_{method}'] = df
-                    break
-        
-        return results
-    
-    @staticmethod
     def filter_sites_by_pvalue(df: pd.DataFrame, p_threshold: float = 0.95) -> pd.DataFrame:
         """Sites with Pr(ω>1) >= p_threshold."""
         if df.empty:
@@ -426,45 +395,6 @@ class SitesParser:
         
         return df[df['pr_w_gt_1'] >= p_threshold].sort_values('pr_w_gt_1', ascending=False)
     
-    @staticmethod
-    def get_codons_for_sites(fasta_file: Path, positions: List[int], ref_seq_index: int = 0) -> Dict[int, str]:
-        """{position: codon} for 1-based amino acid positions of one sequence."""
-        
-        from Bio import SeqIO
-        
-        codons = {}
-        sequences = list(SeqIO.parse(fasta_file, 'fasta'))
-        
-        if not sequences:
-            return codons
-        
-        ref_seq = str(sequences[ref_seq_index].seq)
-        
-        for pos in positions:
-            codon_start = (pos - 1) * 3
-            codon_end = codon_start + 3
-            
-            if codon_end <= len(ref_seq):
-                codons[pos] = ref_seq[codon_start:codon_end]
-        
-        return codons
-    
-    @staticmethod
-    def enrich_sites_with_codons(df: pd.DataFrame, fasta_file: Path) -> pd.DataFrame:
-        """Add a 'codon' column to a site table."""
-        
-        if df.empty or not fasta_file.exists():
-            df['codon'] = ''
-            return df
-        
-        try:
-            codons = SitesParser.get_codons_for_sites(fasta_file, df['position'].tolist())
-            df['codon'] = df['position'].map(lambda pos: codons.get(pos, 'N/A'))
-        except Exception as e:
-            print(f"[WARN] could not read codons: {e}")
-            df['codon'] = ''
-        
-        return df    
     @staticmethod
     def extract_branchsite_class_data(filepath: Path) -> Dict[str, dict]:
         """Branch-site classes (0, 1, 2a, 2b) with proportion, background ω and

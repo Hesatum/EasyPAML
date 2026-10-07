@@ -39,10 +39,6 @@ class PreflightReport:
     ignored_files: List[Path] = field(default_factory=list)
 
     @property
-    def has_errors(self) -> bool:
-        return any(i.severity == ERROR for i in self.issues)
-
-    @property
     def has_problems(self) -> bool:
         return any(i.severity in (ERROR, WARNING) for i in self.issues)
 

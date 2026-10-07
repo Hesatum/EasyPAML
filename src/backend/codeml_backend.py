@@ -1962,46 +1962,6 @@ class CodemlBatchAnalysis:
 
 
     @staticmethod
-    def _fasta_to_phylip_block(fas_path: Path) -> Optional[str]:
-        """FASTA file as a PHYLIP block, or None if the file is already PHYLIP."""
-        text = fas_path.read_text(encoding='utf-8', errors='ignore').strip()
-        lines = text.splitlines()
-        if not lines:
-            return None
-
-        first = lines[0].strip().split()
-        if len(first) == 2 and first[0].isdigit() and first[1].isdigit():
-            return text + '\n'
-
-        seqs: Dict[str, List[str]] = {}
-        order: List[str] = []
-        current = None
-        for line in lines:
-            if line.startswith('>'):
-                current = line[1:].split()[0]
-                order.append(current)
-                seqs[current] = []
-            elif current is not None:
-                seqs[current].append(line.strip())
-
-        if not seqs:
-            return None
-
-        sequences = {k: ''.join(v) for k, v in seqs.items()}
-        n_taxa = len(order)
-        lengths = {len(s) for s in sequences.values()}
-        if len(lengths) != 1:
-            print(f"  [WARN] {fas_path.name}: sequences of different lengths, skipped")
-            return None
-        n_sites = lengths.pop()
-
-        block_lines = [f" {n_taxa} {n_sites}"]
-        for name in order:
-            padded = name[:10].ljust(10)
-            block_lines.append(f"{padded}  {sequences[name]}")
-        return '\n'.join(block_lines) + '\n'
-
-    @staticmethod
     def regenerate_summary_files(results_folder: Path) -> Dict[str, str]:
         """Rebuild LRT_results.txt, analysis_summary.tsv, batch_analysis_log.txt and
         sites_BEB.tsv from an existing results folder. Returns {name: path}."""
@@ -2257,7 +2217,6 @@ class CodemlBatchAnalysis:
         interrupted session). Failed runs are not counted."""
         results_folder = Path(results_folder)
         _legacy = CodemlBatchAnalysis._LEGACY_MODEL_NAMES
-        _reverse = {v: k for k, v in _legacy.items()}
 
         orphaned: dict = {}
         gene_status = CodemlBatchAnalysis._read_gene_status(results_folder)
