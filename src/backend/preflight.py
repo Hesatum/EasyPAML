@@ -125,43 +125,126 @@ def group_by_gene(files: Sequence[Path]):
     return chosen, ignored
 
 
-TREE_SUFFIXES = ('.nwk', '.tree', '.tre', '.newick', '.treefile')
+TREE_SUFFIXES = ('.nwk', '.tree', '.tre', '.newick', '.treefile', '.contree')
+_RAXML_PREFIXES = ('raxml_besttree.', 'raxml_bipartitions.', 'raxml_result.')
+_RAXML_SUFFIXES = ('.raxml.besttree', '.raxml.support', '.raxml.besttreecollapsed')
+_ALN_SUFFIXES = ('.fasta', '.fas', '.fa', '.fna', '.phy', '.phylip', '.aln')
 
 
-def discover_per_gene_trees(alignment_folder, tree_folder=None, genes=None) -> Dict[str, Path]:
-    """Per-gene trees matched by file name (gene.fasta <-> gene.nwk, .tree, .tre,
-    .newick or .treefile), in the alignments folder and, if given, a tree
-    folder. Returns {gene: file}."""
-    found: Dict[str, Path] = {}
-    folders = [Path(alignment_folder)] + ([Path(tree_folder)] if tree_folder else [])
+def is_tree_name(name: str) -> bool:
+    low = name.lower()
+    return low.endswith(TREE_SUFFIXES + _RAXML_SUFFIXES) or low.startswith(_RAXML_PREFIXES)
+
+
+def tree_key(name: str):
+    """(gene key, tool) of a tree file name: extensions and the prefixes and
+    suffixes of IQ-TREE and RAxML removed, lower case. tool is 'IQ-TREE', 'RAxML'
+    or ''."""
+    low, tool = name.lower(), ''
+    for pre in _RAXML_PREFIXES:
+        if low.startswith(pre):
+            low, tool = low[len(pre):], 'RAxML'
+    changed = True
+    while changed:
+        changed = False
+        for suf in _RAXML_SUFFIXES + TREE_SUFFIXES + _ALN_SUFFIXES:
+            if low.endswith(suf) and len(low) > len(suf):
+                if suf in _RAXML_SUFFIXES:
+                    tool = 'RAxML'
+                elif suf in ('.treefile', '.contree'):
+                    tool = tool or 'IQ-TREE'
+                low, changed = low[:-len(suf)], True
+    return low, tool
+
+
+@dataclass
+class TreePairing:
+    """Genes and per-gene tree files paired by name."""
+    pairs: Dict[str, Path] = field(default_factory=dict)
+    tools: Dict[str, str] = field(default_factory=dict)
+    missing: List[str] = field(default_factory=list)
+    suggestions: Dict[str, Path] = field(default_factory=dict)
+    orphans: List[Path] = field(default_factory=list)
+    duplicates: Dict[str, List[Path]] = field(default_factory=dict)
+
+
+def pair_trees(genes: Sequence[str], alignment_folder=None, tree_folder=None) -> TreePairing:
+    """Pair each gene with a tree file in the tree folder (or, without one, in the
+    alignments folder). Names must match exactly after tree_key(); a near name is
+    only offered as a suggestion."""
+    out = TreePairing()
+    by_key: Dict[str, List[Path]] = {}
+    folders = [Path(tree_folder)] if tree_folder else []
+    if alignment_folder:
+        folders.append(Path(alignment_folder))
+    seen = set()
     for folder in folders:
         if not folder.is_dir():
             continue
         for p in sorted(folder.iterdir()):
-            if p.is_file() and p.suffix.lower() in TREE_SUFFIXES:
-                if genes is None or p.stem in genes:
-                    found[p.stem] = p
-    return found
+            if p.is_file() and is_tree_name(p.name) and p.resolve() not in seen:
+                seen.add(p.resolve())
+                by_key.setdefault(tree_key(p.name)[0], []).append(p)
+    gene_keys = {g.lower(): g for g in genes}
+    for key, files in by_key.items():
+        gene = gene_keys.get(key)
+        if gene is None:
+            out.orphans.extend(files)
+        elif len(files) > 1 and len({f.parent for f in files}) == 1:
+            out.duplicates[gene] = files
+        else:
+            out.pairs[gene] = files[0]
+            out.tools[gene] = tree_key(files[0].name)[1]
+    orphan_keys = {tree_key(p.name)[0]: p for p in out.orphans}
+    for gene in genes:
+        if gene in out.pairs or gene in out.duplicates:
+            continue
+        out.missing.append(gene)
+        hit = difflib.get_close_matches(gene.lower(), list(orphan_keys), n=1, cutoff=0.8)
+        if hit:
+            out.suggestions[gene] = orphan_keys[hit[0]]
+    return out
+
+
+def discover_per_gene_trees(alignment_folder, tree_folder=None, genes=None) -> Dict[str, Path]:
+    """{gene: tree file} for genes with their own tree (see pair_trees). Without
+    genes, those of the alignments folder."""
+    if genes is None:
+        genes = list(group_by_gene(list_alignment_files(alignment_folder))[0]) if alignment_folder else []
+    return pair_trees(sorted(genes), alignment_folder, tree_folder).pairs
 
 
 # ── Main check ──────────────────────────────────────────────────
 
 def run_preflight(input_folder, tree_file, auto_prune: bool = True,
                   ignore_stop_codons: bool = False,
-                  per_gene_trees: Optional[Dict[str, Path]] = None) -> PreflightReport:
+                  per_gene_trees: Optional[Dict[str, Path]] = None,
+                  tree_folder=None) -> PreflightReport:
     """Check every alignment in the folder against its tree.
 
     per_gene_trees: {gene: tree file} for genes with their own tree; the
-    others use tree_file.
+    others use tree_file. tree_folder: folder of per-gene trees (pair_trees).
     """
     files = list_alignment_files(input_folder)
     chosen, ignored = group_by_gene(files)
     issues: List[Issue] = []
+    pairing = pair_trees(sorted(chosen), input_folder, tree_folder)
     if per_gene_trees is None:
-        per_gene_trees = discover_per_gene_trees(input_folder, genes=set(chosen))
+        per_gene_trees = pairing.pairs
     for gene in chosen:
-        if gene not in per_gene_trees and not tree_file:
-            issues.append(Issue(gene, 'no_tree', ERROR, {}))
+        if gene in per_gene_trees:
+            continue
+        twins = pairing.duplicates.get(gene)
+        if twins:
+            issues.append(Issue(gene, 'tree_duplicate', WARNING if tree_file else ERROR,
+                                {'files': ", ".join(p.name for p in twins), 'general': bool(tree_file)}))
+        elif tree_folder or not tree_file:
+            hint = pairing.suggestions.get(gene)
+            issues.append(Issue(gene, 'no_tree', WARNING if tree_file else ERROR,
+                                {'suggestion': hint.name if hint else '', 'general': bool(tree_file)}))
+    if tree_folder and pairing.orphans:
+        issues.append(Issue('', 'tree_orphans', WARNING,
+                            {'n': len(pairing.orphans), 'names': [p.name for p in pairing.orphans]}))
     if per_gene_trees:
         issues.append(Issue('', 'per_gene_trees', INFO, {'n': len(per_gene_trees)}))
 
@@ -301,8 +384,16 @@ _MESSAGES = {
         'en': "{count} tree taxon/taxa are not in this gene{prune_en}: {list}",
     },
     'no_tree': {
-        'pt': "Nenhuma árvore para este gene (escolha um arquivo de árvore ou ponha GENE.nwk na pasta).",
-        'en': "No tree for this gene (choose a tree file or put GENE.nwk in the folder).",
+        'pt': "Nenhuma árvore com o nome deste gene{suggest_pt}.{general_pt}",
+        'en': "No tree named after this gene{suggest_en}.{general_en}",
+    },
+    'tree_duplicate': {
+        'pt': "Mais de uma árvore com o nome deste gene ({files}); deixe só uma.{general_pt}",
+        'en': "More than one tree named after this gene ({files}); keep only one.{general_en}",
+    },
+    'tree_orphans': {
+        'pt': "{n} árvore(s) sem alinhamento com o mesmo nome: {list}",
+        'en': "{n} tree(s) with no alignment of the same name: {list}",
     },
     'per_gene_trees': {
         'pt': "{n} gene(s) com árvore própria (GENE.nwk na pasta); para eles ela substitui o arquivo de árvore.",
@@ -335,6 +426,17 @@ def format_issue(issue: Issue, lang: str = 'en') -> str:
         d['list'] = ", ".join(names[:8]) + (" …" if len(names) > 8 else "")
         d['prune_pt'] = " e serão podados da árvore" if d.get('auto_prune') else ""
         d['prune_en'] = " and will be pruned from the tree" if d.get('auto_prune') else ""
+    if issue.kind in ('no_tree', 'tree_duplicate'):
+        s = d.get('suggestion')
+        d['suggest_pt'] = f" (você quis dizer '{s}'? renomeie o arquivo)" if s else ""
+        d['suggest_en'] = f" (did you mean '{s}'? rename the file)" if s else ""
+        d['general_pt'] = (" A árvore geral será usada." if d.get('general')
+                           else " Escolha um arquivo de árvore geral ou renomeie a árvore como GENE.nwk.")
+        d['general_en'] = (" The general tree will be used." if d.get('general')
+                           else " Choose a general tree file or name the tree GENE.nwk.")
+    if issue.kind == 'tree_orphans':
+        names = d.get('names', [])
+        d['list'] = ", ".join(names[:8]) + (" …" if len(names) > 8 else "")
     if issue.kind == 'unaligned':
         d['lengths'] = ", ".join(str(x) for x in d.get('lengths', []))
     template = _MESSAGES.get(issue.kind, {}).get(lang)

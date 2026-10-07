@@ -139,3 +139,42 @@ def test_preflight_ignore_stop_codons_downgrades_to_info(tmp_path):
 def test_suggest_name():
     assert suggest_name('Macaca_mulata', ['Macaca_mulatta', 'Papio_anubis']) == 'Macaca_mulatta'
     assert suggest_name('Zebra', ['Macaca_mulatta']) is None
+
+
+def test_tree_names_of_iqtree_and_raxml_pair_with_their_gene(tmp_path):
+    from src.backend.preflight import pair_trees
+    trees = tmp_path / 'trees'
+    trees.mkdir()
+    for name in ('PEPC1.fasta.treefile', 'RAxML_bestTree.PPCK1', 'almt2.nwk', 'CHS.raxml.bestTree',
+                 'AQP_PIP14.nwk', 'notes.txt'):
+        (trees / name).write_text('(a,b,c);')
+    pr = pair_trees(['PEPC1', 'PPCK1', 'ALMT2', 'CHS', 'AQP_PIP1-4'], tree_folder=trees)
+    assert {g: p.name for g, p in pr.pairs.items()} == {
+        'PEPC1': 'PEPC1.fasta.treefile', 'PPCK1': 'RAxML_bestTree.PPCK1', 'ALMT2': 'almt2.nwk',
+        'CHS': 'CHS.raxml.bestTree'}
+    assert pr.tools['PEPC1'] == 'IQ-TREE' and pr.tools['PPCK1'] == 'RAxML' and pr.tools['ALMT2'] == ''
+    assert pr.missing == ['AQP_PIP1-4']                         # a near name is not paired
+    assert pr.suggestions['AQP_PIP1-4'].name == 'AQP_PIP14.nwk'
+    assert [p.name for p in pr.orphans] == ['AQP_PIP14.nwk']
+
+
+def test_two_trees_for_one_gene_are_reported_not_guessed(tmp_path):
+    from src.backend.preflight import pair_trees
+    (tmp_path / 'g1.nwk').write_text('(a,b,c);')
+    (tmp_path / 'g1.fasta.treefile').write_text('(a,b,c);')
+    pr = pair_trees(['g1'], tree_folder=tmp_path)
+    assert 'g1' not in pr.pairs and len(pr.duplicates['g1']) == 2
+
+
+def test_data_check_names_the_tree_to_rename(tmp_path):
+    data = Path(__file__).resolve().parent / 'data'
+    inp, trees = tmp_path / 'in', tmp_path / 'trees'
+    inp.mkdir()
+    trees.mkdir()
+    (inp / 'AQP_PIP1-4.fasta').write_text((data / 'gene_example.fasta').read_text())
+    (trees / 'AQP_PIP14.nwk').write_text((data / 'gene_example.nwk').read_text())
+    report = run_preflight(inp, None, tree_folder=trees)
+    msgs = {i.kind: i.message('en') for i in report.issues}
+    assert "did you mean 'AQP_PIP14.nwk'? rename the file" in msgs['no_tree']
+    assert 'AQP_PIP14.nwk' in msgs['tree_orphans']
+    assert any(i.kind == 'no_tree' and i.severity == 'error' for i in report.issues)

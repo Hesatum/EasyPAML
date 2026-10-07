@@ -286,7 +286,7 @@ def main():
     # duplicate files, length not a multiple of 3
     report = run_preflight(cfg['input'], cfg.get('tree'), auto_prune=cfg['auto_prune_tree'],
                            ignore_stop_codons=cfg.get('ignore_stop_codons', False),
-                           per_gene_trees=per_gene)
+                           per_gene_trees=per_gene, tree_folder=cfg.get('tree_folder'))
     text = report.format_text(lang, include_info=cfg.get('verbose', False))
     if text:
         print("Verificação dos dados:" if lang == 'pt' else "Data check:")
