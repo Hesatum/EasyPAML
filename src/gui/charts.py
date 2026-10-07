@@ -130,8 +130,9 @@ def draw_lrt(ax, test: TestData, c: Dict[str, str], compact: bool = False,
     ax.text(0.98, 0.95, info, transform=ax.transAxes, ha='right', va='top',
             fontsize=7.5 if compact else 8, color=c['text'], linespacing=1.4,
             bbox=dict(boxstyle='round,pad=0.4', fc=c['box'], ec=c['box_edge'], lw=0.6))
-    ax.set_title(test.title + ("" if compact else f"  (df = {test.df})"), fontsize=9.5,
-                 fontweight='bold', color=c['text'], pad=6)
+    if not compact:
+        ax.set_title(test.title + ("" if compact else f"  (df = {test.df})"), fontsize=9.5,
+                     fontweight='bold', color=c['text'], pad=6)
     ax.set_xlabel("LRT statistic, 2Δℓ", fontsize=8.5)
     if not compact and ys is not None:
         ax.set_ylabel("density", fontsize=8.5)
@@ -171,7 +172,8 @@ def draw_omega(ax, whole: Sequence[Point], positive: Sequence[Point], c: Dict[st
         _dots(ax, rows, c, compact)
         ax.annotate("ω = 1 (neutral)", (1.0, 1.13), xytext=(4, 0), textcoords='offset points',
                     color=c['crit'], fontsize=7.5, ha='left', va='bottom')
-        ax.set_title("ω per gene", fontsize=9.5, fontweight='bold', color=c['text'], pad=6)
+        if not compact:
+            ax.set_title("ω per gene", fontsize=9.5, fontweight='bold', color=c['text'], pad=6)
         ax.set_xlabel("ω (dN/dS), log scale", fontsize=8.5)
         if label:
             ax.text(-0.09, 1.04, label, transform=ax.transAxes, fontsize=12, fontweight='bold',
@@ -205,7 +207,8 @@ def draw_omega(ax, whole: Sequence[Point], positive: Sequence[Point], c: Dict[st
         leg = ax.legend(loc='upper right', fontsize=7.5, frameon=True, facecolor=c['box'],
                         edgecolor=c['box_edge'], labelcolor=c['text'])
         leg.get_frame().set_linewidth(0.6)
-    ax.set_title("ω per gene", fontsize=9.5, fontweight='bold', color=c['text'], pad=6)
+    if not compact:
+        ax.set_title("ω per gene", fontsize=9.5, fontweight='bold', color=c['text'], pad=6)
     ax.set_xlabel("ω (dN/dS), log scale", fontsize=8.5)
     if not compact:
         ax.set_ylabel("density", fontsize=8.5)

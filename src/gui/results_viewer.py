@@ -19,13 +19,14 @@ from src.backend import lrt_stats
 from src.backend.site_map import attach_original_positions
 from src.backend.version import version_string
 from . import charts
+from .summary_tab import SummaryTab, gene_verdict
 from .gui_texts import TEXTS, get_language, tr
 from .ui_helpers import (CURRENT_THEME, FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE, fit_to_screen,
                          add_tooltip, ask_open_file, ask_save_file, hover_tint, mix, open_folder,
                          show_message)
 
 
-class ResultsViewerWindow(ctk.CTkToplevel):
+class ResultsViewerWindow(SummaryTab, ctk.CTkToplevel):
     """Results panel window."""
     
     COLORS = {
@@ -416,7 +417,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         self.tabs = tabs
         
         tabs.add(TEXTS["viewer_tab_summary"])
-        tabs.add(TEXTS["viewer_tab_lrt"])
         tabs.add(TEXTS["viewer_tab_sites"])
 
         branchsite_cols = [col for col in self.df.columns if 'Branch-site_class' in col]
@@ -428,7 +428,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         tabs.add(TEXTS["viewer_tab_interpretation"])
 
         self._create_summary_tab(tabs.tab(TEXTS["viewer_tab_summary"]))
-        self._create_lrt_stats_tab(tabs.tab(TEXTS["viewer_tab_lrt"]))
         self._create_sites_tab(tabs.tab(TEXTS["viewer_tab_sites"]))
         self._create_go_interpretation_tab(tabs.tab(TEXTS["viewer_tab_interpretation"]))
 
@@ -492,102 +491,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         parent, folder = self.master, self.output_folder
         self.destroy()
         ResultsViewerWindow(parent, folder)
-
-    def _chart_data(self):
-        """Tests, gene-wide ω and positive-class ω for the charts, with hover text."""
-        tests = []
-        for (null, alt), info in lrt_stats.PAIRS.items():
-            vals = self._pair_values(null, alt)
-            if not vals or not info['df']:
-                continue
-            t = charts.TestData(null, alt, 1 if info['boundary'] else info['df'])
-            for gene, (lrt, p, q) in vals.items():
-                t.points.append(charts.Point(
-                    gene, float(lrt), bool(pd.notna(q) and q < 0.05),
-                    f"{gene}  2Δℓ {max(0.0, lrt):.2f}  q {lrt_stats.format_p(q)}"))
-            tests.append(t)
-        order = {pair: i for i, pair in enumerate((('M8a', 'M8'), ('M1a', 'M2a'), ('M7', 'M8')))}
-        tests.sort(key=lambda t: order.get((t.null, t.alt), len(order)))
-
-        alt = 'M8' if 'M8_w_pos' in self.df.columns else ('M2a' if 'M2a_w_pos' in self.df.columns else None)
-        whole_col = next((c for c in ('M0_omega', f'{alt}_omega') if c in self.df.columns), None)
-        sig_pair = next(((n, a) for n, a in (('M8a', 'M8'), ('M7', 'M8'), ('M1a', 'M2a'))
-                         if a == alt and self._pair_values(n, a)), None)
-        qs = {g: v[2] for g, v in (self._pair_values(*sig_pair) or {}).items()} if sig_pair else {}
-        whole, positive = [], []
-        for _, row in self.df.iterrows():
-            if row.get('status') == 'failed':
-                continue
-            gene = row['Gene']
-            q = qs.get(gene, np.nan)
-            sig = bool(pd.notna(q) and q < 0.05)
-            if whole_col and pd.notna(row.get(whole_col)):
-                whole.append(charts.Point(gene, float(row[whole_col]), sig,
-                                          f"{gene}  ω {float(row[whole_col]):.3f} ({whole_col.split('_')[0]})"))
-            if alt and pd.notna(row.get(f'{alt}_w_pos')):
-                p1 = row.get(f'{alt}_p_pos')
-                positive.append(charts.Point(
-                    gene, float(row[f'{alt}_w_pos']), sig,
-                    f"{gene}  ω {float(row[f'{alt}_w_pos']):.2f}"
-                    + (f"  p₁ {float(p1):.3f}" if pd.notna(p1) else "")
-                    + (f"  q {lrt_stats.format_p(q)}" if pd.notna(q) else "")))
-        return tests, whole, positive
-
-    def _summary_charts(self, parent) -> None:
-        """Compact LRT density of the main test and ω per gene, with a hover box."""
-        tests, whole, positive = self._chart_data()
-        if not tests and not (whole or positive):
-            return
-        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg as _Canvas
-        from matplotlib.figure import Figure as _Figure
-        c = charts.DARK if CURRENT_THEME['mode'] == 'dark' else charts.LIGHT
-        c = dict(c, bg=PALETTE['bg_surface'], box=PALETTE['bg_elevated'])
-        n = (1 if tests else 0) + (1 if (whole or positive) else 0)
-        fig = _Figure(figsize=(6.2 * n, 2.5), facecolor=c['bg'])
-        k = 1
-        holder = ctk.CTkFrame(parent, fg_color=PALETTE['bg_surface'], corner_radius=RADIUS['card'])
-        holder.pack(fill='x', padx=SPACE['xs'], pady=(0, SPACE['sm']))
-        canvas = _Canvas(fig, master=holder)
-        if tests:
-            ax = fig.add_subplot(1, n, k)
-            hover = {'cid': charts.enable_hover(fig, ax, charts.draw_lrt(ax, tests[0], c, compact=True), c)}
-            k += 1
-            if len(tests) > 1:
-                by_title = {t.title: t for t in tests}
-
-                def _show(title):
-                    canvas.mpl_disconnect(hover['cid'])
-                    ax.clear()
-                    hover['cid'] = charts.enable_hover(
-                        fig, ax, charts.draw_lrt(ax, by_title[title], c, compact=True), c)
-                    canvas.draw_idle()
-                seg = ctk.CTkSegmentedButton(holder, values=list(by_title), command=_show,
-                                             font=self._font('xs', 'bold'), height=24,
-                                             selected_color=PALETTE['accent_fill'],
-                                             selected_hover_color=PALETTE['accent_fill'],
-                                             unselected_color=PALETTE['bg_elevated'],
-                                             text_color=PALETTE['text_primary'])
-                seg.set(tests[0].title)
-                seg.pack(anchor='w', padx=SPACE['md'], pady=(SPACE['sm'], 0))
-        if whole or positive:
-            ax = fig.add_subplot(1, n, k)
-            charts.enable_hover(fig, ax, charts.draw_omega(ax, whole, positive, c, compact=True,
-                                                          whole_label=TEXTS["chart_whole_gene"],
-                                                          positive_label=TEXTS["chart_positive_class"]), c)
-        fig.subplots_adjust(left=0.05, right=0.98, top=0.86, bottom=0.2, wspace=0.18)
-        widget = canvas.get_tk_widget()
-        widget.configure(height=230, highlightthickness=0, bg=c['bg'])
-        widget.pack(fill='x', padx=SPACE['sm'], pady=SPACE['sm'])
-        scroller = getattr(parent, '_parent_canvas', None)
-        if scroller is not None:     # the wheel over the chart still scrolls the list
-            widget.bind('<MouseWheel>', lambda e: scroller.yview_scroll(-int(e.delta / 120) or -1 if e.delta > 0 else 1, 'units'))
-            widget.bind('<Button-4>', lambda e: scroller.yview_scroll(-1, 'units'))
-            widget.bind('<Button-5>', lambda e: scroller.yview_scroll(1, 'units'))
-        canvas.draw()
-        self._summary_canvas = canvas
-        ctk.CTkLabel(holder, text=TEXTS["chart_hint"], font=self._font('xs'), anchor='w',
-                     text_color=PALETTE['text_tertiary']).pack(fill='x', padx=SPACE['md'],
-                                                              pady=(0, SPACE['sm']))
 
     def _sites_chart(self, parent, df_sites, results_file, gene, model, method) -> None:
         """Positions of the sites along the CDS (charts.draw_sites), above the table."""
@@ -679,44 +582,33 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             tests.append((f"{alt} vs {null}", n_sig, len(vals)))
         n_failed = int((self.df['status'] == 'failed').sum()) if 'status' in self.df.columns else 0
 
-        value_font = (FONT_UI, 22, 'bold')
-        pad = dict(padx=SPACE['lg'], pady=SPACE['md'])
+        value_font = (FONT_UI, 20, 'bold')
 
-        def card(col, label, weight=1):
+        def card(col, weight=1):
             parent.grid_columnconfigure(col, weight=weight, uniform='stats')
             c = ctk.CTkFrame(parent, fg_color=PALETTE['bg_surface'], corner_radius=RADIUS['card'])
             c.grid(row=0, column=col, sticky='nsew',
                    padx=(0 if col == 0 else SPACE['xs'], 0 if col == 3 else SPACE['xs']))
             inner = ctk.CTkFrame(c, fg_color='transparent')
-            inner.pack(fill='both', expand=True, **pad)
-            ctk.CTkLabel(inner, text=label, font=self._font('xs'), anchor='w',
-                         text_color=PALETTE['text_secondary']).pack(anchor='w')
+            inner.pack(fill='both', expand=True, padx=SPACE['lg'], pady=SPACE['sm'])
             return inner
 
-        def value(box, text, color):
-            ctk.CTkLabel(box, text=text, font=value_font, anchor='w',
-                         text_color=color).pack(anchor='w')
+        def value(box, number, label, color):
+            ctk.CTkLabel(box, text=number, font=value_font, text_color=color).pack(side='left')
+            ctk.CTkLabel(box, text=label, font=self._font('sm'), text_color=PALETTE['text_secondary']
+                         ).pack(side='left', padx=(SPACE['sm'], SPACE['lg']), pady=(4, 0))
 
-        value(card(0, TEXTS["stats_total_genes"]), str(len(self.df)), PALETTE['text_primary'])
-        value(card(1, TEXTS["stats_models_run"]), self._count_models(), PALETTE['text_primary'])
-
-        box = card(2, TEXTS["stats_sig_genes"], weight=max(2, len(tests)))
-        if tests:
-            row = ctk.CTkFrame(box, fg_color='transparent')
-            row.pack(anchor='w', fill='x')
-            for k, (name, n_sig, total) in enumerate(tests):
-                cell = ctk.CTkFrame(row, fg_color='transparent')
-                cell.pack(side='left', padx=(0, SPACE['xl']))
-                ctk.CTkLabel(cell, text=f"{n_sig}/{total}", font=value_font,
-                             text_color=PALETTE['success_fg'] if n_sig else PALETTE['text_secondary']
-                             ).pack(side='left')
-                ctk.CTkLabel(cell, text=name, font=self._font('sm'),
-                             text_color=PALETTE['text_secondary']).pack(side='left', padx=(SPACE['sm'], 0),
-                                                                        pady=(6, 0))
-        else:
-            value(box, "—", PALETTE['text_secondary'])
-
-        value(card(3, TEXTS["stats_failed"]), str(n_failed),
+        value(card(0), str(len(self.df)), TEXTS["stats_total_genes"], PALETTE['text_primary'])
+        value(card(1), self._count_models(), TEXTS["stats_models_run"], PALETTE['text_primary'])
+        box = card(2, weight=max(2, len(tests)))
+        ctk.CTkLabel(box, text=TEXTS["stats_sig_short"], font=self._font('sm'),
+                     text_color=PALETTE['text_secondary']).pack(side='left', padx=(0, SPACE['md']), pady=(4, 0))
+        for name, n_sig, total in tests:
+            value(box, f"{n_sig}/{total}", name,
+                  PALETTE['success_fg'] if n_sig else PALETTE['text_secondary'])
+        if not tests:
+            value(box, "—", "", PALETTE['text_secondary'])
+        value(card(3), str(n_failed), TEXTS["stats_failed"],
               PALETTE['danger_fg'] if n_failed else PALETTE['text_secondary'])
 
     def _beb_sites(self, gene: str, model: str, threshold: float = 0.95):
@@ -735,140 +627,12 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         except Exception:
             return None
 
-    def _create_summary_tab(self, parent):
-        """One line per gene and positive-selection test."""
-        info = ctk.CTkFrame(parent, fg_color='transparent')
-        info.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], SPACE['xs']))
-        ctk.CTkLabel(info, text=TEXTS["summary_title"], font=self._font('md', 'bold'),
-                     text_color=PALETTE['text_primary']).pack(anchor='w')
-        ctk.CTkLabel(info, text=TEXTS["summary_explain"], font=self._font('xs'),
-                     text_color=PALETTE['text_secondary'], wraplength=1180,
-                     justify='left').pack(anchor='w', pady=(2, 0))
-
-        tests = self._positive_tests()
-        scroll = ctk.CTkScrollableFrame(parent, fg_color='transparent', corner_radius=0)
-        scroll.pack(fill='both', expand=True, padx=SPACE['xs'], pady=(0, SPACE['xs']))
-        try:
-            self._summary_charts(scroll)
-        except Exception as exc:
-            print(f"[WARN] summary charts: {exc}")
-        if not tests and 'status' not in self.df.columns:
-            ctk.CTkLabel(scroll, text=TEXTS["summary_no_tests"], font=self._font('md'),
-                         text_color=PALETTE['text_secondary']).pack(pady=40)
-            return
-
-        mono = self._mono('sm')
-        col_min = (110, 150, 170, 170, 230, 220)
-
-        max_genes = 300
-        for i, (_, row) in enumerate(self.df.iterrows()):
-            if i >= max_genes:
-                ctk.CTkLabel(scroll, text=f"… +{len(self.df) - max_genes} (→ {TEXTS['viewer_tab_export']})",
-                             font=self._font('sm'), text_color=PALETTE['text_secondary']).pack(pady=8)
-                break
-            gene = row['Gene']
-            failed = row.get('status') == 'failed'
-            sig_by_pair = {}
-            test_rows = []
-            for null, alt in tests:
-                vals = self._pair_values(null, alt).get(gene)
-                if not vals:
-                    continue
-                lrt, p, q = vals
-                test = f"{alt} vs {null}"
-                sig = pd.notna(q) and q < 0.05
-                sig_by_pair[(null, alt)] = sig
-                n_sites = None
-                if sig:
-                    sites = self._beb_sites(gene, alt)
-                    n_sites = len(sites) if sites is not None else 0
-                w, p1 = row.get(f'{alt}_w_pos'), row.get(f'{alt}_p_pos')
-                if (pd.isna(w) or pd.isna(p1)) and alt in ('M2a', 'M8'):
-                    rf = self._find_results_file(gene, alt)
-                    if rf:
-                        from src.backend.sites_parser import SitesParser
-                        pc = SitesParser.extract_positive_class(rf) or {}
-                        w, p1 = pc.get('omega', np.nan), pc.get('p', np.nan)
-                effect = (f"ω = {w:.3f}  p₁ = {p1:.3f}" if pd.notna(w) and pd.notna(p1) else "")
-                test_rows.append((test, sig, lrt_stats.format_p(p),
-                                  lrt_stats.format_p(q), effect, n_sites, w, p1))
-
-            card = ctk.CTkFrame(scroll, fg_color=PALETTE['bg_surface'] if i % 2 == 0 else PALETTE['row_alt'],
-                                corner_radius=RADIUS['card'])
-            card.pack(fill='x', pady=(0, SPACE['xs']), padx=SPACE['xs'])
-            head = ctk.CTkFrame(card, fg_color='transparent')
-            head.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], SPACE['xs']))
-            ctk.CTkLabel(head, text=gene, font=self._font('md', 'bold'),
-                         text_color=PALETTE['text_primary']).pack(side='left')
-            if failed:
-                self._chip(head, TEXTS["summary_verdict_failed"], 'danger').pack(side='left', padx=(SPACE['sm'], 0))
-                why = ctk.CTkLabel(card, text=self._compact_reason(self._failure_reason(gene)),
-                                   font=self._font('sm'), anchor='w', justify='left', wraplength=1000,
-                                   text_color=PALETTE['danger_fg'])
-                why.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
-                card.bind('<Configure>', lambda e, l=why: l.configure(
-                    wraplength=max(300, e.width - 2 * SPACE['md'])), add='+')
-            elif self._gene_notes(gene):
-                self._chip(head, TEXTS["summary_verdict_warning"], 'warning').pack(side='left', padx=(SPACE['sm'], 0))
-                note = ctk.CTkLabel(card, text=self._gene_notes(gene).replace(' | ', '\n'),
-                                    font=self._font('sm'), anchor='w', justify='left', wraplength=1000,
-                                    text_color=PALETTE['warning_fg'])
-                note.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['xs']))
-                card.bind('<Configure>', lambda e, l=note: l.configure(
-                    wraplength=max(300, e.width - 2 * SPACE['md'])), add='+')
-
-            if not failed and test_rows:
-                text, color = self._conclusion(sig_by_pair, test_rows)
-                ctk.CTkLabel(card, text=text, font=self._font('md', 'bold'), anchor='w', justify='left',
-                             wraplength=1100, text_color=color).pack(fill='x', padx=SPACE['md'],
-                                                                      pady=(0, SPACE['xs']))
-            body = ctk.CTkFrame(card, fg_color='transparent')
-            body.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']))
-            for c, m in enumerate(col_min):
-                body.grid_columnconfigure(c, minsize=m)
-            for r, (test, sig, p_txt, q_txt, effect, n_sites, *_) in enumerate(test_rows):
-                ctk.CTkLabel(body, text=test, font=self._font('sm'), anchor='w',
-                             text_color=PALETTE['text_secondary']).grid(row=r, column=0, sticky='w')
-                self._chip(body, TEXTS["summary_verdict_sig"] if sig else TEXTS["summary_verdict_nonsig"],
-                           'success' if sig else 'neutral').grid(row=r, column=1, sticky='w', pady=2)
-                ctk.CTkLabel(body, text=f"p = {p_txt}", font=mono, anchor='w',
-                             text_color=PALETTE['text_primary'] if sig else PALETTE['text_secondary']
-                             ).grid(row=r, column=2, sticky='w')
-                ctk.CTkLabel(body, text=f"q = {q_txt}", font=self._mono('sm', 'bold') if sig else mono,
-                             anchor='w', text_color=PALETTE['success_fg'] if sig else PALETTE['text_secondary']
-                             ).grid(row=r, column=3, sticky='w')
-                ctk.CTkLabel(body, text=effect, font=mono, anchor='w',
-                             text_color=PALETTE['text_secondary']).grid(row=r, column=4, sticky='w')
-                if n_sites is not None:
-                    ctk.CTkLabel(body, text=TEXTS["summary_sites_n"].format(n=n_sites), font=self._font('sm'),
-                                 anchor='w', text_color=PALETTE['text_primary'] if n_sites
-                                 else PALETTE['text_secondary']).grid(row=r, column=5, sticky='w')
-
     @staticmethod
     def _conclusion(sig_by_pair: dict, test_rows: list):
-        """One plain sentence for a gene, from the q-values of its tests."""
-        if sig_by_pair.get(('M7', 'M8')) and sig_by_pair.get(('M8a', 'M8')) is False \
-                and not sig_by_pair.get(('M1a', 'M2a')):
-            return "⚠ " + TEXTS["conclusion_neutral"], PALETTE['warning_fg']
-        if sig_by_pair.get(('M7', 'M8')) and ('M8a', 'M8') not in sig_by_pair \
-                and not sig_by_pair.get(('M1a', 'M2a')):
-            return "⚠ " + TEXTS["conclusion_no_m8a"], PALETTE['warning_fg']
-        sig_tests = [t for t, sig, *_ in test_rows if sig]
-        if not sig_tests:
-            return TEXTS["conclusion_none"], PALETTE['text_secondary']
-        n = max((r[5] for r in test_rows if r[1] and r[5] is not None), default=None)
-        if n == 0:
-            # significant, but carried by a tiny class with no well-supported site:
-            # often a few misaligned codons
-            w = max((r[6] for r in test_rows if r[1] and len(r) > 6 and pd.notna(r[6])), default=np.nan)
-            p1 = max((r[7] for r in test_rows if r[1] and len(r) > 7 and pd.notna(r[7])), default=np.nan)
-            detail = (TEXTS["conclusion_weak_class"].format(w=f"{w:.3g}", p1=f"{100 * p1:.1f}")
-                      if pd.notna(w) and pd.notna(p1) else "")
-            return ("⚠ " + TEXTS["conclusion_weak"].format(tests=", ".join(sig_tests), detail=detail),
-                    PALETTE['warning_fg'])
-        sites = TEXTS["conclusion_sites"].format(n=n) if n is not None else ""
-        return (TEXTS["conclusion_supported"].format(tests=", ".join(sig_tests), sites=sites),
-                PALETTE['success_fg'])
+        """One plain sentence for a gene, from the q-values of its tests, and its colour."""
+        kind, text = gene_verdict(sig_by_pair, test_rows)
+        color = {'positive': PALETTE['success_fg'], 'none': PALETTE['text_secondary']}.get(kind, PALETTE['warning_fg'])
+        return (text if kind in ('positive', 'none') else "⚠ " + text), color
 
     def _status_columns(self) -> dict:
         cache = getattr(self, '_status_cache', None)
@@ -906,64 +670,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         return "\n".join((", ".join(x for x in ms if x) + ": " if any(ms) else "") + why
                          for why, ms in groups.items())
 
-    def _create_lrt_stats_tab(self, parent):
-        """LRT and p-values tab."""
-        comparisons, descriptions = self._get_available_lrt_columns()
-        if not comparisons:
-            ctk.CTkLabel(parent, text=TEXTS["lrt_no_comparisons"],
-                        font=(FONT_UI, 12),
-                        text_color=self.COLORS['warning']).pack(pady=50)
-            return
-
-        ctrl_frame = ctk.CTkFrame(parent, fg_color='transparent')
-        ctrl_frame.pack(fill='x', padx=SPACE['md'], pady=(SPACE['sm'], SPACE['xs']))
-
-        row1 = ctk.CTkFrame(ctrl_frame, fg_color='transparent')
-        row1.pack(fill='x')
-
-        ctk.CTkLabel(row1, text=TEXTS["lrt_label_model"],
-                     font=self._font('sm', 'bold'),
-                     text_color=PALETTE['text_secondary']).pack(side='left', padx=(0, SPACE['sm']))
-
-        comp_combo = self._style_combo(ctk.CTkComboBox(row1, values=list(comparisons.keys()), width=400))
-        comp_combo.pack(side='left')
-        comp_combo.set(list(comparisons.keys())[0])
-
-        # dynamic null-hypothesis description
-        ctk.CTkLabel(ctrl_frame, text=TEXTS["lrt_plain"], font=self._font('sm'),
-                     text_color=PALETTE['text_primary'], anchor='w', justify='left',
-                     wraplength=1180).pack(fill='x', pady=(SPACE['xs'], 0))
-        desc_lbl = ctk.CTkLabel(ctrl_frame, text="",
-                                font=self._font('xs'),
-                                text_color=PALETTE['text_tertiary'],
-                                anchor='w', justify='left', wraplength=1180)
-        desc_lbl.pack(fill='x', pady=(SPACE['xs'], 0))
-
-        body = ctk.CTkFrame(parent, fg_color='transparent')
-        body.pack(fill='both', expand=True, padx=SPACE['md'], pady=(0, SPACE['md']))
-        body.grid_columnconfigure(0, weight=1)
-        body.grid_rowconfigure(1, weight=1)
-        head_host = ctk.CTkFrame(body, fg_color='transparent')
-        table_frame = ctk.CTkScrollableFrame(body, fg_color=PALETTE['bg_panel'],
-                                            corner_radius=RADIUS['card'])
-        table_frame.grid(row=1, column=0, sticky='nsew')
-        self._lrt_head_host = head_host
-
-        def update_lrt_table(*args):
-            for widget in table_frame.winfo_children():
-                widget.destroy()
-            for widget in head_host.winfo_children():
-                widget.destroy()
-            head_host.grid_remove()
-            selected_comp = comp_combo.get()
-            col_name = comparisons[selected_comp]
-            desc = descriptions.get(col_name, '')
-            desc_lbl.configure(text=desc)
-            self._render_lrt_table(table_frame, col_name, selected_comp)
-
-        comp_combo.configure(command=update_lrt_table)
-        update_lrt_table()
-    
     def _create_go_interpretation_tab(self, parent):
         """Interpretation tab: candidate genes and GO enrichment (see go_enrichment)."""
         info = ctk.CTkFrame(parent, fg_color=PALETTE['bg_elevated'], corner_radius=8)
@@ -1190,6 +896,19 @@ class ResultsViewerWindow(ctk.CTkToplevel):
                 table_frame._parent_canvas.yview_moveto(0)
             except Exception:
                 pass
+
+        def goto(gene, model):
+            """Show a gene of a model (from the Summary)."""
+            if model not in model_combo.cget('values'):
+                return
+            model_combo.set(model)
+            if gene not in self._significant_for(model):
+                show_all.set(True)
+            update_gene_list()
+            gene_combo.set(gene)
+            update_sites_table()
+            self.tabs.set(TEXTS["viewer_tab_sites"])
+        self._sites_goto = goto
 
         model_combo.configure(command=update_gene_list)
         gene_combo.configure(command=update_sites_table)
@@ -2074,495 +1793,6 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         
         return str(len(unique_models))
     
-    def _get_available_lrt_columns(self):
-        """Retorna (comparisons, descriptions):
-           comparisons  = {label → col_name}
-           descriptions = {col_name → null-hyp text shown below the combo}
-        """
-        KNOWN = {
-            'lrt_M0_vs_M1a': (
-                'M0 → M1a   (neutralidade)',
-                'H₀  M0 — taxa ω única para todos os sítios  ·  '
-                'H₁  M1a — ω₀ < 1 e ω₁ = 1   ·   df = 1   ·  '
-                'Pré-teste; M1a vs M2a é o teste principal de seleção positiva',
-            ),
-            'lrt_M1a_vs_M2a': (
-                'M1a → M2a   (sítios positivos)',
-                'H₀  M1a — apenas purificação/neutralidade (ω ≤ 1)  ·  '
-                'H₁  M2a — sítios com ω > 1   ·   df = 2   ·   '
-                'Detecta seleção positiva em sítios ao longo de todos os ramos',
-            ),
-            'lrt_M7_vs_M8': (
-                'M7 → M8   (Beta + ω > 1)',
-                'H₀  M7 — distribuição Beta restrita a 0 < ω < 1  ·  '
-                'H₁  M8 — Beta + classe com ω livre   ·   df = 2  ·  '
-                'pode rejeitar M7 só por sítios neutros: veja M8a → M8',
-            ),
-            'lrt_M8a_vs_M8': (
-                'M8a → M8   (ω > 1 além dos sítios neutros)',
-                'H₀  M8a — Beta + classe com ω = 1 fixo  ·  '
-                'H₁  M8 — Beta + classe com ω livre   ·   df = 1 (χ²₁)  ·  '
-                'Swanson et al. 2003',
-            ),
-            'lrt_M0_vs_Branch': (
-                'M0 → Branch   (ramos livres)',
-                'H₀  M0 — uma única taxa ω para todos os ramos  ·  '
-                'H₁  Branch — ω independente por grupo marcado   ·  '
-                'df = n° de grupos foreground marcados (#1, #2 …)   ·  '
-                'Ex: 1 marca → df=1 (χ²crit=3.84)  |  5 marcas → df=5 (χ²crit=11.07)',
-            ),
-            'lrt_Branch-site_null_vs_Branch-site': (
-                'Branch-site null → Branch-site   (seleção episódica)',
-                'H₀  Branch-site null — ω ≤ 1 no foreground  ·  '
-                'H₁  Branch-site — sítios com ω > 1 no foreground   ·   df = 1',
-            ),
-            'lrt_M0_vs_Branch-site': (
-                'M0 → Branch-site   (seleção episódica alt.)',
-                'H₀  M0 — taxa única  ·  '
-                'H₁  Branch-site — seleção episódica no foreground   ·   df = 2',
-            ),
-        }
-
-        if get_language() == 'en':
-            KNOWN = {
-                'lrt_M0_vs_M1a': ('M0 → M1a   (neutrality)',
-                                  'H₀ M0 — one ω for all sites  ·  H₁ M1a — ω₀ < 1 and ω₁ = 1  ·  df = 1'),
-                'lrt_M1a_vs_M2a': ('M1a → M2a   (positive sites)',
-                                   'H₀ M1a — purifying/neutral only (ω ≤ 1)  ·  H₁ M2a — sites with ω > 1  ·  df = 2'),
-                'lrt_M7_vs_M8': ('M7 → M8   (Beta + ω > 1)',
-                                 'H₀ M7 — beta restricted to 0 < ω < 1  ·  H₁ M8 — beta + class with free ω  ·  '
-                                 'df = 2  ·  may reject M7 just because of neutral sites: see M8a → M8'),
-                'lrt_M8a_vs_M8': ('M8a → M8   (ω > 1 beyond neutral sites)',
-                                  'H₀ M8a — beta + class with ω = 1 fixed  ·  H₁ M8 — beta + class with free ω  ·  '
-                                  'df = 1 (χ²₁)  ·  Swanson et al. 2003'),
-                'lrt_M0_vs_Branch': ('M0 → Branch   (free branches)',
-                                     'H₀ M0 — one ω for all branches  ·  H₁ Branch — ω per labelled group  ·  '
-                                     'df = number of foreground groups'),
-                'lrt_Branch-site_null_vs_Branch-site': ('Branch-site null → Branch-site   (episodic selection)',
-                                                        'H₀ ω ≤ 1 in the foreground  ·  H₁ sites with ω > 1 in the '
-                                                        'foreground  ·  df = 1 (χ²₁)'),
-            }
-
-        comparisons  = {}
-        descriptions = {}
-
-        for col in self.df.columns:
-            if not col.startswith('lrt_'):
-                continue
-            if col in KNOWN:
-                label, desc = KNOWN[col]
-            else:
-                label = (col.replace('lrt_', '')
-                            .replace('_vs_', ' → ')
-                            .replace('_', ' '))
-                label = ' '.join(
-                    w.upper() if w.lower() in ('m0', 'm1a', 'm2a', 'm7', 'm8') else w
-                    for w in label.split()
-                )
-                desc = ''
-            comparisons[label]  = col
-            descriptions[col]   = desc
-
-        print(f"[INFO] LRT columns encontradas: {comparisons}")
-        return comparisons, descriptions
-    
-    def _render_pair_table(self, parent, null: str, alt: str):
-        """Site-model LRT table: verdict, p, q, positive class, 2Δℓ and lnL."""
-        vals = self._pair_values(null, alt) or {}
-        hd = TEXTS["lrt_headers"]
-        cols = [(0, 330, 'w'), (7, 70, 'w'), (4, 100, 'e'), (5, 100, 'e'), (6, 170, 'e'),
-                (3, 90, 'e'), (1, 110, 'e'), (2, 130, 'e')]
-        cell_pad = (SPACE['xs'], SPACE['xs'])
-        host = getattr(self, '_lrt_head_host', None)
-        if host is not None and host.winfo_exists():
-            host.grid(row=0, column=0, sticky='ew')
-            hdr_parent = host
-        else:
-            hdr_parent = parent
-        hdr = ctk.CTkFrame(hdr_parent, fg_color='transparent', corner_radius=0)
-        hdr.pack(fill='x', padx=(SPACE['sm'], 0), pady=(SPACE['xs'], SPACE['xs']))
-        for c, (i, w, anchor) in enumerate(cols):
-            head_lbl = ctk.CTkLabel(hdr, text=hd[i], font=self._font('xs', 'bold'), width=w, anchor=anchor,
-                                    text_color=PALETTE['text_secondary'])
-            head_lbl.grid(row=0, column=c, padx=cell_pad, sticky='w')
-            add_tooltip(head_lbl, TEXTS["lrt_header_hints"][i])
-        ctk.CTkFrame(hdr_parent, fg_color=PALETTE['divider'], height=1, corner_radius=0).pack(fill='x')
-
-        gene_font, mono = self._font('sm', 'bold'), self._mono('sm')
-        n_sig = 0
-        ranked = sorted(vals.items(), key=lambda kv: (kv[1][2] if pd.notna(kv[1][2]) else 1.0, kv[1][1]))
-        for k, (gene, (lrt, p, q)) in enumerate(ranked):
-            row = self.df[self.df['Gene'] == gene].iloc[0]
-            sig = pd.notna(q) and q < 0.05
-            n_sig += sig
-            w, p1 = row.get(f'{alt}_w_pos', np.nan), row.get(f'{alt}_p_pos', np.nan)
-            if (pd.isna(w) or pd.isna(p1)) and alt in ('M2a', 'M8'):
-                rf = self._find_results_file(gene, alt)
-                if rf:
-                    from src.backend.sites_parser import SitesParser
-                    pc = SitesParser.extract_positive_class(rf) or {}
-                    w, p1 = pc.get('omega', np.nan), pc.get('p', np.nan)
-            wtxt = f"{w:.3f} ({p1:.3f})" if pd.notna(w) and pd.notna(p1) else "—"
-            cells = [gene,
-                     f"{row.get(f'{null}_lnL'):.3f}" if pd.notna(row.get(f'{null}_lnL')) else "NA",
-                     f"{row.get(f'{alt}_lnL'):.3f}" if pd.notna(row.get(f'{alt}_lnL')) else "NA",
-                     f"{max(0.0, lrt):.3f}", lrt_stats.format_p(p), lrt_stats.format_p(q), wtxt,
-                     TEXTS["lrt_sig_yes"] if sig else TEXTS["lrt_sig_no"]]
-            fr = ctk.CTkFrame(parent, fg_color=PALETTE['row_alt'] if k % 2 else PALETTE['bg_panel'],
-                              corner_radius=RADIUS['field'])
-            fr.pack(fill='x', padx=0, pady=0)
-            for c, (i, wd, anchor) in enumerate(cols):
-                if i == 7:
-                    box = ctk.CTkFrame(fr, fg_color='transparent', width=wd, height=28)
-                    box.pack_propagate(False)
-                    box.grid(row=0, column=c, padx=cell_pad, pady=SPACE['xs'], sticky='w')
-                    (self._chip(box, cells[i], 'success') if sig else
-                     ctk.CTkLabel(box, text=cells[i], font=self._font('xs'),
-                                  text_color=PALETTE['text_tertiary'])).pack(side='left')
-                    continue
-                if i == 0:
-                    font, color, txt = gene_font, PALETTE['text_primary'], self._fit(cells[0], wd, gene_font)
-                else:
-                    font, txt = mono, cells[i]
-                    if i == 5 and sig:
-                        color, font = PALETTE['success_fg'], self._mono('sm', 'bold')
-                    elif i in (4, 5):
-                        color = PALETTE['text_primary'] if sig else PALETTE['text_secondary']
-                    else:
-                        color = PALETTE['text_secondary']
-                ctk.CTkLabel(fr, text=txt, font=font, width=wd, anchor=anchor,
-                             text_color=color).grid(row=0, column=c, padx=cell_pad,
-                                                    pady=SPACE['xs'], sticky='w')
-        info = lrt_stats.PAIRS.get((null, alt), {})
-        df_txt = str(info.get('df')) + (" (χ²₁)" if info.get('boundary') else "")
-        ctk.CTkLabel(parent, text=TEXTS["lrt_footer_template"].format(total=len(vals), sig=n_sig, df=df_txt),
-                     font=self._font('xs'), text_color=PALETTE['text_tertiary'], anchor='w',
-                     wraplength=1150, justify='left').pack(fill='x', pady=(SPACE['md'], SPACE['sm']),
-                                                          padx=SPACE['sm'])
-
-    def _render_lrt_table(self, parent, lrt_col: str, comparison_name: str):
-        """LRT table for Branch and Branch-site, with ω per label."""
-        # Parse model names reliably from lrt_col (e.g. lrt_M0_vs_Branch),
-        # not from comparison_name (which may use → and extra text).
-        col_parts = lrt_col.replace('lrt_', '').split('_vs_')
-        if len(col_parts) != 2:
-            ctk.CTkLabel(parent, text=TEXTS["viewer_lrt_parse_err"]).pack()
-            return
-        if tuple(col_parts) in lrt_stats.PAIRS and col_parts[1] not in ('Branch', 'Branch-site'):
-            return self._render_pair_table(parent, col_parts[0], col_parts[1])
-
-        model1_raw = col_parts[0].lower()
-        model2_raw = col_parts[1].lower()
-        
-        
-        model_hierarchy = {
-            'm0': 0, 'm1a': 1, 'm2a': 2, 'm7': 1, 'm8': 2, 'branch': 1
-        }
-        
-        if model_hierarchy.get(model2_raw, 2) > model_hierarchy.get(model1_raw, 0):
-            alternative_model = model2_raw
-        else:
-            alternative_model = model1_raw
-        
-        if alternative_model == 'branch':
-            alt_display = 'Branch'
-        elif alternative_model.lower() == 'branch-site':
-            alt_display = 'Branch-site'
-        elif alternative_model.lower() == 'branch-site_null':
-            alt_display = 'Branch-site_null'
-        else:
-            alt_display = alternative_model.upper()
-        
-        is_branch_model = alternative_model == 'branch'
-        is_branchsite_model = 'branch-site' in alternative_model.lower()
-
-        # ── Table header ──────────────────────────────────────────────
-        header_frame = ctk.CTkFrame(parent, fg_color='transparent', corner_radius=0)
-        header_frame.pack(fill='x', padx=8, pady=(4, 2))
-
-        if is_branchsite_model:
-            headers    = ["Gene", tr("Classe", "Class"), tr("Proporção", "Proportion"), "Background ω", "Foreground ω", "2Δℓ", "p", "Sig."]
-            col_widths = [200, 80, 120, 120, 120, 100, 120, 60]
-        elif is_branch_model:
-            headers    = ["Gene", tr("ω (marcas de ramo)", "ω (branch tags)"), "2Δℓ", "p", "Sig."]
-            col_widths = [250, 400, 100, 120, 60]
-        else:
-            headers    = ["Gene", f"ω ({alt_display})", "2Δℓ", "p", "Sig."]
-            col_widths = [260, 120, 100, 130, 60]
-
-        for i, (h, width) in enumerate(zip(headers, col_widths)):
-            ctk.CTkLabel(header_frame, text=h, font=self._font('xs', 'bold'),
-                         text_color=PALETTE['text_secondary'], width=width, anchor='w').grid(
-                             row=0, column=i, padx=5, pady=9, sticky="w")
-        
-        row_count = 0
-        for idx, (_, row) in enumerate(self.df.iterrows()):
-            lrt_val = row[lrt_col]
-            
-            if pd.isna(lrt_val):
-                continue
-            
-            gene = row['Gene']
-            
-            if is_branch_model:
-                try:
-                    from src.backend.sites_parser import SitesParser
-                    from pathlib import Path
-                    
-                    results_file = self._find_results_file(gene, alt_display)
-                    if results_file:
-                        omegas_by_tag = SitesParser.extract_omega_by_tags(results_file)
-                        if omegas_by_tag:
-                            omega_items = []
-                            
-                            def sort_tags(item):
-                                tag, val = item
-                                if tag == 'background':
-                                    return (0, tag)
-                                elif tag == 'foreground':
-                                    return (2, tag)
-                                elif tag.startswith('#'):
-                                    try:
-                                        return (1, int(tag[1:]))
-                                    except Exception:
-                                        return (1.5, tag)
-                                else:
-                                    return (3, tag)
-                            
-                            for tag, val in sorted(omegas_by_tag.items(), key=sort_tags):
-                                if val == 999.0:
-                                    # 999 is codeml's placeholder for a label without data
-                                    display_val = "N/A"
-                                    display_tag = tag.replace('background', 'Background').replace('foreground', 'Foreground')
-                                    if tag.startswith('#'):
-                                        display_tag = tag
-                                    omega_items.append(f"{display_tag}: {display_val}")
-                                else:
-                                    if tag == 'background':
-                                        display_tag = 'Background'
-                                    elif tag == 'foreground':
-                                        display_tag = 'Foreground'
-                                    elif tag.startswith('#'):
-                                        display_tag = tag
-                                    else:
-                                        display_tag = tag.replace('_', ' ').title()
-                                    
-                                    omega_items.append(f"{display_tag}: {val:.4f}")
-                            
-                            if len(omega_items) <= 2:
-                                omega_str = " | ".join(omega_items)
-                            else:
-                                omega_str = "\n".join(omega_items)
-                        else:
-                            omega = SitesParser.extract_omega_robust(results_file)
-                            omega_str = f"{omega:.4f}" if omega else "N/A"
-                    else:
-                        omega_str = "N/A"
-                except Exception as e:
-                    omega_str = "N/A"
-                    
-                omega = None
-                try:
-                    results_file = self._find_results_file(gene, alt_display)
-                    if results_file:
-                        omega = SitesParser.extract_omega_robust(results_file)
-                except Exception:
-                    pass
-            else:
-                omega_col = f"{alt_display}_omega"
-                omega = row.get(omega_col, np.nan)
-                
-                if pd.isna(omega):
-                    try:
-                        from src.backend.sites_parser import SitesParser
-                        from pathlib import Path
-                        
-                        results_file = self._find_results_file(gene, alt_display)
-                        if results_file:
-                            omega = SitesParser.extract_omega_robust(results_file)
-                    except Exception:
-                        pass
-
-                omega_str = f"{omega:.4f}" if pd.notna(omega) else "N/A"
-            
-            branchsite_class_data = None
-            if is_branchsite_model:
-                try:
-                    branchsite_class_data = {}
-                    for class_name in ['0', '1', '2a', '2b']:
-                        prop_col = f"Branch-site_class{class_name}_prop"
-                        bg_w_col = f"Branch-site_class{class_name}_bg_w"
-                        fg_w_col = f"Branch-site_class{class_name}_fg_w"
-                        
-                        prop = row.get(prop_col, np.nan)
-                        bg_w = row.get(bg_w_col, np.nan)
-                        fg_w = row.get(fg_w_col, np.nan)
-                        
-                        if pd.notna(prop) and pd.notna(bg_w) and pd.notna(fg_w):
-                            branchsite_class_data[class_name] = {
-                                'prop': prop,
-                                'bg_w': bg_w,
-                                'fg_w': fg_w
-                            }
-                except Exception:
-                    branchsite_class_data = None
-            
-            if alternative_model in ['m2a', 'm8']:
-                df_chi2 = 2
-                p_val = stats.chi2.sf(lrt_val, df=2) if lrt_val > 0 else 1.0
-            elif is_branch_model:
-                # df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
-                # M0 uses the unrooted tree, Branch the rooted one
-                m0_np_val        = row.get('M0_np', np.nan)
-                branch_np_val    = row.get('Branch_np', np.nan)
-                m0_ntime_val     = row.get('M0_ntime', np.nan)
-                branch_ntime_val = row.get('Branch_ntime', np.nan)
-                if pd.notna(m0_np_val) and pd.notna(branch_np_val):
-                    raw_df = abs(int(branch_np_val) - int(m0_np_val))
-                    if pd.notna(m0_ntime_val) and pd.notna(branch_ntime_val):
-                        df_chi2 = max(1, raw_df - (int(branch_ntime_val) - int(m0_ntime_val)))
-                    else:
-                        df_chi2 = max(1, raw_df)
-                else:
-                    df_chi2 = 1
-                p_val = stats.chi2.sf(lrt_val, df=df_chi2) if lrt_val > 0 else 1.0
-            elif is_branchsite_model:
-                # χ²₁, as in LRT_results.txt; the mixture is only a reference
-                p_val = lrt_stats.p_value(lrt_val, 1, boundary=True)
-                df_chi2 = 1
-            else:
-                p_val = stats.chi2.sf(lrt_val, df=1) if lrt_val > 0 else 1.0
-                df_chi2 = 1
-            is_sig = p_val < 0.05
-            
-            p_val_str = self._fmt_pval(p_val)
-            
-            is_strong = is_sig and pd.notna(omega) and omega > 1.0 if not (is_branch_model or is_branchsite_model) else False
-            row_idx = row_count
-
-            bg_color = PALETTE['bg_panel'] if row_idx % 2 == 0 else PALETTE['row_alt']
-            border_color = bg_color
-            
-            if is_branchsite_model and branchsite_class_data:
-                for class_idx, class_name in enumerate(['0', '1', '2a', '2b']):
-                    if class_name not in branchsite_class_data:
-                        continue
-                    
-                    class_info = branchsite_class_data[class_name]
-                    
-                    row_frame = ctk.CTkFrame(parent, 
-                                            fg_color=bg_color,
-                                            corner_radius=RADIUS['field'], border_width=0)
-                    row_frame.pack(fill='x', padx=SPACE['sm'], pady=0)
-                    
-                    sig_text = "* Sim" if is_sig else "—"
-
-                    vals = [
-                        gene if class_idx == 0 else "",
-                        f"Class {class_name}",
-                        f"{class_info['prop']:.4f}",
-                        f"{class_info['bg_w']:.4f}",
-                        f"{class_info['fg_w']:.4f}",
-                        f"{lrt_val:.4f}" if class_idx == 0 else "",
-                        p_val_str if class_idx == 0 else "",
-                        sig_text if class_idx == 0 else ""
-                    ]
-
-                    for i, (v, width) in enumerate(zip(vals, col_widths)):
-                        if i == 7 and is_sig:
-                            color = PALETTE['success_fg']
-                        elif i == 7:
-                            color = self.COLORS['text_muted']
-                        elif i == 6 and is_sig:
-                            color = PALETTE['success_fg']
-                        elif i == 6:
-                            color = self.COLORS['text_secondary']
-                        else:
-                            color = self.COLORS['text_secondary']
-                        
-                        label = ctk.CTkLabel(row_frame, text=v, font=(FONT_UI, 11),
-                                   text_color=color, width=width)
-                        label.grid(row=0, column=i, padx=5, pady=8, sticky="w")
-
-                row_count += 1
-            else:
-                row_frame = ctk.CTkFrame(parent,
-                                        fg_color=bg_color,
-                                        corner_radius=RADIUS['field'], border_width=0)
-                row_frame.pack(fill='x', padx=SPACE['sm'], pady=0)
-
-                if is_strong:
-                    sig_text = "** pos"
-                elif is_sig:
-                    sig_text = "* sig"
-                else:
-                    sig_text = "—"
-
-                lrt_display = (f"{lrt_val:.4f} (df={df_chi2})"
-                               if is_branch_model else f"{lrt_val:.4f}")
-                vals = [gene, omega_str, lrt_display, p_val_str, sig_text]
-
-                for i, (v, width) in enumerate(zip(vals, col_widths)):
-                    if i == 4 and is_strong:
-                        color = PALETTE['success_fg']
-                    elif i == 4 and is_sig:
-                        color = PALETTE['accent_text']
-                    elif i == 4:
-                        color = self.COLORS['text_muted']
-                    elif i == 3 and is_sig:
-                        color = PALETTE['success_fg'] if is_strong else PALETTE['accent_text']
-                    else:
-                        color = self.COLORS['text_secondary']
-
-                    if i == 1 and is_branch_model and '\n' in str(v):
-                        label = ctk.CTkLabel(row_frame, text=v, font=(FONT_UI, 11),
-                                             text_color=color, width=width, justify="left")
-                    else:
-                        label = ctk.CTkLabel(row_frame, text=v, font=(FONT_UI, 11),
-                                             text_color=color, width=width)
-
-                    label.grid(row=0, column=i, padx=5, pady=8, sticky="nw")
-            
-            row_count += 1
-        
-        if row_count == 0:
-            ctk.CTkLabel(parent, text=TEXTS["lrt_no_data_for_comparison"],
-                        font=(FONT_UI, 11),
-                        text_color=self.COLORS['warning']).pack(pady=30)
-        else:
-            footer = ctk.CTkFrame(parent, fg_color=self.COLORS['bg_sidebar'], corner_radius=6)
-            footer.pack(fill='x', padx=8, pady=(10, 8))
-
-            def _footer_pval(x):
-                if not (pd.notna(x) and x > 0):
-                    return 1.0
-                if is_branchsite_model:
-                    return lrt_stats.p_value(x, 1, boundary=True)
-                return stats.chi2.sf(x, df=df_chi2)
-
-            sig_count = sum(1 for _, row in self.df.iterrows()
-                            if pd.notna(row.get(lrt_col)) and
-                            _footer_pval(row[lrt_col]) < 0.05)
-
-            df_display_footer = "1 (χ²₁)" if is_branchsite_model else str(df_chi2)
-            footer_text = TEXTS["lrt_footer_template"].format(
-                total=row_count, sig=sig_count, df=df_display_footer
-            )
-            ctk.CTkLabel(footer, text=footer_text, font=(FONT_UI, 11),
-                         text_color=self.COLORS['text_tertiary']).pack(pady=8, padx=12)
-    
-
-    # ── df_chi2 per comparison ────────────────────────────────
-    _DF_CHI2 = {
-        'lrt_M0_vs_M1a':                           1,
-        'lrt_M8a_vs_M8':                           1,
-        'lrt_M1a_vs_M2a':                          2,
-        'lrt_M7_vs_M8':                            2,
-        'lrt_M0_vs_Branch':                        1,
-        'lrt_Branch-site_null_vs_Branch-site':     1,
-        'lrt_M0_vs_Branch-site':                   2,
-    }
-
     @staticmethod
     def _significant_rows(df_out: pd.DataFrame) -> pd.Series:
         """Rows marked significant in an export table (q < 0.05, or p < 0.05 when
@@ -2586,7 +1816,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
         df_f = self.df[mask].copy()
         lrt_vals = lrt_series[mask]
 
-        df_chi2 = self._DF_CHI2.get(lrt_col, 1)
+        _info = lrt_stats.PAIRS.get(tuple(lrt_col.replace('lrt_', '').split('_vs_')), {})
+        df_chi2 = 1 if _info.get('boundary') else (_info.get('df') or 1)
 
         # df = (np_Branch − np_M0) − (ntime_Branch − ntime_M0)
         branch_df_series = None
@@ -2974,19 +2205,8 @@ class ResultsViewerWindow(ctk.CTkToplevel):
             show_message(self, TEXTS["msg_error"], TEXTS["msg_csv_err"].format(error=e), 'error')
 
     def _export_charts(self):
-        """Export charts."""
-        filepath = ask_save_file(self, TEXTS["dialog_save_as"], self.output_folder,
-                                 initialfile="EasyPAML_charts.png", defaultextension=".png",
-                                 filetypes=[("PNG / PDF", "*.png *.pdf")])
-        if not filepath:
-            return
-        
-        try:
-            tests, whole, positive = self._chart_data()
-            charts.export_figure(filepath, tests, whole, positive)
-            show_message(self, TEXTS["msg_success"], TEXTS["msg_exported_to"].format(path=filepath))
-        except Exception as e:
-            show_message(self, TEXTS["msg_error"], TEXTS["msg_export_err"].format(error=e), 'error')
+        """Export the chart shown in the Summary."""
+        self._summary_export_chart()
 
     def _export_html(self):
         """Export an HTML report, one section per test."""

@@ -506,15 +506,59 @@ TEXTS_PT: dict[str, object] = {
     "viewer_tab_summary": "Resumo",
     "viewer_btn_open_output": "Abrir pasta de resultados",
     "stats_sig_genes": "Genes com seleção positiva (q < 0,05)",
+    "stats_sig_short": "q < 0,05:",
     "stats_failed": "Genes que falharam",
     "summary_title": "Uma linha por gene e por teste",
     "summary_explain": (
-        "Para cada teste: p do LRT, q (p corrigido por Benjamini-Hochberg entre os genes), "
-        "ω e proporção (p₁) da classe de sítios que pode ter ω > 1, e quantos sítios têm "
-        "Pr(ω>1) ≥ 0,95 no BEB. Nem o ω médio do gene nem o ω da classe positiva decidem sozinhos: "
-        "o ω médio fica abaixo de 1 mesmo com poucos sítios sob seleção forte, e a classe positiva "
-        "pode ter ω > 1 sem que o teste seja significativo. Quem decide é o q."
+        "q é o p corrigido para o número de genes (Benjamini-Hochberg); q < 0,05 é significativo. "
+        "\"ω médio\" é a média de todos os sítios no modelo alternativo do teste: fica abaixo de 1 "
+        "mesmo com poucos sítios sob seleção, por isso a evidência vem do q, da classe positiva e dos sítios."
     ),
+    "summary_test": "Teste:",
+    "summary_pick_gene": "Clique num gene para ver a conclusão; clique duas vezes para abrir os sítios.",
+    "summary_open_sites": "Ver sítios",
+    "summary_export_table": "Exportar tabela…",
+    "summary_export_all": "Todos os testes (Excel)…",
+    "summary_export_html": "Relatório HTML…",
+    "summary_copy_genes": "Copiar genes significativos",
+    "summary_genes_copied": "{n} gene(s) copiado(s), um por linha (para g:Profiler, PANTHER, DAVID…).",
+    "summary_df_branch": "df = número de grupos de ramos marcados",
+    "chart_kind_lrt": "Distribuição de 2Δℓ",
+    "chart_kind_omega": "ω por gene",
+    "chart_export": "Exportar gráfico…",
+    "chart_mean_w": "ω médio ({model})",
+    "col_gene": "Gene",
+    "col_result": "Neste teste",
+    "col_conclusion": "Conclusão do gene",
+    "col_mean_w": "ω médio ({model})",
+    "col_w_pos": "ω classe +",
+    "col_sites": "Sítios ≥0,95",
+    "col_w_tags": "ω por marca",
+    "result_failed": "falhou",
+    "conclusion_short": {
+        "positive": "Seleção positiva", "weak": "Sinal fraco", "neutral": "Não sustentada",
+        "no_m8a": "Possível (sem M8a)", "none": "Sem seleção", "failed": "Falhou", "sig": ""},
+    "summary_col_hints": {
+        "q": "p corrigido para o número de genes testados (Benjamini-Hochberg). q < 0,05 é significativo.",
+        "p": "Probabilidade de uma melhora tão grande sem seleção positiva (distribuição χ²).",
+        "lrt": "2Δℓ = 2 × (lnL alternativo − lnL nulo): quanto o modelo alternativo melhora o ajuste.",
+        "mean_w": "Média de ω em todos os sítios no modelo alternativo. Não é critério de seleção positiva.",
+        "w_pos": "ω da classe de sítios que pode estar sob seleção positiva.",
+        "p1": "Proporção de sítios nessa classe.",
+        "sites": "Sítios com Pr(ω>1) ≥ 0,95 no BEB.",
+        "conclusion": "Conclusão juntando os testes de seleção positiva do gene (M8 vs M8a, M8 vs M7, M2a vs M1a).",
+        "result": "Significativo (q < 0,05) neste teste?",
+        "lnl0": "Log-verossimilhança do modelo nulo; maior (menos negativo) é melhor ajuste.",
+        "lnl1": "Log-verossimilhança do modelo alternativo.",
+        "w_tags": "ω de cada grupo de ramos marcado (bg = ramos de fundo).",
+        "df": "Graus de liberdade do teste: número de grupos marcados."},
+    "test_hypotheses": {
+        ("M8a", "M8"): "H₀ M8a: beta + classe com ω = 1 fixo   ·   H₁ M8: beta + classe com ω livre (Swanson et al. 2003)",
+        ("M7", "M8"): "H₀ M7: beta entre 0 e 1   ·   H₁ M8: beta + classe com ω livre   ·   pode dar positivo só por sítios neutros",
+        ("M1a", "M2a"): "H₀ M1a: purificação e neutralidade (ω ≤ 1)   ·   H₁ M2a: mais uma classe com ω > 1",
+        ("Branch-site_null", "Branch-site"): "H₀: ω = 1 no foreground   ·   H₁: sítios com ω > 1 nos ramos marcados (#1)",
+        ("M0", "Branch"): "H₀ M0: um ω para todos os ramos   ·   H₁ Branch: um ω por grupo de ramos marcado",
+        ("M0", "M1a"): "H₀ M0: um ω para todos os sítios   ·   H₁ M1a: classes com ω < 1 e ω = 1"},
     "summary_sig": "{test}: significativo (p = {p}, q = {q}) — {sites} sítio(s) com Pr(ω>1) ≥ 0,95",
     "summary_nonsig": "{test}: não significativo (p = {p}, q = {q})",
     "summary_posclass": "classe positiva: ω = {w}, p₁ = {p1}",
@@ -1108,15 +1152,59 @@ TEXTS_EN: dict[str, object] = {
     "viewer_tab_summary": "Summary",
     "viewer_btn_open_output": "Open results folder",
     "stats_sig_genes": "Genes with positive selection (q < 0.05)",
+    "stats_sig_short": "q < 0.05:",
     "stats_failed": "Genes that failed",
     "summary_title": "One line per gene and test",
     "summary_explain": (
-        "For each test: LRT p, q (p corrected by Benjamini-Hochberg across genes), ω and "
-        "proportion (p₁) of the site class that can have ω > 1, and how many sites have "
-        "Pr(ω>1) ≥ 0.95 in BEB. Neither the gene's mean ω nor the positive-class ω decides on its "
-        "own: the mean stays below 1 even when a few sites are under strong selection, and the "
-        "positive class can have ω > 1 while the test is not significant. The q decides."
+        "q is p corrected for the number of genes (Benjamini-Hochberg); q < 0.05 is significant. "
+        "\"Mean ω\" is the average over all sites under the test's alternative model: it stays below 1 "
+        "even when a few sites are under selection, so the evidence comes from q, the positive class and the sites."
     ),
+    "summary_test": "Test:",
+    "summary_pick_gene": "Click a gene to see its conclusion; double-click to open its sites.",
+    "summary_open_sites": "View sites",
+    "summary_export_table": "Export table…",
+    "summary_export_all": "All tests (Excel)…",
+    "summary_export_html": "HTML report…",
+    "summary_copy_genes": "Copy significant genes",
+    "summary_genes_copied": "{n} gene(s) copied, one per line (for g:Profiler, PANTHER, DAVID…).",
+    "summary_df_branch": "df = number of labelled branch groups",
+    "chart_kind_lrt": "2Δℓ distribution",
+    "chart_kind_omega": "ω per gene",
+    "chart_export": "Export chart…",
+    "chart_mean_w": "mean ω ({model})",
+    "col_gene": "Gene",
+    "col_result": "This test",
+    "col_conclusion": "Gene conclusion",
+    "col_mean_w": "mean ω ({model})",
+    "col_w_pos": "positive-class ω",
+    "col_sites": "Sites ≥0.95",
+    "col_w_tags": "ω per label",
+    "result_failed": "failed",
+    "conclusion_short": {
+        "positive": "Positive selection", "weak": "Weak signal", "neutral": "Not supported",
+        "no_m8a": "Possible (no M8a)", "none": "No selection", "failed": "Failed", "sig": ""},
+    "summary_col_hints": {
+        "q": "p corrected for the number of genes tested (Benjamini-Hochberg). q < 0.05 is significant.",
+        "p": "The chance of an improvement this large without positive selection (χ² distribution).",
+        "lrt": "2Δℓ = 2 × (alternative lnL − null lnL): how much the alternative model improves the fit.",
+        "mean_w": "Average ω over all sites under the alternative model. Not a positive selection criterion.",
+        "w_pos": "ω of the class of sites that may be under positive selection.",
+        "p1": "Proportion of sites in that class.",
+        "sites": "Sites with Pr(ω>1) ≥ 0.95 in BEB.",
+        "conclusion": "Conclusion from all positive-selection tests of the gene (M8 vs M8a, M8 vs M7, M2a vs M1a).",
+        "result": "Significant (q < 0.05) in this test?",
+        "lnl0": "Log-likelihood of the null model; higher (less negative) is a better fit.",
+        "lnl1": "Log-likelihood of the alternative model.",
+        "w_tags": "ω of each labelled branch group (bg = background branches).",
+        "df": "Degrees of freedom of the test: the number of labelled groups."},
+    "test_hypotheses": {
+        ("M8a", "M8"): "H₀ M8a: beta + a class with ω = 1 fixed   ·   H₁ M8: beta + a class with free ω (Swanson et al. 2003)",
+        ("M7", "M8"): "H₀ M7: beta between 0 and 1   ·   H₁ M8: beta + a class with free ω   ·   can be positive from neutral sites alone",
+        ("M1a", "M2a"): "H₀ M1a: purifying and neutral (ω ≤ 1)   ·   H₁ M2a: an extra class with ω > 1",
+        ("Branch-site_null", "Branch-site"): "H₀: ω = 1 on the foreground   ·   H₁: sites with ω > 1 on the labelled branches (#1)",
+        ("M0", "Branch"): "H₀ M0: one ω for all branches   ·   H₁ Branch: one ω per labelled branch group",
+        ("M0", "M1a"): "H₀ M0: one ω for all sites   ·   H₁ M1a: classes with ω < 1 and ω = 1"},
     "summary_sig": "{test}: significant (p = {p}, q = {q}) — {sites} site(s) with Pr(ω>1) ≥ 0.95",
     "summary_nonsig": "{test}: not significant (p = {p}, q = {q})",
     "summary_posclass": "positive class: ω = {w}, p₁ = {p1}",

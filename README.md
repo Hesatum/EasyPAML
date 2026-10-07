@@ -102,12 +102,15 @@ at the bottom left change them, and the choice is kept for the next session.
 
 The results panel has these tabs:
 
-- Summary: a chart of the 2Δℓ distribution of a test and one of ω per gene (move the
-  mouse along the x axis to see the genes), then a sentence per gene, such as "Positive selection: M8 vs M7, M8 vs M8a
-  significant (q < 0.05), 21 site(s) with Pr(ω>1) ≥ 0.95", and below it p, q, ω and
-  p₁ of the positive class for each test.
-- LRT and p-values: lnL of each model, 2Δℓ, p (in scientific notation), q (BH), and
-  ω and proportion of the positive class.
+- Summary: pick a test (M8 vs M8a, M8 vs M7, M2a vs M1a, Branch-site, Branch). Its
+  hypotheses and df are shown above a chart, either the 2Δℓ distribution across genes or
+  ω per gene (move the mouse along the x axis to see the genes; "Export chart…" saves it
+  as vector PDF/SVG, 600 dpi TIFF or 300 dpi PNG). Below, one row per gene: result of
+  the test, the gene's conclusion over all positive-selection tests, q, p, 2Δℓ, mean ω
+  of the alternative model, positive-class ω and p₁, sites with Pr(ω>1) ≥ 0.95 and the
+  lnL of both models. Click a column title to sort; double-click a gene to open its
+  sites. The table, all tests (Excel) or an HTML report can be exported, and the
+  significant genes copied for enrichment tools.
 - Positive Sites: for each significant gene (tick "Show all genes" for the others), a
   chart of where the sites fall along the CDS, with `*` (Pr(ω>1) ≥ 0.95) and `**`
   (≥ 0.99) in different colours, then the table: position in your alignment and in the
