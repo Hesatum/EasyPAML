@@ -1147,7 +1147,7 @@ class App(ctk.CTk):
         )
         self.status_indicator.pack(side='right', padx=(0, sp['sm']), ipadx=sp['sm'])
 
-        self.files_hint = ctk.CTkLabel(self.main_frame, text="⚠  " + TEXTS["hint_select_files"],
+        self.files_hint = ctk.CTkLabel(self.main_frame, text="",
                                        font=(_FONT_UI, fs['sm']), anchor='w', justify='left',
                                        height=32, corner_radius=RADIUS['card'],
                                        fg_color=mix(C['bg_dark'], C['warning'], 0.12),
@@ -2208,6 +2208,11 @@ class App(ctk.CTk):
         enabled = all([self.input_folder, has_tree, self.output_folder])
         state = "normal" if enabled else "disabled"
         try:
+            if not enabled:
+                parts = [p for p, ok in zip(TEXTS["hint_missing_parts"],
+                                            (self.input_folder, has_tree, self.output_folder)) if not ok]
+                missing = (", ".join(parts[:-1]) + TEXTS["hint_and"] + parts[-1]) if len(parts) > 1 else parts[0]
+                self.files_hint.configure(text="⚠  " + TEXTS["hint_select_files"].format(missing=missing))
             if enabled:
                 self.files_hint.pack_forget()
             elif not self.files_hint.winfo_ismapped():
