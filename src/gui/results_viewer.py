@@ -1513,6 +1513,7 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
                         ws_r.column_dimensions[
                             get_column_letter(col_cells[0].column)
                         ].width = min(max_len + 4, 30)
+                sheets_written = len(writer.book.sheetnames)
 
             show_message(self, TEXTS["msg_success"],
                          TEXTS["msg_excel_exported"].format(n=sheets_written, path=filepath))

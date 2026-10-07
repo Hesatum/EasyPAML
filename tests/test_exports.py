@@ -35,6 +35,7 @@ def test_excel_export_writes_every_test(viewer, tmp_path, monkeypatch):
     assert [k for k, _ in viewer._messages] == ['info'], viewer._messages
     wb = openpyxl.load_workbook(out)
     assert 'Summary' in wb.sheetnames and len(wb.sheetnames) >= 3
+    assert f"with {len(wb.sheetnames)} sheet(s)" in viewer._messages[0][1]
     head = [c.value for c in wb[wb.sheetnames[0]][1]]
     assert 'lnL (M7)' in head and 'q-value (BH)' in head and 'significant (q < 0.05)' in head
 
