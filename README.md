@@ -8,21 +8,24 @@ of genes (Benjamini-Hochberg), and lists the sites under selection (BEB).
 [METHODS.md](METHODS.md) describes what the program does to the data, for a methods
 section or a review. [CHANGELOG.md](CHANGELOG.md) lists the changes in each version.
 
-## You don't need to know every trap
+## What EasyPAML is for
 
-A codeml analysis can give a wrong answer without any error message. EasyPAML watches
-for the usual traps for you:
+codeml is powerful but easy to get wrong: a small problem in the files or a missing
+test can give a wrong answer without any error message. EasyPAML makes the analysis
+easier to run and harder to get wrong. It checks your data before running, adds the
+tests a result needs, and explains the answer in plain terms.
 
-- Before it runs, it checks your files. If a sequence has a stop codon or a name that
-  is not in the tree, it tells you where and suggests the fix.
-- When you switch on M8, it also runs M7 and M8a. Neutral sites alone can make M8 vs
-  M7 significant, so a gene that M8 vs M8a does not confirm is marked as such.
-- With many genes, some look significant by chance. The p-values are corrected for
-  the number of genes tested (q), which limits how many chance hits reach your list.
-- If codeml fails or hangs on a gene, you see which gene and why, and it is left out
-  of the results.
-- For your paper, the settings of every run and a ready methods paragraph are saved
-  with the results.
+## Which model answers your question
+
+- **Is any part of the gene under positive selection?** Use the site models. Switch
+  on M8: EasyPAML also runs M7 and M8a and lists the codons under selection. M2a,
+  which adds M1a, is a second test of the same question.
+- **Does ω change along some lineages?** Use the Branch model. Label the lineages of
+  interest in the tree (#1, #2…); each group gets its own ω, compared with a single ω
+  for the whole tree (M0). A different ω alone does not mean positive selection.
+- **Are some codons under positive selection only on certain lineages?** Use the
+  Branch-site model. Label those lineages as the foreground (#1); EasyPAML runs the
+  test with its null and lists the codons.
 
 ## Installation
 
@@ -87,19 +90,6 @@ The results panel opens at the end:
   alignment and in the codeml output.
 - **Branch** (when Branch or Branch-site ran): the tree with the labelled branches and
   their ω.
-
-## Models
-
-| Model | Used for |
-|---|---|
-| M0 | one ω for the whole gene; null of Branch |
-| M1a / M2a | M2a vs M1a: sites under positive selection (df = 2) |
-| M7 / M8 | M8 vs M7 (df = 2); neutral sites alone can make it significant |
-| M8a | M8 vs M8a (df = 1): the stricter test of M8 |
-| Branch | one ω per group of labelled branches, vs M0 |
-| Branch-site | sites under selection on the labelled (#1) branches |
-
-For sites under positive selection, run M8 and read both of its tests.
 
 ## Command line
 
