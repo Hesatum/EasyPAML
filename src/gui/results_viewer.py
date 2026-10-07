@@ -13,6 +13,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from scipy import stats
 import re
 import sys
+import threading
 from html import escape as html_escape
 from src.backend.branch_extractor import BranchExtractor
 from src.backend import lrt_stats
@@ -23,7 +24,7 @@ from .summary_tab import SummaryTab, gene_verdict
 from .branch_tab import BranchTab
 from .gui_texts import TEXTS, get_language, tr
 from .ui_helpers import (CURRENT_THEME, FONT_MONO, FONT_SIZE, FONT_UI, PALETTE, RADIUS, SPACE, fit_to_screen,
-                         add_tooltip, ask_open_file, ask_save_file, hover_tint, mix, open_folder,
+                         add_tooltip, LoadingOverlay, ask_open_file, ask_save_file, hover_tint, mix, open_folder,
                          show_message)
 
 
@@ -119,6 +120,7 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
 
         def restyle(*_):
             current = tabs.get()
+            self._ensure_tab(current)
             for name, btn in seg._buttons_dict.items():
                 btn.configure(text_color='#ffffff' if name == current else PALETTE['text_secondary'])
 
@@ -144,14 +146,39 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
         self.output_folder = output_folder
         self.df = None
         self.tag_columns = {}
-        
-        if not self._load_data():
-            self._show_error(TEXTS["viewer_error_no_tsv"])
+
+        # the window shows at once; files are read in a thread behind a spinner and
+        # the tabs are built when the data is ready
+        self._overlay = LoadingOverlay(self, TEXTS["loading_results"])
+        self._load_result = {}
+        self._loader = threading.Thread(target=self._load_in_background, daemon=True)
+        self._loader.start()
+        self.after(50, self._wait_for_data)
+
+    def _load_in_background(self):
+        try:
+            ok = self._load_data()
+            if ok:
+                self._extract_tag_columns()
+                self._sort_by_significance()
+                self._gene_verdicts()
+            self._load_result['ok'] = ok
+        except Exception as exc:
+            self._load_result['error'] = exc
+
+    def _wait_for_data(self):
+        if self._loader.is_alive():
+            self.after(50, self._wait_for_data)
             return
-        
-        self._extract_tag_columns()
-        self._sort_by_significance()
+        if not self._load_result.get('ok'):
+            self._overlay.close()
+            self._show_error(TEXTS["viewer_error_no_tsv"] if 'error' not in self._load_result
+                             else str(self._load_result['error']))
+            return
         self.setup_ui()
+        self.update_idletasks()
+        self._overlay.frame.lift()
+        self.after(10, self._overlay.close)
     
     def _load_data(self) -> bool:
         """Load analysis_summary.tsv, regenerating it when model folders are missing from it."""
@@ -429,14 +456,21 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
             tabs.add(TEXTS["viewer_tab_branch"])
 
         self._create_summary_tab(tabs.tab(TEXTS["viewer_tab_summary"]))
-        self._create_sites_tab(tabs.tab(TEXTS["viewer_tab_sites"]))
+        # the other tabs are built the first time they are opened
+        self._tab_builders = {TEXTS["viewer_tab_sites"]: self._create_sites_tab}
 
         if branchsite_cols:
-            self._create_branchsite_class_tab(tabs.tab(TEXTS["viewer_tab_branchsite_classes"]))
+            self._tab_builders[TEXTS["viewer_tab_branchsite_classes"]] = self._create_branchsite_class_tab
 
         if has_branch:
-            self._create_tree_tab(tabs.tab(TEXTS["viewer_tab_branch"]))
+            self._tab_builders[TEXTS["viewer_tab_branch"]] = self._create_tree_tab
         self._style_tabs(tabs)
+
+    def _ensure_tab(self, name: str) -> None:
+        """Build a tab the first time it is shown."""
+        build = self._tab_builders.pop(name, None)
+        if build is not None:
+            build(self.tabs.tab(name))
     
     # ── p and q per gene and pair (computed for older folders) ──
 
@@ -600,7 +634,7 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
 
         value(card(0), str(len(self.df)), TEXTS["stats_total_genes"], PALETTE['text_primary'])
         value(card(1), self._count_models(), TEXTS["stats_models_run"], PALETTE['text_primary'])
-        box = card(2, weight=max(2, len(tests)))
+        box = card(2, weight=max(3, 2 * len(tests)))
         ctk.CTkLabel(box, text=TEXTS["stats_sig_short"], font=self._font('sm'),
                      text_color=PALETTE['text_secondary']).pack(side='left', padx=(0, SPACE['md']), pady=(4, 0))
         for name, n_sig, total in tests:

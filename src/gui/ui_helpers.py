@@ -381,6 +381,58 @@ def os_error_text(exc: OSError) -> str:
     return str(exc)
 
 
+class Spinner:
+    """A turning arc on a tk.Canvas: shows that the program is working."""
+
+    def __init__(self, parent, size: int = 40, bg: str = None, color: str = None, width: int = 4):
+        import tkinter as tk
+        self.canvas = tk.Canvas(parent, width=size, height=size, highlightthickness=0,
+                                bg=bg or PALETTE['bg_window'])
+        pad = width + 1
+        self.canvas.create_oval(pad, pad, size - pad, size - pad, outline=mix(bg or PALETTE['bg_window'],
+                                PALETTE['text_tertiary'], 0.35), width=width)
+        self.arc = self.canvas.create_arc(pad, pad, size - pad, size - pad, start=90, extent=100,
+                                          style='arc', outline=color or PALETTE['accent_fill'], width=width)
+        self.angle = 90
+        self.running = True
+        self._tick()
+
+    def _tick(self):
+        if not self.running:
+            return
+        self.angle = (self.angle - 12) % 360
+        try:
+            self.canvas.itemconfigure(self.arc, start=self.angle)
+            self.canvas.after(30, self._tick)
+        except Exception:
+            self.running = False
+
+    def stop(self):
+        self.running = False
+
+
+class LoadingOverlay:
+    """Covers a window with a spinner and a line of text until close() is called."""
+
+    def __init__(self, parent, text: str):
+        self.frame = ctk.CTkFrame(parent, fg_color=PALETTE['bg_window'], corner_radius=0)
+        self.frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+        box = ctk.CTkFrame(self.frame, fg_color='transparent')
+        box.place(relx=0.5, rely=0.45, anchor='center')
+        self.spinner = Spinner(box, size=44, bg=PALETTE['bg_window'])
+        self.spinner.canvas.pack()
+        ctk.CTkLabel(box, text=text, font=(FONT_UI, FONT_SIZE['md']),
+                     text_color=PALETTE['text_secondary']).pack(pady=(SPACE['md'], 0))
+        self.frame.lift()
+
+    def close(self):
+        self.spinner.stop()
+        try:
+            self.frame.destroy()
+        except Exception:
+            pass
+
+
 def add_tooltip(widget, text: str, wraplength: int = 320) -> None:
     """Small box with text while the mouse is over widget."""
     tip = {}

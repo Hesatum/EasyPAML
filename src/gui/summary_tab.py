@@ -435,6 +435,8 @@ class SummaryTab:
     def _summary_open_sites(self):
         sel = self._sum_tree.selection()
         r = self._sum_rows.get(sel[0]) if sel else None
+        if getattr(self, '_sites_goto', None) is None:
+            self._ensure_tab(TEXTS["viewer_tab_sites"])
         goto = getattr(self, '_sites_goto', None)
         if r and goto and self._sum['test'][1] in SITE_ALTS + ('Branch-site',):
             goto(r['gene'], self._sum['test'][1])
