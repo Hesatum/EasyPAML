@@ -4,6 +4,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+- Warm start from M0 is an option (`--warm-start-m0`, or "Start from M0" in the
+  window), off by default. Before, selecting M0 with other models started them from
+  the M0 κ and branch lengths with three initial ω, which METHODS.md did not say;
+  results of runs with M0 can change slightly.
 - Progress weighted by the expected time of each run, with a time left from the
   start; the command line prints it every minute.
 - A significant test with no site at Pr(ω>1) ≥ 0.95 is shown as a weak signal.

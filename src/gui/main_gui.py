@@ -819,6 +819,7 @@ class App(ctk.CTk):
         self.cores_var = ctk.IntVar(value=max(1, _max_cores // 2))
         self.ignore_stop_codons_var = ctk.BooleanVar(value=False)
         self.auto_prune_tree_var = ctk.BooleanVar(value=True)
+        self.warm_start_var = ctk.BooleanVar(value=False)
 
         self.tree_branch_labeled = None
         self.tree_branchsite_labeled = None
@@ -1104,6 +1105,12 @@ class App(ctk.CTk):
         self.cb_auto_prune = _switch(ci, self.auto_prune_tree_var, C['accent_cyan'])
         _place_ctrl(self.cb_auto_prune, sp['md'])
         _place_help(_help(ci, "label_auto_prune", "label_auto_prune_hint"), sp['md'])
+
+        _row[0] += 1
+        _setting_label("label_warm_start", sp['md'])
+        self.cb_warm_start = _switch(ci, self.warm_start_var, C['accent_cyan'])
+        _place_ctrl(self.cb_warm_start, sp['md'])
+        _place_help(_help(ci, "label_warm_start", "label_warm_start_hint"), sp['md'])
 
         ctk.CTkFrame(_sb, fg_color='transparent', height=sp['xl']).pack(fill='x')
 
@@ -2437,6 +2444,7 @@ class App(ctk.CTk):
                 'n_workers': int(self.cores_var.get()),
                 'ignore_stop_codons': ignore_stops,
                 'auto_prune_tree': self.auto_prune_tree_var.get(),
+                'warm_start_m0': bool(self.warm_start_var.get()),
                 'pause_event': self.pause_event,
                 'stop_event': self.stop_event,
                 'log_callback': self._backend_log,

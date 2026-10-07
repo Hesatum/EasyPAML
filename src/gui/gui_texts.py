@@ -107,6 +107,16 @@ TEXTS_PT: dict[str, object] = {
         "Um stop no último códon nunca impede a análise."
     ),
 
+    "label_warm_start":      "Partir do M0 (warm start)",
+    "label_warm_start_hint": (
+        "Desligado (padrão): cada modelo é ajustado do zero.\n"
+        "Ligado: o M0 é ajustado primeiro (mesmo sem estar marcado);\n"
+        "seu κ e seus comprimentos de ramo viram valores iniciais\n"
+        "dos outros modelos (fix_blength = 1), e cada um é ajustado\n"
+        "a partir de ω inicial 0,2, 1,0 e 2,5, ficando o melhor lnL.\n"
+        "Veja METHODS.md."
+    ),
+
     "label_auto_prune":      "Poda automática da árvore",
     "label_auto_prune_hint": (
         "Para cada gene, tira da árvore os táxons que não estão\n"
@@ -725,6 +735,16 @@ TEXTS_EN: dict[str, object] = {
         "On: codeml runs and treats the whole stop column as\n"
         "missing data (with cleandata = 1 it is removed).\n"
         "A stop in the last codon never blocks the analysis."
+    ),
+
+    "label_warm_start":      "Start from M0 (warm start)",
+    "label_warm_start_hint": (
+        "Off (default): every model is fitted from scratch.\n"
+        "On: M0 is fitted first (even if it is not selected);\n"
+        "its κ and branch lengths become the starting values\n"
+        "of the other models (fix_blength = 1), and each one is\n"
+        "fitted from initial ω 0.2, 1.0 and 2.5, keeping the best\n"
+        "lnL. See METHODS.md."
     ),
 
     "label_auto_prune":      "Automatic tree pruning",

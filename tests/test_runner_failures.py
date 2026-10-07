@@ -471,6 +471,23 @@ def test_multistart_keeps_the_files_of_the_best_start(tmp_path, fake_codeml, mon
     assert re.search(r'^\s*omega\s*=\s*1(\.0*)?\b', (out / 'gene_M8.ctl').read_text(), re.M)
 
 
+@pytest.mark.parametrize('warm', [False, True])
+def test_m0_warm_start_only_when_asked(tmp_path, fake_codeml, monkeypatch, warm):
+    """Running M0 with the site models does not change how they start unless
+    warm_start_m0 is on; then they start from M0 with several initial omega values."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    app = _app(tmp_path, fake_codeml, models=('M0', 'M8'))
+    app.config['warm_start_m0'] = warm
+    tree = (DATA / 'gene_example.nwk').read_text().strip()
+    monkeypatch.setattr(app, '_extract_fitted_tree', lambda path: tree)
+    monkeypatch.setattr(app, '_extract_kappa', lambda path: 2.5)
+    calls = []
+    real = app._run_model_multistart
+    monkeypatch.setattr(app, '_run_model_multistart', lambda *a, **k: calls.append(a[1]) or real(*a, **k))
+    app.run_batch_analysis()
+    assert calls == (['M8'] if warm else [])
+
+
 def test_progress_moves_during_a_model_and_heartbeat_prints_it(tmp_path, fake_codeml, monkeypatch):
     """The fraction grows while codeml runs (expected-time weighting), reaches 1 at the
     end, and the command line prints it periodically."""

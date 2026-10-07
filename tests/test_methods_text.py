@@ -39,3 +39,12 @@ def test_version_string_has_commit_in_a_clone():
     assert c is None or len(c.split('-')[0]) == 40
     if c:
         assert f"commit {c[:7]}" in version_string()
+
+
+def test_methods_text_mentions_warm_start_only_when_used():
+    assert 'starting values' not in _text(['M0', 'M7', 'M8'], {})
+    t = build_methods_text(
+        version='0.3.0', codeml_version='4.9j', models=['M0', 'M7', 'M8'],
+        ctl={'CodonFreq': 2, 'ncatG': 10, 'kappa': 2, 'cleandata': 1}, omega0=0.5,
+        pruned=True, family_sizes={}, n_genes=2, warm_start=True, omega_starts=(0.2, 1.0, 2.5))
+    assert 'estimated under M0 were used as starting values' in t and '0.2, 1 and 2.5' in t

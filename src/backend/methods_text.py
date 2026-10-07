@@ -24,7 +24,8 @@ def build_methods_text(*, version: str, codeml_version: Optional[str], models: L
                        ctl: Dict[str, object], omega0: float, pruned: bool,
                        family_sizes: Dict[Tuple[str, str], int], n_genes: int,
                        beb: bool = True, masked_stops: Optional[Dict[str, int]] = None,
-                       excluded_taxa: Optional[Dict[str, List[str]]] = None) -> str:
+                       excluded_taxa: Optional[Dict[str, List[str]]] = None,
+                       warm_start: bool = False, omega_starts: Sequence[float] = ()) -> str:
     cf = ctl.get('CodonFreq')
     cf_name = CODONFREQ_NAMES.get(int(cf), str(cf)) if cf is not None else '?'
     site = [m for m in _SITE_MODELS if m in models]
@@ -47,6 +48,11 @@ def build_methods_text(*, version: str, codeml_version: Optional[str], models: L
     if pruned:
         tree += " and pruned to the taxa present in each alignment"
     s.append(tree + ".")
+    if warm_start:
+        s.append("The κ and branch lengths estimated under M0 were used as starting values for the "
+                 "other models (fix_blength = 1)"
+                 + (f", each fitted from initial ω {_join([f'{w:g}' for w in omega_starts])} keeping "
+                    "the highest log-likelihood" if omega_starts else "") + ".")
     if masked_stops:
         genes = sorted(masked_stops)
         n = sum(masked_stops.values())

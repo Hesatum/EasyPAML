@@ -161,10 +161,12 @@ uses, are already written by then; the site table falls back to NEB.
 then reruns with BEB only the genes with q below `--sig-threshold` (0.05). Outputs
 go to `OUT/pass1_screen/` and `OUT/pass2_beb/`.
 
-`--warm-start-m0` (off by default) fits M0 for each gene and uses its κ and branch
-lengths as starting values for the site models (`fix_blength = 1`), with ω started
-from 0.2, 1.0 and 2.5 and the best lnL kept. Results are not guaranteed to match a
-fit from scratch.
+Warm start (`--warm-start-m0`, or "Start from M0" in the advanced settings) is off by
+default: every model is fitted from scratch, also when M0 is selected. When it is on,
+M0 is fitted first for each gene (also when it is not selected) and its κ and branch
+lengths are the starting values of the other models (`fix_blength = 1`); each model is
+fitted from initial ω 0.2, 1.0 and 2.5 and the best lnL is kept. Results are not
+guaranteed to match a fit from scratch. `methods_text.txt` says when it was used.
 
 ## Evidence column in the results panel
 
