@@ -408,7 +408,7 @@ TEXTS_PT: dict[str, object] = {
     "preflight_tag_warning": "AVISO",
     "preflight_tag_info": "INFO",
     "preflight_general": "(geral)",
-    "preflight_btn_fix": "Corrigir e voltar",
+    "preflight_btn_fix": "Voltar para corrigir os arquivos",
     "preflight_btn_continue": "Continuar mesmo assim",
     "preflight_continue_hint": (
         "Continuando, genes com erro aparecem como FALHOU e stop codons são tratados "
@@ -1041,7 +1041,7 @@ TEXTS_EN: dict[str, object] = {
     "preflight_tag_warning": "WARNING",
     "preflight_tag_info": "INFO",
     "preflight_general": "(general)",
-    "preflight_btn_fix": "Fix and go back",
+    "preflight_btn_fix": "Go back to fix the files",
     "preflight_btn_continue": "Continue anyway",
     "preflight_continue_hint": (
         "If you continue, genes with errors are shown as FAILED and stop codons are "

@@ -91,7 +91,7 @@ at the bottom left change them, and the choice is kept for the next session.
 5. Click Run. Before running, EasyPAML checks the data and lists what it found:
    stop codons (sequence and codon position), alignment names that are not in the
    tree (with the closest name), taxa that will be pruned, duplicate files for the
-   same gene, and lengths that are not a multiple of 3. Choose "Fix and go back" or
+   same gene, and lengths that are not a multiple of 3. Choose "Go back to fix the files" or
    "Continue anyway".
 6. A run takes from minutes to hours. With 10 sequences a model takes 1 to 5
    minutes per gene; with 30 sequences M8 takes 15 to 75 minutes, and with 60
