@@ -202,19 +202,7 @@ class SummaryTab:
         info = ctk.CTkLabel(hyp, text=" ? ", font=self._font('xs', 'bold'), corner_radius=8,
                             fg_color=PALETTE['bg_elevated'], text_color=PALETTE['text_primary'], cursor='hand2')
         info.pack(side='left', padx=(SPACE['sm'], 0))
-        explain = ctk.CTkLabel(parent, text=TEXTS["summary_explain"], font=self._font('sm'), anchor='w',
-                               justify='left', wraplength=1150, fg_color=PALETTE['bg_elevated'],
-                               corner_radius=RADIUS['field'], text_color=PALETTE['text_primary'],
-                               padx=SPACE['sm'], pady=SPACE['xs'])
-
-        def _toggle(_e=None):
-            if explain.winfo_ismapped():
-                explain.pack_forget()
-            else:
-                explain.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']), after=hyp)
-        info.bind('<Button-1>', _toggle)
-        self._sum_explain = explain
-        explain.bind('<Button-1>', _toggle)
+        info.bind('<Button-1>', lambda e: self._summary_toggle_explain())
 
         self._summary_chart_card(parent)
         self._summary_table(parent)
@@ -278,9 +266,16 @@ class SummaryTab:
             command=lambda v: self._summary_draw('omega' if v == TEXTS["chart_kind_omega"] else 'lrt'))
         self._sum_chart_seg.set(TEXTS["chart_kind_lrt"])
         self._sum_chart_seg.pack(side='left')
-        ctk.CTkLabel(top, text=TEXTS["chart_hint"], font=self._font('xs'),
-                     text_color=PALETTE['text_tertiary']).pack(side='left', padx=SPACE['md'])
+        self._sum_chart_hint = ctk.CTkLabel(top, text=TEXTS["chart_hint"], font=self._font('xs'),
+                                            text_color=PALETTE['text_tertiary'])
+        self._sum_chart_hint.pack(side='left', padx=SPACE['md'])
         self._ghost_button(top, TEXTS["chart_export"], self._summary_export_chart).pack(side='right')
+        self._sum_chart_btn = self._ghost_button(top, "", self._summary_toggle_chart)
+        self._sum_chart_btn.pack(side='right', padx=(0, SPACE['sm']))
+        # the explanation of "?" takes the chart's place, so the gene table keeps its height
+        self._sum_explain = ctk.CTkLabel(card, text="", font=self._font('sm'), anchor='w', justify='left',
+                                         wraplength=1150, text_color=PALETTE['text_primary'])
+        self._sum_explain.bind('<Button-1>', lambda e: self._summary_toggle_explain())
 
         c = charts.DARK if CURRENT_THEME['mode'] == 'dark' else charts.LIGHT
         self._sum_colors = dict(c, bg=PALETTE['bg_panel'], box=PALETTE['bg_elevated'])
@@ -288,8 +283,34 @@ class SummaryTab:
         self._sum_canvas = _Canvas(fig, master=card)
         widget = self._sum_canvas.get_tk_widget()
         widget.configure(height=165, highlightthickness=0, bg=self._sum_colors['bg'])
-        widget.pack(fill='x', padx=SPACE['sm'], pady=(0, SPACE['sm']))
         self._sum_hover = None
+        # on a short screen the table needs the height more than the chart
+        self._sum['chart_on'] = self.winfo_screenheight() > 800
+        self._summary_show_chart_area()
+
+    def _summary_show_chart_area(self):
+        """Chart, explanation or nothing below the chart bar."""
+        widget = self._sum_canvas.get_tk_widget()
+        widget.pack_forget()
+        self._sum_explain.pack_forget()
+        if self._sum.get('explain'):
+            self._sum_explain.pack(fill='x', padx=SPACE['md'], pady=(SPACE['xs'], SPACE['sm']))
+        elif self._sum['chart_on']:
+            widget.pack(fill='x', padx=SPACE['sm'], pady=(0, SPACE['sm']))
+        self._sum_chart_btn.configure(text=TEXTS["chart_hide"] if self._sum['chart_on'] else TEXTS["chart_show"])
+        if self._sum['chart_on']:
+            self._sum_chart_hint.pack(side='left', padx=SPACE['md'])
+        else:
+            self._sum_chart_hint.pack_forget()
+
+    def _summary_toggle_chart(self):
+        self._sum['chart_on'] = not self._sum['chart_on']
+        self._sum['explain'] = False
+        self._summary_show_chart_area()
+
+    def _summary_toggle_explain(self):
+        self._sum['explain'] = not self._sum.get('explain')
+        self._summary_show_chart_area()
 
     def _ghost_button(self, parent, text, command):
         return ctk.CTkButton(parent, text=text, command=command, height=28, fg_color='transparent',
