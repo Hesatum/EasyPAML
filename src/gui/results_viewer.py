@@ -563,9 +563,11 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
         charts.draw_sites(fig, positions, df_sites['pr_w_gt_1'].astype(float), marks, length, removed, c,
                           title=legend)
         if removed:
-            ctk.CTkLabel(parent, text=TEXTS["sites_chart_removed"].format(n=len(removed)),
-                         font=self._font('xs'), anchor='w',
-                         text_color=PALETTE['text_tertiary']).pack(side='bottom', fill='x', padx=SPACE['sm'])
+            note = ctk.CTkLabel(parent, text=TEXTS["sites_chart_removed"].format(n=len(removed)),
+                                font=self._font('xs'), anchor='w', justify='left', wraplength=600,
+                                text_color=PALETTE['text_tertiary'])
+            note.pack(side='bottom', fill='x', padx=SPACE['sm'])
+            parent.bind('<Configure>', lambda e: note.configure(wraplength=max(200, e.width - 24)), add='+')
         canvas = _Canvas(fig, master=parent)
         widget = canvas.get_tk_widget()
         widget.configure(height=240, highlightthickness=0, bg=c['bg'])

@@ -328,11 +328,11 @@ def draw_sites(fig: Figure, positions, probs, marks, length: int, removed: Seque
         de.set_ylim(0, None)
     else:
         de.set_yticks([])
-    de.set_ylabel("sites per\n30 codons", fontsize=8.5, color=c['muted'])
     for side in ('top', 'right'):
         de.spines[side].set_visible(False)
     for side in ('left', 'bottom'):
         de.spines[side].set_color(c['axis'])
     de.tick_params(colors=c['muted'], labelsize=9)
     de.yaxis.set_major_locator(MaxNLocator(2))
-    de.set_xlabel(f"codon position in your alignment (1–{length})", fontsize=9, color=c['muted'])
+    de.set_xlabel(f"codon position in your alignment (1–{length})  ·  curve: sites per 30 codons",
+                  fontsize=9, color=c['muted'])
