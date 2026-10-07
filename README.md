@@ -184,6 +184,7 @@ OUT/
   analysis_summary.tsv     lnL, np, ω per model; ω and p₁ of the positive class; 2Δl, p and q per test
   LRT_results.txt          LRT per gene, with the methods note
   sites_BEB.tsv            BEB sites with Pr(ω>1) ≥ 0.95 (M2a, M8, Branch-site), both numberings
+                           (a gene with none gets one row marked "none")
   M8/GENE_M8.ctl           the .ctl used (every parameter, relative paths)
   M8/GENE_M8_seq.fasta     the alignment exactly as codeml read it
   M8/GENE_M8_tree.nwk      the tree exactly as codeml read it (pruned/unrooted)

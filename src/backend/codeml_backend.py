@@ -2038,7 +2038,8 @@ class CodemlBatchAnalysis:
     def write_sites_table(results_folder: Path) -> Optional[Path]:
         """sites_BEB.tsv: BEB sites with Pr(ω>1) ≥ 0.95 (the ones codeml marks * or **)
         for M2a, M8 and Branch-site, with both numberings; NEB only when there is no
-        BEB. Failed genes are left out."""
+        BEB. A gene without such sites gets one row with significance "none" and no
+        position. Failed genes are left out."""
         from .site_map import attach_original_positions
         results_folder = Path(results_folder)
         status = CodemlBatchAnalysis._read_gene_status(results_folder)
@@ -2061,6 +2062,8 @@ class CodemlBatchAnalysis:
                         method, df = 'NEB', SitesParser.parse_sites_from_file(rf, method='NEB')
                     df = df[df['pr_w_gt_1'] >= 0.95]
                     if df.empty:
+                        frames.append(pd.DataFrame([{'gene': gene, 'model': model,
+                                                     'method': method, 'significance': 'none'}]))
                         continue
                     df = attach_original_positions(df, rf)
                 except Exception:

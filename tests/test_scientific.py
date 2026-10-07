@@ -3,6 +3,8 @@ import math
 import re
 from pathlib import Path
 
+import pandas as pd
+
 from src.backend import lrt_stats
 from src.backend.codeml_backend import CodemlBatchAnalysis
 from src.backend.ctl_params import (CODONFREQ_OPTIONS, DEFAULT_CODONFREQ, codonfreq_label,
@@ -206,3 +208,16 @@ def test_sites_table_keeps_significant_sites_and_codeml_stars(tmp_path):
     got = {r[head.index('position_codeml')]: (r[head.index('pr_w_gt_1')], r[head.index('significance')])
            for r in body}
     assert got == {'39': ('0.994', '**'), '85': ('0.990', '*')}
+
+
+def test_sites_table_lists_gene_without_sites(tmp_path):
+    """A gene whose BEB has no site at 0.95 still appears, marked "none"."""
+    (tmp_path / 'M8').mkdir()
+    (tmp_path / 'M8' / 'geneA_M8_results.txt').write_text(_BEB_BLOCK)
+    low = _BEB_BLOCK.replace('0.994**', '0.700').replace('0.990*', '0.600')
+    (tmp_path / 'M8' / 'geneC_M8_results.txt').write_text(low)
+    out = CodemlBatchAnalysis.write_sites_table(tmp_path)
+    t = pd.read_csv(out, sep='\t', dtype=str)
+    c = t[t['gene'] == 'geneC']
+    assert len(c) == 1 and c.iloc[0]['significance'] == 'none' and pd.isna(c.iloc[0]['position_codeml'])
+    assert len(t[t['gene'] == 'geneA']) == 2
