@@ -309,9 +309,11 @@ class SummaryTab:
     def _summary_columns(self, pair) -> List[Tuple[str, str, int, str]]:
         """(id, title, width, anchor) of the table for a test."""
         null, alt = pair
-        cols = [('gene', TEXTS["col_gene"], 132, 'w'), ('result', TEXTS["col_result"], 132, 'w')]
+        cols = [('gene', TEXTS["col_gene"], 132, 'w')]
         if pair in POSITIVE_PAIRS:
             cols.append(('conclusion', TEXTS["col_conclusion"], 165, 'w'))
+        else:
+            cols.append(('result', TEXTS["col_result"], 132, 'w'))
         cols += [('q', 'q (BH)', 74, 'e'), ('p', 'p', 74, 'e'), ('lrt', '2Δℓ', 70, 'e')]
         if pair == ('M0', 'Branch'):
             cols.append(('df', 'df', 40, 'e'))
