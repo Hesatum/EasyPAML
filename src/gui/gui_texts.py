@@ -481,8 +481,10 @@ TEXTS_PT: dict[str, object] = {
     "summary_title": "Uma linha por gene e por teste",
     "summary_explain": (
         "q é o p corrigido para o número de genes (Benjamini-Hochberg); q < 0,05 é significativo. "
-        "\"ω médio\" é a média de todos os sítios no modelo alternativo do teste: fica abaixo de 1 "
-        "mesmo com poucos sítios sob seleção, por isso a evidência vem do q, da classe positiva e dos sítios."
+        "Com um gene só não há o que corrigir e q = p. "
+        "\"ω médio\" é a média de todos os sítios no modelo alternativo do teste. Ele não decide o resultado: "
+        "pode ficar abaixo de 1 com sítios sob seleção e acima de 1 sem um teste significativo. "
+        "A evidência vem do q, da classe positiva e dos sítios."
     ),
     "summary_test": "Teste:",
     "summary_pick_gene": "Clique num gene para ver a conclusão; clique duas vezes para abrir os sítios.",
@@ -1097,8 +1099,10 @@ TEXTS_EN: dict[str, object] = {
     "summary_title": "One line per gene and test",
     "summary_explain": (
         "q is p corrected for the number of genes (Benjamini-Hochberg); q < 0.05 is significant. "
-        "\"Mean ω\" is the average over all sites under the test's alternative model: it stays below 1 "
-        "even when a few sites are under selection, so the evidence comes from q, the positive class and the sites."
+        "With a single gene there is nothing to correct and q = p. "
+        "\"Mean ω\" is the average over all sites under the test's alternative model. It does not decide the result: "
+        "it can stay below 1 with sites under selection and exceed 1 without a significant test. "
+        "The evidence comes from q, the positive class and the sites."
     ),
     "summary_test": "Test:",
     "summary_pick_gene": "Click a gene to see its conclusion; double-click to open its sites.",

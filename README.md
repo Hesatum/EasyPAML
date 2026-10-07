@@ -121,8 +121,9 @@ The results panel has these tabs:
   in colour and their ω, the Branch and Branch-site tests, a table of the branch groups
   and the share of foreground sites with ω > 1. "Export tree…" saves the figure.
 
-> The mean ω of a gene is not a criterion for positive selection. It stays below 1
-> even when a few sites are under strong selection. Use the LRT (q) and the site table.
+> The mean ω of a gene is not a criterion for positive selection. It often stays below 1
+> when a few sites are under strong selection, and it can exceed 1 without a significant
+> test. Use the LRT (q) and the site table.
 
 ## Models
 
