@@ -216,7 +216,7 @@ def draw_omega(ax, whole: Sequence[Point], positive: Sequence[Point], c: Dict[st
 
 
 def enable_hover(fig: Figure, ax, points: Sequence[Point], c: Dict[str, str],
-                 pixels: float = 6, max_lines: int = 10) -> int:
+                 pixels: float = 6, max_lines: int = 8) -> int:
     """Show a box with the genes near the mouse along the x axis. Returns the
     callback id, for mpl_disconnect when the axes are redrawn."""
     box = ax.annotate("", xy=(0, 0), xycoords='axes fraction', xytext=(0, 0),
@@ -227,6 +227,7 @@ def enable_hover(fig: Figure, ax, points: Sequence[Point], c: Dict[str, str],
     guide = ax.axvline(0, color=c['muted'], lw=0.6, alpha=0.6, zorder=6)
     guide.set_visible(False)
     pts = [p for p in points if p.x is not None and np.isfinite(p.x) and p.x > (0 if ax.get_xscale() == 'log' else -1)]
+    xs = np.array([[p.x, 0.0] for p in pts]) if pts else np.zeros((0, 2))
 
     def on_move(event):
         if event.inaxes is not ax or event.x is None:
@@ -235,19 +236,21 @@ def enable_hover(fig: Figure, ax, points: Sequence[Point], c: Dict[str, str],
                 guide.set_visible(False)
                 fig.canvas.draw_idle()
             return
-        to_px = ax.transData.transform
-        near = sorted(((abs(to_px((p.x, 0))[0] - event.x), p) for p in pts),
-                      key=lambda t: t[0])
-        near = [p for d, p in near if d <= pixels]
+        # one vectorised transform: fast with thousands of genes
+        dist = np.abs(ax.transData.transform(xs)[:, 0] - event.x) if len(pts) else np.zeros(0)
+        idx = np.flatnonzero(dist <= pixels)
+        near = [pts[i] for i in idx[np.argsort(dist[idx], kind='stable')]]
         if not near:
             if box.get_visible():
                 box.set_visible(False)
                 guide.set_visible(False)
                 fig.canvas.draw_idle()
             return
-        lines = [p.hover or p.gene for p in near[:max_lines]]
         if len(near) > max_lines:
-            lines.append(f"+{len(near) - max_lines} more")
+            lines = [p.hover or p.gene for p in near[:max_lines - 1]]
+            lines.append(f"… +{len(near) - (max_lines - 1)} more")
+        else:
+            lines = [p.hover or p.gene for p in near]
         box.set_text("\n".join(lines))
         fx, fy = ax.transAxes.inverted().transform((event.x, event.y))
         box.xy = (fx, fy)

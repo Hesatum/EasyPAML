@@ -97,3 +97,27 @@ def test_sites_figure_marks_one_and_two_stars(tmp_path):
     assert out.stat().st_size > 5_000
     lollipops = fig.axes[0]
     assert len(lollipops.lines) >= 3     # grey, * and ** markers
+
+
+def test_hover_box_is_short_and_fast_with_thousands_of_genes():
+    import time
+    import numpy as np
+    from matplotlib.backend_bases import MouseEvent
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.figure import Figure
+    from src.gui import charts
+    rng = np.random.default_rng(0)
+    test = charts.TestData('M8a', 'M8', 1, [charts.Point(f"g{i}", float(rng.chisquare(1)), False)
+                                            for i in range(5000)])
+    fig = Figure(figsize=(6, 3))
+    FigureCanvasAgg(fig)
+    ax = fig.add_subplot()
+    charts.enable_hover(fig, ax, charts.draw_lrt(ax, test, charts.LIGHT, compact=True), charts.LIGHT)
+    fig.canvas.draw()
+    x, y = ax.transData.transform((0.5, 0))
+    t0 = time.perf_counter()
+    fig.canvas.callbacks.process('motion_notify_event', MouseEvent('motion_notify_event', fig.canvas, x, y + 20))
+    assert time.perf_counter() - t0 < 0.5
+    box = [t for t in ax.texts if t.get_visible() and '…' in t.get_text()]
+    assert box and len(box[0].get_text().splitlines()) == 8
+    assert box[0].get_text().splitlines()[-1].startswith('… +')
