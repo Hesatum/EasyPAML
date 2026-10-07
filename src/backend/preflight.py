@@ -69,13 +69,13 @@ class PreflightReport:
 
 # ── Tree ──────────────────────────────────────────────────────────────────
 
-_LABEL_RE = re.compile(r"[#$]\d+$")
+_LABEL_RE = re.compile(r"\s*[#$]\d+$")
 
 
 def read_tree_taxa(tree_file) -> List[str]:
     """Tip names of the tree, without #1/$1 labels or an 'N 1' header."""
     from Bio import Phylo
-    raw = Path(tree_file).read_text(encoding='utf-8', errors='replace')
+    raw = re.sub(r'\s+([#$]\d)', r'\1', Path(tree_file).read_text(encoding='utf-8', errors='replace'))
     lines = raw.splitlines()
     if lines and lines[0].strip() and lines[0].strip().split()[0].isdigit() \
             and not lines[0].strip().startswith('('):

@@ -7,6 +7,7 @@ import traceback
 import io
 import sys
 import os
+import re
 import signal
 import platform as _platform
 
@@ -2240,6 +2241,16 @@ class App(ctk.CTk):
             self.append_log(tr("Erro ao abrir o painel de resultados: ", "Error opening the results panel: ") + f"{e}", "error")
             self.append_log(traceback.format_exc())
 
+    def _per_gene_trees_labelled(self) -> bool:
+        """Every gene has its own tree and each one carries #N or $N labels."""
+        if not self._all_genes_have_trees():
+            return False
+        try:
+            return all(re.search(r'[#$]\d', Path(p).read_text(encoding='utf-8', errors='ignore'))
+                       for p in self.per_gene_trees.values())
+        except OSError:
+            return False
+
     def _all_genes_have_trees(self) -> bool:
         if not self.input_folder or not self.per_gene_trees:
             return False
@@ -2408,13 +2419,14 @@ class App(ctk.CTk):
             self.append_log(tr("Selecione pelo menos um modelo.", "Select at least one model."), 'warn')
             return
         needs_branchsite = any('Branch-site' in m for m in original)
-        if needs_branchsite and not self.tree_branchsite_labeled:
+        labelled_per_gene = self._per_gene_trees_labelled()
+        if needs_branchsite and not self.tree_branchsite_labeled and not labelled_per_gene:
             self.append_log(("Branch-site precisa de um ramo marcado: use "
                              f"'{TEXTS['btn_label_branchsite']}'.") if get_language() == 'pt' else
                             (f"Branch-site needs a labelled branch: use '{TEXTS['btn_label_branchsite']}'."),
                             'error')
             return
-        if 'Branch' in original and not self.tree_branch_labeled:
+        if 'Branch' in original and not self.tree_branch_labeled and not labelled_per_gene:
             self.append_log(("O modelo Branch precisa de ramos marcados: use "
                              f"'{TEXTS['btn_label_branch']}'.") if get_language() == 'pt' else
                             (f"The Branch model needs labelled branches: use '{TEXTS['btn_label_branch']}'."),

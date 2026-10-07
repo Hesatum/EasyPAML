@@ -1216,7 +1216,7 @@ class CodemlBatchAnalysis:
         """Prune tips not in `keep` without losing branch labels: when pruning leaves an
         internal node with one child, Bio.Phylo collapses it and its #N label would
         be lost, so the remaining child inherits the label."""
-        label_re = re.compile(r'[#$]\d+$')
+        label_re = re.compile(r'\s*[#$]\d+$')
 
         def _label(clade):
             m = label_re.search(clade.name or '')
@@ -1450,6 +1450,7 @@ class CodemlBatchAnalysis:
             if tree_path is None:
                 return self._failed(self._t('reason_exception', error='no tree for this gene'), exec_start)
             tree_text = tree_path.read_text(encoding='utf-8', errors='ignore')
+            tree_text = re.sub(r'\s+([#$]\d)', r'\1', tree_text)    # "Name #1" -> "Name#1"
             t_lines = tree_text.splitlines()
             if t_lines and t_lines[0].strip() and t_lines[0].strip().split()[0].isdigit() \
                     and not t_lines[0].strip().startswith('('):
@@ -1459,7 +1460,7 @@ class CodemlBatchAnalysis:
             not_in_fasta: set = set()
             try:
                 tree_obj = Phylo.read(StringIO(tree_text), 'newick')
-                tree_taxa = {re.sub(r'[#$]\d+$', '', t.name) for t in tree_obj.get_terminals() if t.name}
+                tree_taxa = {re.sub(r'\s*[#$]\d+$', '', t.name) for t in tree_obj.get_terminals() if t.name}
             except Exception as exc:
                 return self._failed(f"tree: {exc}", exec_start)
 
@@ -1484,7 +1485,7 @@ class CodemlBatchAnalysis:
                     self._log(f"[WARN] {base_name} [{model_name}]: {msg}")
                 for tx in not_in_fasta:
                     for term in [t for t in tree_obj.get_terminals()
-                                 if t.name and re.sub(r'[#$]\d+$', '', t.name) == tx]:
+                                 if t.name and re.sub(r'\s*[#$]\d+$', '', t.name) == tx]:
                         tree_obj.prune(term)
                 if not_in_fasta:
                     self._log(f"[tree] {base_name} [{model_name}]: pruned {sorted(not_in_fasta)}")
@@ -1517,6 +1518,9 @@ class CodemlBatchAnalysis:
 
             labeled_full = cfg.get('labeled_tree_content')
             labeled_bs = cfg.get('labeled_tree_branchsite')
+            if per_gene and re.search(r'[#$]\d', tree_text):
+                # a per-gene tree with its own #1 labels is the labelled tree of this gene
+                labeled_full = labeled_bs = tree_text.strip()
             if model_name.startswith(('BranchSite', 'Branch-site')):
                 labeled_content = labeled_bs or (labeled_full if labeled_full and '#1' in labeled_full else None)
             elif model_name == 'Branch':
@@ -1545,6 +1549,10 @@ class CodemlBatchAnalysis:
                 fix_bl = 1
                 tree_note = "M0 fitted tree as starting values (fix_blength = 1)"
             else:
+                if not model_name.startswith('Branch'):
+                    for clade in tree_obj.find_clades():   # labels only mean something for branch models
+                        if clade.name:
+                            clade.name = re.sub(r'[#$]\d+$', '', clade.name) or None
                 tree_out = _newick(tree_obj)
             n_tips = len(names)
             (temp_dir / tree_filename).write_text(f"{n_tips}  1\n{tree_out}\n", encoding='utf-8')

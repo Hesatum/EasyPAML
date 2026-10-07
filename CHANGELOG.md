@@ -4,6 +4,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+- Branch and Branch-site use the `#1` labels inside a per-gene tree. Labels written
+  as `Name #1` (with a space, as in the PAML manual) no longer exclude that taxon,
+  and site models get the tree without labels.
 - Per-gene trees: the tree button takes one tree or a folder with one tree per gene,
   paired by file name (also IQ-TREE and RAxML names); the data check says which
   file to rename.

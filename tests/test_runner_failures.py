@@ -530,3 +530,18 @@ def test_cli_adds_null_models_like_the_window(tmp_path, fake_codeml, monkeypatch
     assert {p.name for p in out.iterdir() if p.is_dir()} == expected
     said = capsys.readouterr().out
     assert ('use --no-auto-nulls' in said) == (expected != {'M8'})
+
+
+def test_branch_model_uses_the_labels_of_a_per_gene_tree(tmp_path, fake_codeml, monkeypatch):
+    """A per-gene tree with #1 labels is the labelled tree of that gene for Branch."""
+    monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
+    trees = tmp_path / 'trees'
+    trees.mkdir()
+    (trees / 'gene.fasta.treefile').write_text(
+        (DATA / 'gene_example.nwk').read_text().replace('Gorilla_gorilla', 'Gorilla_gorilla #1'))
+    app = _app(tmp_path, fake_codeml, models=('M0', 'Branch'))
+    app.config.update(tree_file=None, tree_folder=trees)
+    app.run_batch_analysis()
+    written = (tmp_path / 'out' / 'Branch' / 'gene_Branch_tree.nwk').read_text()
+    assert 'Gorilla_gorilla #1' in written or 'Gorilla_gorilla#1' in written
+    assert '#1' not in (tmp_path / 'out' / 'M0' / 'gene_M0_tree.nwk').read_text()
