@@ -106,8 +106,10 @@ and the choice is kept for the next session.
 
 The results panel has these tabs:
 
-- Summary: pick a test (M8 vs M8a, M8 vs M7, M2a vs M1a, Branch-site, Branch). Its
-  hypotheses and df are shown above a chart, either the 2Δℓ distribution across genes or
+- Summary: a sentence at the top gives the answer over all positive-selection tests
+  (genes supported, and why others are not). Pick a test (M8 vs M8a, M8 vs M7, M2a vs
+  M1a, Branch-site, Branch): a line says what "significant" means for it, "?" shows its
+  hypotheses and df, and below is a chart, either the 2Δℓ distribution across genes or
   ω per gene (move the mouse along the x axis to see the genes; "Export chart…" saves it
   as vector PDF/SVG, 600 dpi TIFF or 300 dpi PNG). Below, one row per gene: the evidence
   over all positive-selection tests (Supported, Weak signal, Not confirmed by M8a,

@@ -4,6 +4,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+- Summary: one sentence with the answer at the top, and a plain line saying what
+  "significant" means for each test (hypotheses and df under "?").
 - Branch and Branch-site use the `#1` labels inside a per-gene tree. Labels written
   as `Name #1` (with a space, as in the PAML manual) no longer exclude that taxon,
   and site models get the tree without labels.

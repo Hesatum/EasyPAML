@@ -213,6 +213,7 @@ class SummaryTab:
             else:
                 explain.pack(fill='x', padx=SPACE['md'], pady=(0, SPACE['sm']), after=hyp)
         info.bind('<Button-1>', _toggle)
+        self._sum_explain = explain
         explain.bind('<Button-1>', _toggle)
 
         self._summary_chart_card(parent)
@@ -444,7 +445,9 @@ class SummaryTab:
         info = lrt_stats.PAIRS.get(pair, {})
         df_txt = (f"df = {1 if info.get('boundary') else info.get('df')}" if info.get('df')
                   else TEXTS["summary_df_branch"])
-        self._sum_hyp.configure(text=TEXTS["test_hypotheses"].get(pair, test_label(pair)) + "   ·   " + df_txt)
+        hypotheses = TEXTS["test_hypotheses"].get(pair, test_label(pair)) + "   ·   " + df_txt
+        self._sum_hyp.configure(text=TEXTS["test_plain"].get(pair, hypotheses))
+        self._sum_explain.configure(text=hypotheses + "\n\n" + TEXTS["summary_explain"])
         has_omega = pair[1] in SITE_ALTS
         self._sum_chart_seg.configure(state='normal' if has_omega else 'disabled')
         if not has_omega:
