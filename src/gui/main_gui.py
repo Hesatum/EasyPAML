@@ -1825,7 +1825,9 @@ class App(ctk.CTk):
             self._use_input_folder(path)
 
     def _use_input_folder(self, path):
-        self.input_folder = Path(path)
+        previous, self.input_folder = self.input_folder, Path(path)
+        if previous and previous != self.input_folder:
+            self._forget_previous_data(previous)
         self.stop_label.configure(text=TEXTS["status_stops_template"].format(n="–"))
         files = list_alignment_files(self.input_folder)
         chosen, _ = group_by_gene(files)
@@ -1842,6 +1844,19 @@ class App(ctk.CTk):
             color = self.COLORS['warning']
         self.label_input.configure(text=f"{self.input_folder.name}\n{text}", text_color=color)
         self._update_models_state()
+
+    def _forget_previous_data(self, previous: Path):
+        """New input folder: drop the tree that came from the old one and the
+        progress and log of the last run."""
+        if self.tree_file and previous in self.tree_file.parents and self.input_folder not in self.tree_file.parents:
+            self.tree_file = None
+            self.label_tree.configure(text=TEXTS["label_not_selected"], text_color=self.COLORS['text_tertiary'])
+        if self.analysis_thread and self.analysis_thread.is_alive():
+            return
+        self.progress_bar.set(0)
+        self.progress_label.configure(text=TEXTS["progress_idle"])
+        self.log.delete("1.0", "end")
+        self.log.insert("end", TEXTS["log_welcome"])
 
     def select_tree_file(self):
         start = str(self.tree_file.parent) if self.tree_file else (
