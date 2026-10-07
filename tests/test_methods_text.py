@@ -48,3 +48,11 @@ def test_methods_text_mentions_warm_start_only_when_used():
         ctl={'CodonFreq': 2, 'ncatG': 10, 'kappa': 2, 'cleandata': 1}, omega0=0.5,
         pruned=True, family_sizes={}, n_genes=2, warm_start=True, omega_starts=(0.2, 1.0, 2.5))
     assert 'estimated under M0 were used as starting values' in t and '0.2, 1 and 2.5' in t
+
+
+def test_version_says_how_many_commits_after_the_release():
+    from src.backend.version import after_release
+    assert after_release('v0.4.0-0-gabc1234', '0.4.0') == '0.4.0'
+    assert after_release('v0.4.0-3-gabc1234', '0.4.0') == '0.4.0+3'
+    assert after_release('v0.2.0-87-gabc1234', '0.4.0') == '0.4.0'
+    assert after_release('', '0.4.0') == '0.4.0'
