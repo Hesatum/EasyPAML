@@ -8,19 +8,21 @@ of genes (Benjamini-Hochberg), and lists the sites under selection (BEB).
 [METHODS.md](METHODS.md) describes what the program does to the data, for a methods
 section or a review. [CHANGELOG.md](CHANGELOG.md) lists the changes in each version.
 
-## Mistakes EasyPAML catches for you
+## You don't need to know every trap
 
-A codeml analysis can go wrong without any error message. EasyPAML is built so that
-the common mistakes are stopped or explained before they reach your results:
+A codeml analysis can give a wrong answer without any error message. EasyPAML watches
+for the usual traps for you:
 
-| Common mistake | What EasyPAML does |
-|---|---|
-| A stop codon, a sequence name that is not in the tree, or a length that is not a multiple of 3 | Checks every gene before running, says where the problem is and suggests the closest name |
-| Running M8 vs M7 only, which neutral sites alone can make significant | Adds M8a for you and marks such genes "Not confirmed by M8a" |
-| Calling a gene selected from p when many genes were tested | Corrects p for the number of genes (q) and uses q everywhere |
-| Reading the mean ω of the gene as evidence | Bases the answer on q, the positive class and the sites |
-| A run that crashed or stalled counted as a result | Stops codeml when it hangs and leaves failed runs out of the tests, with the reason |
-| Not knowing later which settings were used | Writes the .ctl of every run, the versions and a methods paragraph to the output folder |
+- Before it runs, it checks your files. If a sequence has a stop codon or a name that
+  is not in the tree, it tells you where and suggests the fix.
+- When you switch on M8, it also runs M7 and M8a. Neutral sites alone can make M8 vs
+  M7 significant, so a gene that M8 vs M8a does not confirm is marked as such.
+- With many genes, some look significant by chance. The p-values are corrected for
+  the number of genes tested (q), which limits how many chance hits reach your list.
+- If codeml fails or hangs on a gene, you see which gene and why, and it is left out
+  of the results.
+- For your paper, the settings of every run and a ready methods paragraph are saved
+  with the results.
 
 ## Installation
 
