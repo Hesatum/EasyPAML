@@ -458,10 +458,13 @@ class FilePicker(_Modal):
                      ).pack(fill='x', padx=pad, pady=(pad, SPACE['sm']))
         bar = ctk.CTkFrame(self, fg_color='transparent')
         bar.pack(fill='x', padx=pad)
-        ctk.CTkButton(bar, text=TEXTS['picker_up'], width=72, height=30, command=self._up,
-                      fg_color=PALETTE['neutral_fill'], hover_color=mix(PALETTE['neutral_fill'], '#000000', 0.2),
-                      text_color='#ffffff', corner_radius=RADIUS['field'],
-                      font=(FONT_UI, FONT_SIZE['sm'], 'bold')).pack(side='left')
+        back = ctk.CTkButton(bar, text="←", width=36, height=30, command=self._up,
+                             fg_color=PALETTE['neutral_fill'],
+                             hover_color=mix(PALETTE['neutral_fill'], '#000000', 0.2),
+                             text_color='#ffffff', corner_radius=RADIUS['field'],
+                             font=(FONT_UI, FONT_SIZE['lg'], 'bold'))
+        back.pack(side='left')
+        add_tooltip(back, TEXTS['picker_up'])
         self.path_var = ctk.StringVar(value=str(self.cwd))
         self.path_entry = ctk.CTkEntry(bar, textvariable=self.path_var, height=30,
                                        fg_color=PALETTE['bg_inset'], border_color=PALETTE['control_border'],
@@ -486,6 +489,7 @@ class FilePicker(_Modal):
         self.listbox.pack(side='left', fill='both', expand=True, padx=SPACE['sm'], pady=SPACE['sm'])
         self.listbox.bind('<Double-Button-1>', lambda e: self._open_selected())
         self.listbox.bind('<Return>', lambda e: self._open_selected())
+        self.listbox.bind('<BackSpace>', lambda e: self._up())
         self.listbox.bind('<<ListboxSelect>>', lambda e: self._on_select())
 
         self.name_var = ctk.StringVar(value=initialfile)

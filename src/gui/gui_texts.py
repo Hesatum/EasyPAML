@@ -342,7 +342,7 @@ TEXTS_PT: dict[str, object] = {
     "chart_hint":               "Passe o mouse sobre o eixo x para ver os genes. Laranja: q < 0,05.",
 
     # ── Novas chaves (0.3.0) ─────────────────────────────────────────────
-    "picker_up": "Acima",
+    "picker_up": "Voltar para a pasta de cima (Backspace)",
     "picker_choose": "Escolher esta pasta",
     "picker_choose_named": "Escolher \u201c{name}\u201d",
     "picker_cancel": "Cancelar",
@@ -938,7 +938,7 @@ TEXTS_EN: dict[str, object] = {
     "chart_hint":               "Move the mouse along the x axis to see the genes. Orange: q < 0.05.",
 
     # ── New keys (0.3.0) ─────────────────────────────────────────────────
-    "picker_up": "Up",
+    "picker_up": "Back to the parent folder (Backspace)",
     "picker_choose": "Choose this folder",
     "picker_choose_named": "Choose \u201c{name}\u201d",
     "picker_cancel": "Cancel",
