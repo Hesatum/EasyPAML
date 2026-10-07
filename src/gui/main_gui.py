@@ -2431,6 +2431,12 @@ class App(ctk.CTk):
             self.append_log(("Modelos nulos adicionados automaticamente: " if get_language() == 'pt'
                              else "Null models added automatically: ") + ", ".join(added), 'info')
 
+        if self.tree_folder:
+            from .tree_pairing import TreePairingDialog
+            if TreePairingDialog(self, self.input_folder, self.tree_folder, self.tree_file).show() != 'continue':
+                return
+            self._use_tree_folder(self.tree_folder)    # files may have been renamed
+
         self.btn_run.configure(state="disabled")
         self.status_indicator.configure(text=TEXTS["preflight_running"], text_color=self.COLORS['info'])
         ignore = bool(self.ignore_stop_codons_var.get())
