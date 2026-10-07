@@ -424,7 +424,6 @@ class ResultsViewerWindow(SummaryTab, ctk.CTkToplevel):
             tabs.add(TEXTS["viewer_tab_branchsite_classes"])
 
         tabs.add(TEXTS["viewer_tab_branch"])
-        tabs.add(TEXTS["viewer_tab_export"])
         tabs.add(TEXTS["viewer_tab_interpretation"])
 
         self._create_summary_tab(tabs.tab(TEXTS["viewer_tab_summary"]))
@@ -435,7 +434,6 @@ class ResultsViewerWindow(SummaryTab, ctk.CTkToplevel):
             self._create_branchsite_class_tab(tabs.tab(TEXTS["viewer_tab_branchsite_classes"]))
 
         self._create_tree_tab(tabs.tab(TEXTS["viewer_tab_branch"]))
-        self._create_export_tab(tabs.tab(TEXTS["viewer_tab_export"]))
         self._style_tabs(tabs)
     
     # ── p and q per gene and pair (computed for older folders) ──
@@ -1727,40 +1725,6 @@ class ResultsViewerWindow(SummaryTab, ctk.CTkToplevel):
         if valid_genes:
             render_tree()
     
-    def _create_export_tab(self, parent):
-        """Export tab."""
-        main_frame = ctk.CTkScrollableFrame(parent, fg_color='transparent', corner_radius=0)
-        main_frame.pack(fill='both', expand=True, padx=SPACE['md'], pady=SPACE['sm'])
-
-        ctk.CTkLabel(main_frame, text=TEXTS["export_tab_title"], font=self._font('md', 'bold'),
-                     text_color=PALETTE['text_primary'], anchor='w').pack(anchor='w', pady=(0, SPACE['sm']))
-
-        _export_callbacks = [
-            self._export_excel,
-            self._export_csv,
-            self._export_charts,
-            self._export_html,
-        ]
-        for (title, desc), command in zip(TEXTS["export_options"], _export_callbacks):
-            card = ctk.CTkFrame(main_frame, fg_color=PALETTE['bg_elevated'], corner_radius=RADIUS['card'])
-            card.pack(fill='x', pady=(0, SPACE['sm']))
-
-            row = ctk.CTkFrame(card, fg_color='transparent')
-            row.pack(fill='x', padx=SPACE['lg'], pady=SPACE['md'])
-
-            txt = ctk.CTkFrame(row, fg_color='transparent')
-            txt.pack(side="left", fill='both', expand=True)
-            ctk.CTkLabel(txt, text=title, font=self._font('md', 'bold'),
-                         text_color=PALETTE['text_primary'], anchor='w').pack(anchor='w')
-            ctk.CTkLabel(txt, text=desc, font=self._font('sm'),
-                         text_color=PALETTE['text_secondary'], anchor='w').pack(anchor='w', pady=(2, 0))
-
-            ctk.CTkButton(row, text=TEXTS["export_btn"], width=130, height=32,
-                          fg_color=PALETTE['accent_fill'], hover_color=mix(PALETTE['accent_fill'], '#000000', 0.15),
-                          text_color='#ffffff', font=self._font('sm', 'bold'),
-                          corner_radius=RADIUS['field'], command=command).pack(side="right")
-
-    
     def _detect_positive_selection(self) -> dict:
         """{gene: {test: {omega, p_value, q_value, lrt}}} for genes with q < 0.05 in at
         least one positive-selection test; omega is the positive class ω."""
@@ -2158,55 +2122,6 @@ class ResultsViewerWindow(SummaryTab, ctk.CTkToplevel):
                          TEXTS["msg_excel_exported"].format(n=sheets_written, path=filepath))
         except Exception as e:
             show_message(self, TEXTS["msg_error"], TEXTS["msg_excel_err"].format(error=e), 'error')
-
-    def _export_csv(self):
-        """Export to CSV, one file per test."""
-        lrt_cols = [c for c in self.df.columns if c.startswith('lrt_')]
-        if not lrt_cols:
-            show_message(self, TEXTS["msg_warning"], TEXTS["msg_no_lrt"], 'warning')
-            return
-
-        SHEET_LABELS = {
-            'lrt_M0_vs_M1a':                       'M0_vs_M1a',
-            'lrt_M1a_vs_M2a':                      'M1a_vs_M2a',
-            'lrt_M7_vs_M8':                        'M7_vs_M8',
-            'lrt_M0_vs_Branch':                    'M0_vs_Branch',
-            'lrt_Branch-site_null_vs_Branch-site': 'Branch-site',
-            'lrt_M0_vs_Branch-site':               'M0_vs_Branch-site',
-        }
-
-        # Ask for base path (files will be named <base>_<model>.csv)
-        base_path = ask_save_file(self, TEXTS["dialog_save_csv"], self.output_folder,
-                                  initialfile="EasyPAML_LRT.csv", defaultextension=".csv",
-                                  filetypes=[("CSV", "*.csv")])
-        if not base_path:
-            return
-
-        from pathlib import Path as _P
-        base = _P(base_path).with_suffix('')
-        files_written = []
-        try:
-            for lrt_col in lrt_cols:
-                df_out = self._build_export_df(lrt_col)
-                if df_out.empty:
-                    continue
-                label = SHEET_LABELS.get(lrt_col,
-                    lrt_col.replace('lrt_', '').replace('_vs_', '_vs_').replace(' ', '_'))
-                out_path = str(base) + f'_{label}.csv'
-                df_out.to_csv(out_path, index=False, sep=',', encoding='utf-8-sig')
-                files_written.append(out_path)
-
-            if files_written:
-                show_message(self, TEXTS["msg_success"], TEXTS["msg_csv_exported"].format(
-                    n=len(files_written), files="\n".join(files_written)))
-            else:
-                show_message(self, TEXTS["msg_warning"], TEXTS["msg_no_csv_data"], 'warning')
-        except Exception as e:
-            show_message(self, TEXTS["msg_error"], TEXTS["msg_csv_err"].format(error=e), 'error')
-
-    def _export_charts(self):
-        """Export the chart shown in the Summary."""
-        self._summary_export_chart()
 
     def _export_html(self):
         """Export an HTML report, one section per test."""

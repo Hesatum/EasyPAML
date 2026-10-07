@@ -169,7 +169,6 @@ TEXTS_PT: dict[str, object] = {
     "viewer_tab_sites":              "Sítios sob seleção",
     "viewer_tab_branchsite_classes": "Classes branch-site",
     "viewer_tab_branch":             "Análise de ramos",
-    "viewer_tab_export":             "Exportar",
 
     "stats_total_genes":        "Total de Genes",
     "stats_models_run":         "Modelos Rodados",
@@ -269,15 +268,7 @@ TEXTS_PT: dict[str, object] = {
     "branch_outgroup_none":  "(nenhum)",
     "branch_btn_export_png": "Exportar PNG",
 
-    "export_tab_title": "Exportar Resultados",
-    "export_btn":       "Exportar →",
 
-    "export_options": [
-        ("Excel (.xlsx)",    "Uma planilha por teste"),
-        ("CSV",              "Um arquivo por teste"),
-        ("Gráficos (PNG)",   "Gráficos de ω, LRT e genes com seleção (PNG ou PDF)"),
-        ("Relatório (HTML)", "Uma página com todos os testes"),
-    ],
 
     # ── TreeLabelWindow — mensagens de erro inline ───────────────────────
     "tree_err_no_biopython":  "[!] Biopython não instalado. Execute: pip install biopython",
@@ -331,15 +322,11 @@ TEXTS_PT: dict[str, object] = {
     "msg_no_lrt":               "Nenhum resultado LRT encontrado.",
     "msg_excel_exported":       "Excel exportado com {n} aba(s):\n{path}",
     "msg_excel_err":            "Erro ao exportar Excel:\n{error}",
-    "msg_csv_exported":         "{n} arquivo(s) exportado(s):\n{files}",
-    "msg_no_csv_data":          "Nenhum dado disponível para exportar.",
-    "msg_csv_err":              "Erro ao exportar CSV:\n{error}",
     "msg_html_exported":        "Relatório HTML exportado:\n{path}",
     "msg_html_err":             "Erro ao exportar HTML:\n{error}",
 
     # ── ResultsViewerWindow file dialogs ────────────────────────
     "dialog_export_cladogram":  "Exportar cladograma",
-    "dialog_save_csv":          "Salvar CSVs (um por teste; o nome do teste é acrescentado ao nome)",
     "dialog_save_as":           "Salvar como",
 
     # ── Charts (matplotlib) ─────────────────────────────────────────────
@@ -816,7 +803,6 @@ TEXTS_EN: dict[str, object] = {
     "viewer_tab_sites":              "Positive Sites",
     "viewer_tab_branchsite_classes": "Branch-site Classes",
     "viewer_tab_branch":             "Branch Analysis",
-    "viewer_tab_export":             "Export",
 
     "stats_total_genes":        "Total Genes",
     "stats_models_run":         "Models Run",
@@ -916,15 +902,7 @@ TEXTS_EN: dict[str, object] = {
     "branch_outgroup_none":  "(none)",
     "branch_btn_export_png": "Export PNG",
 
-    "export_tab_title": "Export Results",
-    "export_btn":       "Export →",
 
-    "export_options": [
-        ("Excel (.xlsx)",   "One sheet per test"),
-        ("CSV",             "One file per test"),
-        ("Charts (PNG)",    "ω, LRT and selected-gene charts (PNG or PDF)"),
-        ("Report (HTML)",   "One page with every test"),
-    ],
 
     # ── TreeLabelWindow — inline error messages ──────────────────────────
     "tree_err_no_biopython":  "[!] Biopython not installed. Run: pip install biopython",
@@ -978,15 +956,11 @@ TEXTS_EN: dict[str, object] = {
     "msg_no_lrt":               "No LRT results found.",
     "msg_excel_exported":       "Excel exported with {n} sheet(s):\n{path}",
     "msg_excel_err":            "Error exporting Excel:\n{error}",
-    "msg_csv_exported":         "{n} file(s) exported:\n{files}",
-    "msg_no_csv_data":          "No data available to export.",
-    "msg_csv_err":              "Error exporting CSV:\n{error}",
     "msg_html_exported":        "HTML report exported:\n{path}",
     "msg_html_err":             "Error exporting HTML:\n{error}",
 
     # ── ResultsViewerWindow — file dialogs ───────────────────────────────
     "dialog_export_cladogram":  "Export cladogram",
-    "dialog_save_csv":          "Save CSV files (one per test; the test name is added to the name)",
     "dialog_save_as":           "Save as",
 
     # ── Charts (matplotlib) ───────────────────────────────────────────────

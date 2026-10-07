@@ -268,26 +268,6 @@ def enable_hover(fig: Figure, ax, points: Sequence[Point], c: Dict[str, str],
     return fig.canvas.mpl_connect('motion_notify_event', on_move)
 
 
-def export_figure(path, tests: Sequence[TestData], whole: Sequence[Point],
-                  positive: Sequence[Point]) -> None:
-    """One panel per test and an ω panel, two columns, for a manuscript figure."""
-    c = LIGHT
-    has_omega = bool(whole or positive)
-    cols = min(2, max(1, len(tests)))
-    lrt_rows = (len(tests) + cols - 1) // cols
-    rows = lrt_rows + (1 if has_omega else 0)
-    fig = Figure(figsize=(5.3 * cols, 3.3 * rows), facecolor=c['bg'])
-    grid = fig.add_gridspec(rows, cols, hspace=0.6, wspace=0.28)
-    letters = "ABCDEFGHIJ"
-    for i, test in enumerate(tests):
-        draw_lrt(fig.add_subplot(grid[i // cols, i % cols]), test, c, label=letters[i])
-    if has_omega:      # full width under the tests
-        draw_omega(fig.add_subplot(grid[rows - 1, :]), whole, positive, c,
-                   label=letters[len(tests)])
-    dpi = 600 if str(path).lower().endswith(('.tif', '.tiff')) else 300
-    fig.savefig(path, dpi=dpi, facecolor=c['bg'], bbox_inches='tight')
-
-
 def draw_sites(fig: Figure, positions, probs, marks, length: int, removed: Sequence[int],
                c: Dict[str, str], title: str = "") -> None:
     """Where the sites under selection sit along the CDS, in the user's alignment

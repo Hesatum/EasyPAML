@@ -73,8 +73,12 @@ def test_chart_figure_is_written_for_few_and_many_genes(tmp_path, n):
                                                          i % 4 == 0) for i in range(n)])
     whole = [charts.Point(f"g{i}", float(rng.lognormal(-1, 0.5)), False) for i in range(n)]
     pos = [charts.Point(f"g{i}", float(rng.lognormal(1, 0.5)), i % 4 == 0) for i in range(n)]
+    from matplotlib.figure import Figure
+    fig = Figure(figsize=(7, 3.2))
+    charts.draw_lrt(fig.add_subplot(1, 2, 1), test, charts.LIGHT)
+    charts.draw_omega(fig.add_subplot(1, 2, 2), whole, pos, charts.LIGHT)
     out = tmp_path / 'fig.png'
-    charts.export_figure(out, [test], whole, pos)
+    fig.savefig(out, dpi=300)
     assert out.stat().st_size > 10_000
 
 
