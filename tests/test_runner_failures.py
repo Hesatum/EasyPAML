@@ -514,7 +514,7 @@ def test_progress_moves_during_a_model_and_heartbeat_prints_it(tmp_path, fake_co
 @pytest.mark.parametrize('extra, expected', [([], {'M7', 'M8', 'M8a'}),
                                              (['--no-m8a'], {'M7', 'M8'}),
                                              (['--no-auto-nulls'], {'M8'})])
-def test_cli_adds_null_models_like_the_window(tmp_path, fake_codeml, monkeypatch, extra, expected):
+def test_cli_adds_null_models_like_the_window(tmp_path, fake_codeml, monkeypatch, capsys, extra, expected):
     import easypaml_cli
     monkeypatch.setenv('FAKE_CODEML_MODE', 'ok')
     inp = tmp_path / 'in'
@@ -528,3 +528,5 @@ def test_cli_adds_null_models_like_the_window(tmp_path, fake_codeml, monkeypatch
     with pytest.raises(SystemExit):
         easypaml_cli.main()
     assert {p.name for p in out.iterdir() if p.is_dir()} == expected
+    said = capsys.readouterr().out
+    assert ('use --no-auto-nulls' in said) == (expected != {'M8'})

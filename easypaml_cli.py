@@ -250,8 +250,12 @@ def main():
             listed, include_neutral=True, include_m8a=not cfg.get('no_m8a'))
         added = [m for m in cfg['models'] if m not in listed]
         if added:
-            print(("Modelos nulos acrescentados: " if lang == 'pt' else "Null models added: ")
-                  + ", ".join(added) + "  (--no-auto-nulls)")
+            if lang == 'pt':
+                print(f"Modelos nulos acrescentados para completar os testes: {', '.join(added)}. "
+                      "Para rodar só os modelos listados, use --no-auto-nulls.")
+            else:
+                print(f"Null models added to complete the tests: {', '.join(added)}. "
+                      "To run only the models you listed, use --no-auto-nulls.")
     if cfg.get('no_m8a') and 'M8a' in cfg['models']:
         cfg['models'] = [m for m in cfg['models'] if m != 'M8a']
     if not cfg['input'].is_dir():
