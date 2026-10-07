@@ -286,7 +286,7 @@ TEXTS_PT: dict[str, object] = {
     "log_analysis_done":      "Análise terminada.\n",
 
     # ── App file dialogs ────────────────────────────────────────
-    "dialog_select_results_folder": "Selecione a pasta com resultados para atualizar síntese",
+    "dialog_select_results_folder": "Escolha uma pasta de resultados do EasyPAML para abrir",
 
     # ── App — troca de idioma ────────────────────────────────────────────
     "lang_switch_message":  "O novo idioma é aplicado quando o EasyPAML reabre. As pastas e os modelos escolhidos são mantidos.",
@@ -922,7 +922,7 @@ TEXTS_EN: dict[str, object] = {
     "log_analysis_done":      "Analysis finished.\n",
 
     # ── App — file dialogs ───────────────────────────────────────────────
-    "dialog_select_results_folder": "Select results folder to update summary",
+    "dialog_select_results_folder": "Choose an EasyPAML results folder to open",
 
     # ── App — language switch ────────────────────────────────────────────
     "lang_switch_message":  "The new language is applied when EasyPAML reopens. The folders and models you chose are kept.",
