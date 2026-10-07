@@ -303,6 +303,21 @@ def ask_yes_no(parent, title: str, message: str, yes: str = None, no: str = None
     return bool(dlg.show())
 
 
+def ask_choice(parent, title: str, message: str, options) -> Optional[str]:
+    """Dialog with one button per (label, value); returns the value, or None when closed."""
+    dlg = _Modal(parent, title, 560, 260)
+    ctk.CTkLabel(dlg, text=message, font=(FONT_UI, FONT_SIZE['md']), wraplength=500, justify='left',
+                 text_color=PALETTE['text_primary']).pack(padx=SPACE['xl'], pady=(SPACE['xl'], SPACE['lg']),
+                                                          anchor='w')
+    row = ctk.CTkFrame(dlg, fg_color='transparent')
+    row.pack(fill='x', padx=SPACE['xl'], pady=(0, SPACE['xl']), side='bottom')
+    for i, (label, value) in enumerate(reversed(list(options))):
+        _button(row, label, lambda v=value: dlg._close(v),
+                PALETTE['accent_fill'] if i == len(options) - 1 else PALETTE['neutral_fill']).pack(
+            side='right', padx=(0, SPACE['sm'] if i else 0))
+    return dlg.show()
+
+
 def show_message(parent, title: str, message: str, kind: str = 'info') -> None:
     dlg = _Modal(parent, title, 560, 300)
     color = {'error': PALETTE['danger_text'], 'warning': PALETTE['warning_text']}.get(

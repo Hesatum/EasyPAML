@@ -81,9 +81,13 @@ and the choice is kept for the next session.
    alignments it found.
 2. Tree file: a Newick tree (`.nwk`, `.tree`, `.tre`, `.txt`), rooted or unrooted.
    It may contain extra taxa, which are pruned for each gene.
-   To use one tree per gene, put `GENE.nwk` (or `.tree`/`.tre`) next to `GENE.fasta`
-   in the alignments folder. That tree replaces the tree file for that gene, and if
-   every gene has its own tree you do not need a tree file at all.
+   For one tree per gene, choose "Folder with one tree per gene" (or put the trees
+   next to the alignments). Each tree is paired with its gene by file name, ignoring
+   case and the names IQ-TREE and RAxML give (`GENE.nwk`, `GENE.fasta.treefile`,
+   `RAxML_bestTree.GENE`, `GENE.raxml.bestTree`). A near name is never paired: the
+   data check says which file to rename. A general tree file can be chosen as well;
+   it is used for the genes without a tree of their own. For Branch and
+   Branch-site, the `#1` labels must already be in each per-gene tree.
 3. Output folder: choose a folder, or create one with "New folder".
 4. Switch the models on. With "Automatic null models" on, the null model of each
    test is added for you (M8 adds M7 and M8a; M2a adds M1a). Click the card of an
@@ -155,7 +159,7 @@ Main options (`--help` lists all of them):
 | `--models` | `M1a,M2a,M7,M8,M8a` | models to run |
 | `--no-auto-nulls` | | run only the listed models; by default the null of each listed model is added, as in the window (`--models M8` runs M7, M8 and M8a) |
 | `--no-m8a` | | do not run M8a (no M8a vs M8 test); in the window, click the M8a card |
-| `--tree-folder` | | folder with one tree per gene (`GENE.nwk`), matched by name; `GENE.nwk` in the alignments folder also works |
+| `--tree-folder` | | folder with one tree per gene, paired by file name (`GENE.nwk`, IQ-TREE and RAxML names); trees in the alignments folder also work |
 | `--codonfreq` | `2` (F3x4) | codeml CodonFreq (0 Fequal, 1 F1x4, 2 F3x4, 3 F61, 7 FMutSel …) |
 | `--ncatg` | `10` | beta categories (M7/M8/M8a) |
 | `--kappa` | `2` | initial κ (estimated) |

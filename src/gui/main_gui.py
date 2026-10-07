@@ -29,7 +29,7 @@ from backend.preflight import discover_per_gene_trees, group_by_gene, list_align
 from .results_viewer import ResultsViewerWindow
 from .gui_texts import TEXTS, set_language, get_language, tr
 from .ui_helpers import (CURRENT_THEME, FONT_SIZE, PALETTE, RADIUS, SPACE, THEME_CHOICES, PreflightDialog,
-                         ask_directory, ask_open_file, ask_string, ask_yes_no, os_error_text, save_theme_pref, system_theme,
+                         ask_choice, ask_directory, ask_open_file, ask_string, ask_yes_no, os_error_text, save_theme_pref, system_theme,
                          disable_mouse_wheel, fit_to_screen, hover_tint, mix, open_folder,
                          show_about, show_message)
 
@@ -805,6 +805,7 @@ class App(ctk.CTk):
         self.input_folder = None
         self.per_gene_trees = {}
         self.tree_file = None
+        self.tree_folder = None
         self.output_folder = None
         self.analysis_thread = None
         self.analysis_instance = None
@@ -1481,7 +1482,7 @@ class App(ctk.CTk):
     def _refresh_visual_state(self):
         """Poll the state and refresh the appearance when it changes."""
         try:
-            sig = (str(self.input_folder), str(self.tree_file), len(self.per_gene_trees),
+            sig = (str(self.input_folder), str(self.tree_file), str(self.tree_folder), len(self.per_gene_trees),
                    str(self.output_folder),
                    tuple(k for k, v in self.model_vars.items() if v.get()),
                    bool(self.include_neutral_models.get()), tuple(sorted(self._excluded_nulls)),
@@ -1508,7 +1509,9 @@ class App(ctk.CTk):
             lines = []
             for line in str(detail.cget('text')).splitlines():
                 lines.append(line.split(': ')[0] if ': ' in line else line)
-            if key == 'tree' and not self.tree_file and self.per_gene_trees:
+            if key == 'tree' and self.tree_folder:
+                lines = str(detail.cget('text')).splitlines()
+            elif key == 'tree' and not self.tree_file and self.per_gene_trees:
                 lines = [TEXTS["slot_tree_per_gene"].format(n=len(self.per_gene_trees))]
             col = detail.cget('text_color')
             shown.configure(text="\n".join(lines[:3]),
@@ -1872,7 +1875,7 @@ class App(ctk.CTk):
         self.stop_label.configure(text=TEXTS["status_stops_template"].format(n="–"))
         files = list_alignment_files(self.input_folder)
         chosen, _ = group_by_gene(files)
-        self.per_gene_trees = discover_per_gene_trees(self.input_folder, genes=set(chosen))
+        self.per_gene_trees = discover_per_gene_trees(self.input_folder, self.tree_folder, genes=set(chosen))
         if files:
             names = ", ".join(f.name for f in files[:4]) + (" …" if len(files) > 4 else "")
             text = TEXTS["label_found_alignments"].format(n=len(files), names=names)
@@ -1884,6 +1887,8 @@ class App(ctk.CTk):
             text = TEXTS["label_no_alignments"]
             color = self.COLORS['warning']
         self.label_input.configure(text=f"{self.input_folder.name}\n{text}", text_color=color)
+        if self.tree_folder:
+            self._use_tree_folder(self.tree_folder)
         self._update_models_state()
 
     def _forget_previous_data(self, previous: Path):
@@ -1903,14 +1908,42 @@ class App(ctk.CTk):
         self.log.insert("end", TEXTS["log_welcome"])
 
     def select_tree_file(self):
+        kind = ask_choice(self, TEXTS["btn_tree_file"], TEXTS["tree_choice_message"],
+                          [(TEXTS["tree_choice_file"], 'file'), (TEXTS["tree_choice_folder"], 'folder')])
+        if kind == 'folder':
+            start = self._start_dir(self.tree_folder or self.input_folder)
+            path = ask_directory(self, TEXTS["tree_choice_folder"], start)
+            if path:
+                self._use_tree_folder(path)
+            return
+        if kind != 'file':
+            return
         start = self._start_dir(self.tree_file.parent if self.tree_file else self.input_folder)
         path = ask_open_file(self, TEXTS["btn_tree_file"], start,
                              filetypes=[('Newick', '*.nwk *.tree *.tre *.newick *.nh *.txt')])
         if path:
             self._use_tree_file(path)
 
+    def _use_tree_folder(self, path):
+        """Folder with one tree per gene, paired with the genes by file name."""
+        self.tree_folder = Path(path)
+        n_genes = 0
+        if self.input_folder:
+            chosen, _ = group_by_gene(list_alignment_files(self.input_folder))
+            n_genes = len(chosen)
+            self.per_gene_trees = discover_per_gene_trees(self.input_folder, self.tree_folder, genes=set(chosen))
+        text = TEXTS["label_tree_folder"].format(folder=self.tree_folder.name, n=len(self.per_gene_trees),
+                                                 total=n_genes)
+        if self.tree_file:
+            text += "\n" + TEXTS["label_tree_folder_general"].format(tree=self.tree_file.name)
+        self.label_tree.configure(text=text, text_color=self.COLORS['text_secondary'])
+        self._update_models_state()
+
     def _use_tree_file(self, path):
         self.tree_file = Path(path)
+        if self.tree_folder:
+            self._use_tree_folder(self.tree_folder)
+            return
         self.label_tree.configure(text=str(self.tree_file.name),
                                   text_color=self.COLORS['text_secondary'])
         self._update_models_state()
@@ -2121,6 +2154,7 @@ class App(ctk.CTk):
         import json
         import subprocess
         state = {'input': str(self.input_folder or ''), 'tree': str(self.tree_file or ''),
+                 'tree_folder': str(self.tree_folder or ''),
                  'output': str(self.output_folder or ''),
                  'models': [k for k, v in self.model_vars.items() if v.get()],
                  'excluded': sorted(self._excluded_nulls)}
@@ -2141,6 +2175,8 @@ class App(ctk.CTk):
             self._use_input_folder(state['input'])
         if state.get('tree') and Path(state['tree']).is_file():
             self._use_tree_file(state['tree'])
+        if state.get('tree_folder') and Path(state['tree_folder']).is_dir():
+            self._use_tree_folder(state['tree_folder'])
         if state.get('output') and Path(state['output']).is_dir():
             self._use_output_folder(state['output'])
         for name in state.get('models', []):
@@ -2404,7 +2440,7 @@ class App(ctk.CTk):
             try:
                 report = run_preflight(self.input_folder, self.tree_file, auto_prune=prune,
                                        ignore_stop_codons=ignore,
-                                       per_gene_trees=self.per_gene_trees)
+                                       per_gene_trees=self.per_gene_trees, tree_folder=self.tree_folder)
                 err = None
             except Exception as exc:
                 report, err = None, exc
@@ -2470,6 +2506,7 @@ class App(ctk.CTk):
                 'input_folder': self.input_folder,
                 'tree_file': self.tree_file,
                 'per_gene_trees': dict(self.per_gene_trees),
+                'tree_folder': self.tree_folder,
                 'output_folder': self.output_folder,
                 'models': selected,
                 'custom_model_params': self.custom_model_params,

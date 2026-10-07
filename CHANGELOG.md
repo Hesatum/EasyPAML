@@ -4,6 +4,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+- Per-gene trees: the tree button takes one tree or a folder with one tree per gene,
+  paired by file name (also IQ-TREE and RAxML names); the data check says which
+  file to rename.
 - English is the default language of the window and the command line; Portuguese
   only when chosen (PT button or `--lang pt`), not from the system language.
 - "Try the example" in the window loads two simulated genes with a known answer
