@@ -1557,6 +1557,7 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
                 df_out = self._build_export_df(lrt_col)
                 if df_out.empty:
                     continue
+                df_out = df_out.drop(columns=[c for c in df_out.columns if c.startswith(('Positive Sites', 'np ('))])
                 label, subtitle = SHEET_LABELS.get(lrt_col, (lrt_col, ''))
 
                 th_cells = ''.join(f'<th>{c}</th>' for c in df_out.columns)
@@ -1572,6 +1573,10 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
                             cell_cls = ' class="pos"'
                         if pd.isna(val):
                             display = '—'
+                        elif isinstance(val, float) and col_name.startswith(('p-value', 'q-value')):
+                            display = lrt_stats.format_p(val)
+                        elif isinstance(val, float) and col_name.startswith(('lnL', '2Δℓ')):
+                            display = f'{val:.3f}'
                         elif isinstance(val, float):
                             display = f'{val:.5g}'
                         else:
@@ -1597,8 +1602,25 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
 
             # ── Positive-selection cards ──────────────────────────────
             pos_html = ''
+            verdicts = self._gene_verdicts()
             if positive_genes:
                 for gene, signals in positive_genes.items():
+                    kind = verdicts.get(gene, ('',))[0]
+                    evidence = TEXTS["conclusion_short"].get(kind, '')
+                    notes = self._gene_notes(gene)
+                    sites_html = ''
+                    model = 'M8' if any(t.startswith('M8 ') for t in signals) else 'M2a'
+                    sites = self._beb_sites(gene, model)
+                    if sites is not None and not sites.empty:
+                        items = []
+                        for _, sr in sites.sort_values('position').iterrows():
+                            pos = sr.get('position_original')
+                            pos = int(pos) if pd.notna(pos) else int(sr['position'])
+                            star = sr['significance'] if isinstance(sr['significance'], str) and sr['significance'] \
+                                else ('**' if sr['pr_w_gt_1'] >= 0.99 else '*')
+                            items.append(f'<span class="site">{pos}&nbsp;{html_escape(str(sr["amino_acid"]))}{star}</span>')
+                        sites_html = (f'<div class="sites"><b>{len(items)} {model} BEB site(s), Pr(ω&gt;1) ≥ 0.95'
+                                      f'</b> (alignment numbering; ** ≥ 0.99): ' + ' '.join(items) + '</div>')
                     signals_inner = ''.join(
                         f'<div class="signal">{st}: p = {self._fmt_pval(sd["p_value"])}, '
                         f'q = {self._fmt_pval(sd["q_value"])}'
@@ -1606,9 +1628,13 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
                         + '</div>'
                         for st, sd in signals.items()
                     )
-                    pos_html += (f'<div class="gene-card">'
-                                 f'<div class="gene-name">{html_escape(str(gene))}</div>'
-                                 f'{signals_inner}</div>\n')
+                    pos_html += (f'<div class="gene-card{"" if kind == "positive" else " weak"}">'
+                                 f'<div class="gene-name">{html_escape(str(gene))}'
+                                 + (f' <span class="evidence">{html_escape(evidence)}</span>' if evidence else '')
+                                 + '</div>'
+                                 f'{signals_inner}{sites_html}'
+                                 + (f'<div class="note">⚠ {html_escape(notes.replace(" | ", "; "))}</div>' if notes else '')
+                                 + '</div>\n')
             else:
                 pos_html = '<p class="meta">No gene with a significant LRT (q &lt; 0.05)</p>' 
 
@@ -1625,7 +1651,7 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
 @media (prefers-color-scheme: dark){{:root{{--bg:#0d0d11;--card:#16161c;--text:#eeeef2;--muted:#a2a2b6;
        --line:#2a2a33;--head:#20202a;--accent:#818cf8;--sig-bg:#0b2016;--sig:#6ee7b7;--pos:#22d3ee;--warn:#fbbf24}}}}
 body{{font-family:'Segoe UI',Roboto,'DejaVu Sans',sans-serif;background:var(--bg);color:var(--text);padding:32px 16px}}
-.container{{max-width:1280px;margin:0 auto;background:var(--card);border-radius:12px;padding:36px;
+.container{{max-width:1500px;margin:0 auto;background:var(--card);border-radius:12px;padding:36px;
             border:1px solid var(--line)}}
 h1{{color:var(--accent);font-size:26px;margin-bottom:4px}}
 h2{{font-size:19px;margin:36px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)}}
@@ -1637,13 +1663,20 @@ h2{{font-size:19px;margin:36px 0 8px;padding-bottom:6px;border-bottom:1px solid 
 .stat-value{{font-size:26px;font-weight:700}}
 table{{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}}
 th{{background:var(--head);padding:8px 10px;text-align:left;font-weight:600;white-space:nowrap}}
-td{{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}}
-td:last-child{{min-width:260px}}
+td{{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap;
+    font-variant-numeric:tabular-nums}}
 tr.sig td{{background:var(--sig-bg);color:var(--sig)}}
 td.pos{{color:var(--pos);font-weight:700}}
 .gene-card{{border:1px solid var(--line);border-left:4px solid var(--sig);border-radius:8px;padding:12px 16px;margin:8px 0}}
 .gene-name{{font-size:15px;font-weight:700;margin-bottom:6px}}
 .signal{{font-size:13px;color:var(--muted);margin:2px 0}}
+.evidence{{font-size:12px;font-weight:600;color:var(--sig);margin-left:8px}}
+.gene-card.weak{{border-left-color:var(--warn)}}
+.gene-card.weak .evidence{{color:var(--warn)}}
+.sites{{font-size:13px;margin-top:8px;line-height:1.9}}
+.site{{display:inline-block;padding:0 6px;margin-right:4px;border:1px solid var(--line);border-radius:4px;
+       font-family:'DejaVu Sans Mono',Consolas,monospace;font-size:12px}}
+.note{{font-size:13px;color:var(--warn);margin-top:6px}}
 section{{margin-bottom:40px}}
 .footer{{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}}
 </style>

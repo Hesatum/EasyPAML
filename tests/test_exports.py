@@ -46,6 +46,7 @@ def test_html_export_is_english_and_counts_like_the_table(viewer, tmp_path, monk
     assert [k for k, _ in viewer._messages] == ['info'], viewer._messages
     html = out.read_text(encoding='utf-8')
     assert not re.search(r'\b(analisados|significantes|às)\b', html)
+    assert '<td>-4100.000</td>' in html and 'np (' not in html
     for meta, table in re.findall(r'<p class="meta">\d+ gene\(s\) tested &nbsp;·&nbsp; (\d+) significant'
                                   r'.*?<tbody>(.*?)</tbody>', html, re.S):
         assert int(meta) == table.count('<tr class="sig">')
