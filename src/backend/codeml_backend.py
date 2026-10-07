@@ -2077,6 +2077,9 @@ class CodemlBatchAnalysis:
             table = pd.concat(frames, ignore_index=True)
             table = table[[c for c in cols if c in table.columns]].rename(columns={
                 'position_original': 'position_alignment', 'position': 'position_codeml'})
+            for c in ('position_alignment', 'position_codeml'):
+                if c in table.columns:
+                    table[c] = pd.to_numeric(table[c], errors='coerce').round().astype('Int64')
         else:
             table = pd.DataFrame(columns=['gene', 'model', 'method', 'position_alignment',
                                           'position_codeml', 'amino_acid', 'pr_w_gt_1',

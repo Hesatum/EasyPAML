@@ -220,4 +220,4 @@ def test_sites_table_lists_gene_without_sites(tmp_path):
     t = pd.read_csv(out, sep='\t', dtype=str)
     c = t[t['gene'] == 'geneC']
     assert len(c) == 1 and c.iloc[0]['significance'] == 'none' and pd.isna(c.iloc[0]['position_codeml'])
-    assert len(t[t['gene'] == 'geneA']) == 2
+    assert sorted(t[t['gene'] == 'geneA']['position_codeml']) == ['39', '85']
