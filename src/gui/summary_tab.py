@@ -31,6 +31,10 @@ CHART_SIZE_IN = (7.1, 3.2)
 
 def test_label(pair) -> str:
     null, alt = pair
+    if pair == ('Branch-site_null', 'Branch-site'):
+        return "Branch-site"
+    if pair == ('M0', 'Branch'):
+        return "Branch vs M0"
     return f"{alt} vs {null.replace('_null', ' null')}"
 
 
@@ -171,13 +175,17 @@ class SummaryTab:
         ctk.CTkLabel(bar, text=TEXTS["summary_test"], font=self._font('sm', 'bold'),
                      text_color=PALETTE['text_secondary']).pack(side='left', padx=(0, SPACE['sm']))
         by_label = {test_label(p): p for p in tests}
-        seg = ctk.CTkSegmentedButton(bar, values=list(by_label), font=self._font('sm', 'bold'), height=28,
-                                     selected_color=PALETTE['accent_fill'],
-                                     selected_hover_color=PALETTE['accent_fill'],
-                                     unselected_color=PALETTE['bg_elevated'],
-                                     unselected_hover_color=PALETTE['bg_elevated_hover'],
-                                     text_color=PALETTE['text_primary'],
-                                     command=lambda lab: self._summary_select(by_label[lab]))
+        if len(tests) <= 4:
+            seg = ctk.CTkSegmentedButton(bar, values=list(by_label), font=self._font('sm', 'bold'), height=28,
+                                         selected_color=PALETTE['accent_fill'],
+                                         selected_hover_color=PALETTE['accent_fill'],
+                                         unselected_color=PALETTE['bg_elevated'],
+                                         unselected_hover_color=PALETTE['bg_elevated_hover'],
+                                         text_color=PALETTE['text_primary'],
+                                         command=lambda lab: self._summary_select(by_label[lab]))
+        else:       # many tests: a list keeps room for the export buttons
+            seg = self._style_combo(ctk.CTkComboBox(bar, values=list(by_label), width=200, state='readonly',
+                                                    command=lambda lab: self._summary_select(by_label[lab])))
         seg.set(test_label(tests[0]))
         seg.pack(side='left')
         for text, cmd in ((TEXTS["summary_export_html"], self._export_html),
@@ -301,13 +309,13 @@ class SummaryTab:
     def _summary_columns(self, pair) -> List[Tuple[str, str, int, str]]:
         """(id, title, width, anchor) of the table for a test."""
         null, alt = pair
-        cols = [('gene', TEXTS["col_gene"], 200, 'w'), ('result', TEXTS["col_result"], 115, 'w')]
+        cols = [('gene', TEXTS["col_gene"], 200, 'w'), ('result', TEXTS["col_result"], 132, 'w')]
         if pair in POSITIVE_PAIRS:
             cols.append(('conclusion', TEXTS["col_conclusion"], 165, 'w'))
         cols += [('q', 'q (BH)', 85, 'e'), ('p', 'p', 85, 'e'), ('lrt', '2Δℓ', 70, 'e')]
         if pair == ('M0', 'Branch'):
             cols.append(('df', 'df', 40, 'e'))
-        cols.append(('mean_w', TEXTS["col_mean_w"].format(model=alt), 115, 'e'))
+        cols.append(('mean_w', TEXTS["col_mean_w"].format(model=alt), 84 + 8 * len(alt), 'e'))
         if alt in SITE_ALTS:
             cols += [('w_pos', TEXTS["col_w_pos"], 130, 'e'), ('p1', 'p₁', 60, 'e'),
                      ('sites', TEXTS["col_sites"], 95, 'e')]
@@ -346,8 +354,14 @@ class SummaryTab:
                 r['w_pos'], r['p1'] = self._fmt_num(w, 3), self._fmt_num(p1, 3)
                 r['sites'] = str(counts.get(gene, 0)) if sig else ''
             if pair == ('M0', 'Branch'):
+                # Branch uses the rooted labelled tree: one branch length more than M0
                 np_b, np_0 = row.get('Branch_np'), row.get('M0_np')
-                r['df'] = str(int(np_b - np_0)) if pd.notna(np_b) and pd.notna(np_0) else ''
+                nt_b, nt_0 = row.get('Branch_ntime'), row.get('M0_ntime')
+                if pd.notna(np_b) and pd.notna(np_0):
+                    extra = (nt_b - nt_0) if pd.notna(nt_b) and pd.notna(nt_0) else 0
+                    r['df'] = str(max(1, int(np_b - np_0 - extra)))
+                else:
+                    r['df'] = ''
                 tg = tags.get(gene, {})
                 r['w_tags'] = "  ".join(f"{'bg' if k == 'background' else k} {v:.3g}"
                                         for k, v in sorted(tg.items(), key=lambda kv: (kv[0] != 'background', kv[0])))

@@ -618,8 +618,8 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
 
         value_font = (FONT_UI, 20, 'bold')
 
-        def card(col, weight=1):
-            parent.grid_columnconfigure(col, weight=weight, uniform='stats')
+        def card(col, weight=0):
+            parent.grid_columnconfigure(col, weight=weight)
             c = ctk.CTkFrame(parent, fg_color=PALETTE['bg_surface'], corner_radius=RADIUS['card'])
             c.grid(row=0, column=col, sticky='nsew',
                    padx=(0 if col == 0 else SPACE['xs'], 0 if col == 3 else SPACE['xs']))
@@ -634,7 +634,7 @@ class ResultsViewerWindow(SummaryTab, BranchTab, ctk.CTkToplevel):
 
         value(card(0), str(len(self.df)), TEXTS["stats_total_genes"], PALETTE['text_primary'])
         value(card(1), self._count_models(), TEXTS["stats_models_run"], PALETTE['text_primary'])
-        box = card(2, weight=max(3, 2 * len(tests)))
+        box = card(2, weight=1)
         ctk.CTkLabel(box, text=TEXTS["stats_sig_short"], font=self._font('sm'),
                      text_color=PALETTE['text_secondary']).pack(side='left', padx=(0, SPACE['md']), pady=(4, 0))
         for name, n_sig, total in tests:
