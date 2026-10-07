@@ -144,3 +144,12 @@ def test_newick_with_codeml_omega_labels_and_branch_marks():
 def test_summary_answer_says_when_nothing_is_supported(viewer):
     text, supported = viewer._summary_answer_text()
     assert not supported and 'supported in none of the 1 gene(s)' in text
+
+
+def test_branch_omega_written_once_per_labelled_clade():
+    from src.gui.branch_tab import label_tops, parse_newick
+    one_clade = parse_newick("(((a#1,b#1),c#1),(d,e));")
+    assert [n.children != [] for n in label_tops(one_clade)] == [True]
+    apart = parse_newick("(((a#1,b#1),c),((d#1,e#1),f),g#1);")
+    tops = label_tops(apart)
+    assert len(tops) == 3 and sum(1 for n in tops if not n.children) == 1

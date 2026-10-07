@@ -91,6 +91,32 @@ def preorder(n: Node) -> List[Node]:
     return out
 
 
+def tip_labels_of(n: Node) -> int:
+    """The label every tip below n shares, or 0."""
+    if not n.children:
+        return n.label or 0
+    labs = {tip_labels_of(c) for c in n.children}
+    return labs.pop() if len(labs) == 1 else 0
+
+
+def label_tops(root: Node) -> List[Node]:
+    """Where to write each label's ω once: the ancestral node of every clade whose
+    tips all carry the same label (one entry per clade, so labelled lineages apart in
+    the tree get one each), and labelled internal branches outside such clades."""
+    tops: List[Node] = []
+
+    def walk(n):
+        for c in n.children:
+            if tip_labels_of(c):
+                tops.append(c)
+            else:
+                if c.label:
+                    tops.append(c)
+                walk(c)
+    walk(root)
+    return tops
+
+
 class BranchTab:
     """Mixin for ResultsViewerWindow."""
 
@@ -282,14 +308,27 @@ class BranchTab:
                 groups.setdefault(lab, []).append(n.w)
                 col, lw = color(lab), (2.6 if lab else 1.4)
                 px, py, nx, ny = x[id(parent)], y[id(parent)], x[id(n)], y[id(n)]
-                ax.plot([px, px], [py, ny], color=c['ns'], lw=1.2, solid_capstyle='round', zorder=1)
-                ax.plot([px, nx], [ny, ny], color=col, lw=lw, solid_capstyle='round', zorder=2 if lab else 1)
-                if lab and n.w is not None:
-                    ax.text((px + nx) / 2, ny + 0.18, f"#{lab}  ω {n.w:.3g}", color=col, fontsize=8,
-                            ha='center', va='bottom', fontweight='bold')
+                # the whole elbow (vertical from the parent, then horizontal) is this branch
+                ax.plot([px, px, nx], [py, ny, ny], color=col, lw=lw, solid_joinstyle='miter',
+                        solid_capstyle='butt', zorder=2 if lab else 1)
             for ch in n.children:
                 draw(ch, n)
         draw(root)
+        parents = {id(ch): n for n in preorder(root) for ch in n.children}
+        for n in label_tops(root):
+            lab = n.label or tip_labels_of(n)
+            w = next((m.w for m in preorder(n) if (m.label or 0) == lab and m.w is not None), None)
+            if w is None:
+                continue
+            text = f"#{lab}  ω {w:.3g}"
+            if n.children:      # a clade: once, at its ancestral node
+                ax.plot([x[id(n)]], [y[id(n)]], 'o', color=color(lab), ms=5, zorder=6)
+                ax.text(x[id(n)] - 0.08, y[id(n)] + 0.18, text, color=color(lab), fontsize=8,
+                        ha='right', va='bottom', fontweight='bold', zorder=6)
+            else:               # a single labelled tip branch
+                px = x[id(parents[id(n)])]
+                ax.text((px + x[id(n)]) / 2, y[id(n)] + 0.18, text, color=color(lab), fontsize=8,
+                        ha='center', va='bottom', fontweight='bold')
         for n in tips:
             ax.text(total + 0.12, y[id(n)], n.name, va='center', ha='left', fontsize=8.5, color=c['text'])
         ax.set_xlim(-0.2, total + 2.6)
@@ -307,7 +346,7 @@ class BranchTab:
             handles.append(Line2D([0], [0], color=color(lab), lw=2.6 if lab else 1.4,
                                   label=f"{name}" + (f"   ω = {w:.3g}" if w is not None else "")))
         if handles:
-            leg = ax.legend(handles=handles, loc='lower left', fontsize=8, frameon=True,
+            leg = ax.legend(handles=handles, loc='upper left', fontsize=8, frameon=True,
                             facecolor=c.get('box', c['bg']), edgecolor=c['box_edge'], labelcolor=c['text'])
             leg.get_frame().set_linewidth(0.6)
         return summary
