@@ -83,7 +83,7 @@ The results panel opens at the end:
   The chart of 2Δℓ or ω per gene can be shown or hidden and exported for a journal
   (PDF, SVG, 600 dpi TIFF). The table, all tests (Excel) and an HTML report can be
   exported.
-- **Positive Sites**: where the sites fall along the CDS, and their positions in your
+- **Positive sites**: where the sites fall along the CDS, and their positions in your
   alignment and in the codeml output, Pr(ω>1) and ω.
 - **Branch** (when Branch or Branch-site ran): the tree with the labelled branches and
   their ω.

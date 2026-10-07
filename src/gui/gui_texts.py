@@ -28,7 +28,7 @@ TEXTS_PT: dict[str, object] = {
         "• Cada número\n  recebe cor única."
     ),
 
-    "tree_labeler_legend_title": "Tags Ativas",
+    "tree_labeler_legend_title": "Marcas ativas",
     "tree_labeler_no_tags":      "Nenhuma tag ativa",
     "tree_labeler_btn_save":     "Salvar",
     "tree_labeler_btn_cancel":   "Cancelar",
@@ -45,7 +45,7 @@ TEXTS_PT: dict[str, object] = {
     "btn_output_folder": "Pasta de Resultados",
     "label_not_selected": "Não selecionado",
 
-    "btn_view_results":          "Ver Resultados",
+    "btn_view_results":          "Ver resultados",
 
     "label_omega_initial":    "ω (dN/dS) inicial:",
     "label_timeout":          "Tempo limite por modelo (min):",
@@ -121,14 +121,14 @@ TEXTS_PT: dict[str, object] = {
     "label_auto_prune_hint": (
         "Para cada gene, tira da árvore os táxons que não estão\n"
         "no alinhamento. Sequências do alinhamento que NÃO estão\n"
-        "na árvore são EXCLUÍDAS da análise -- o EasyPAML avisa\n"
+        "na árvore são EXCLUÍDAS da análise; o EasyPAML avisa\n"
         "antes de rodar e sugere o nome mais parecido.\n"
         "Desligado: nomes diferentes fazem o codeml falhar."
     ),
 
     "tab_site_models":  "Modelos de sítio",
     "tab_branch_model": "Modelo de ramos",
-    "tab_branchsite":   "Branch-Site",
+    "tab_branchsite":   "Branch-site",
 
     "status_ready":   "● Pronto",
     "status_running": "● Executando",
@@ -148,7 +148,7 @@ TEXTS_PT: dict[str, object] = {
     "log_header_subtitle": "uma mensagem por linha",
 
     "log_welcome": (
-        "EasyPAML -- análise de seleção com PAML/codeml\n"
+        "EasyPAML: análise de seleção com PAML/codeml\n"
         "1. Escolha a pasta de alinhamentos (.fasta, .fas, .phy, .phylip)\n"
         "2. Escolha o arquivo de árvore (.nwk, .tree, .tre, .txt)\n"
         "3. Escolha (ou crie) a pasta de resultados\n"
@@ -166,11 +166,11 @@ TEXTS_PT: dict[str, object] = {
     "model_info_references":     "Referências:",
 
     # ── ResultsViewerWindow ───────────────────────────────────────
-    "viewer_window_title":       "EasyPAML — Painel de Análise",
-    "viewer_error_no_tsv":       "Arquivo analysis_summary.tsv não encontrado!",
+    "viewer_window_title":       "EasyPAML · Resultados",
+    "viewer_error_no_tsv":       "analysis_summary.tsv não encontrado.",
     "viewer_error_run_analysis": "Execute uma análise para gerar resultados.",
 
-    "viewer_header_title":    "EasyPAML  —  Resultados",
+    "viewer_header_title":    "EasyPAML  ·  Resultados",
     "viewer_header_subtitle": "Análise de seleção  ·  codeml",
     "viewer_btn_recompute": "Recalcular resumos",
 
@@ -180,9 +180,9 @@ TEXTS_PT: dict[str, object] = {
     "viewer_tab_branchsite_classes": "Classes branch-site",
     "viewer_tab_branch":             "Análise de ramos",
 
-    "stats_total_genes":        "Total de Genes",
-    "stats_models_run":         "Modelos Rodados",
-    "stats_positive_selection": "Seleção Positiva Global",
+    "stats_total_genes":        "Genes",
+    "stats_models_run":         "Modelos rodados",
+    "stats_positive_selection": "Seleção positiva global",
     "stats_avg_omega":          "ω Médio",
 
     "lrt_no_comparisons": "Nenhuma comparação LRT disponível",
@@ -198,7 +198,7 @@ TEXTS_PT: dict[str, object] = {
         "p em notação científica; q = p corrigido por Benjamini-Hochberg"
     ),
 
-    "pos_sel_tab_title": "Selecao Global — ω > 1 no gene inteiro",
+    "pos_sel_tab_title": "Seleção global: ω > 1 no gene inteiro",
     "pos_sel_tab_criterion": (
         "Critério: ω médio do modelo M2a ou M8 > 1.0  AND  LRT p < 0.05  ·  "
         "Diferente de seleção em sítios específicos (aba Sítios Positivos)"
@@ -235,7 +235,7 @@ TEXTS_PT: dict[str, object] = {
 
     "branchsite_classes_gene_label": "Gene:",
     "branchsite_classes_not_found":  "Gene não encontrado",
-    "branchsite_classes_header":     "Classes do Modelo Branch-site — {gene}",
+    "branchsite_classes_header":     "Classes do modelo Branch-site: {gene}",
 
     "branchsite_classes_table_headers": [
         "Classe",        # 120 px
@@ -250,7 +250,7 @@ TEXTS_PT: dict[str, object] = {
         "no ramo foreground para aquela classe de sítios"
     ),
 
-    "branch_no_data_title": "Sem dados do Branch Model",
+    "branch_no_data_title": "Sem dados do modelo Branch",
     "branch_no_data_hint":  "Execute o modelo Branch com uma árvore marcada.",
     "branch_export": "Exportar árvore…",
     "branch_groups": "Grupos de ramos (modelo Branch)",
@@ -269,9 +269,9 @@ TEXTS_PT: dict[str, object] = {
     "tree_err_load":          "Erro ao carregar a árvore:\n{error}",
 
     # ── TreeLabelWindow dialogs ────────────────────────────────
-    "tag_dialog_edit_title":  "Editar Tag",
+    "tag_dialog_edit_title":  "Editar marca",
     "tag_dialog_edit_prompt": "Ramo atual: {tag}\n\nDigite novo número ou 'remover':",
-    "tag_dialog_new_title":   "Número da Tag",
+    "tag_dialog_new_title":   "Número da marca",
     "tag_dialog_new_prompt":  "Digite o número da tag:\n(ex: 1 para #1, 2 para #2)",
 
     # ── App — CPU label ──────────────────────────────────────────────────
@@ -292,7 +292,7 @@ TEXTS_PT: dict[str, object] = {
     "lang_switch_message":  "O novo idioma é aplicado quando o EasyPAML reabre. As pastas e os modelos escolhidos são mantidos.",
     "lang_switch_confirm":  "Reabrir agora?",
     "msg_wait_for_run": "Espere a análise terminar (ou pare-a) antes de trocar o idioma ou o tema.",
-    "lang_switch_err":      "Não foi possível reiniciar automaticamente:\n{error}\n\nReabra manualmente.",
+    "lang_switch_err":      "Não foi possível reabrir sozinho:\n{error}\n\nAbra o EasyPAML de novo.",
 
     # ── ResultsViewerWindow — mensagens inline ───────────────────────────
     "viewer_genes_loaded":      "{n} gene(s) carregado(s)",
@@ -301,7 +301,7 @@ TEXTS_PT: dict[str, object] = {
     "viewer_branch_read_err":   "Erro ao ler tabela: {error}",
     "viewer_branch_no_table":   "Tabela dN & dS não encontrada no arquivo.",
     "viewer_branch_invalid":    "Dados inválidos.",
-    "viewer_lrt_parse_err":     "Erro ao ler a comparação",
+    "viewer_lrt_parse_err":     "Não foi possível ler esta comparação.",
     "viewer_sites_subtitle":    "Modelo: {model}  ·  Análise: {method}  ·  {omega}",
     "viewer_sites_count":       "{n} sítio(s)",
 
@@ -357,14 +357,13 @@ TEXTS_PT: dict[str, object] = {
     "label_codonfreq": "Frequências de códons (CodonFreq):",
     "label_codonfreq_hint": (
         "Modelo de frequências de códons do codeml.\n"
-        "2 = F3x4 é o padrão usado na maioria dos estudos com\n"
-        "M7/M8 e M1a/M2a. 7 = FMutSel é outro modelo (mais\n"
-        "parâmetros) -- se usar, descreva assim nos métodos."
+        "2 = F3x4 é o padrão do EasyPAML. 7 = FMutSel é outro\n"
+        "modelo, com mais parâmetros; se usar, diga isso nos métodos."
     ),
     "label_ncatg": "Categorias da beta (ncatG, M7/M8):",
     "label_found_alignments": "{n} alinhamento(s) encontrado(s): {names}",
     "label_no_alignments": "Nenhum alinhamento (.fasta, .fas, .phy, .phylip) nesta pasta",
-    "label_per_gene_trees": "{n} de {total} gene(s) com árvore própria (GENE.nwk) -- usada no lugar do arquivo de árvore",
+    "label_per_gene_trees": "{n} de {total} gene(s) com árvore própria (GENE.nwk), usada no lugar do arquivo de árvore",
     "label_output_created": "{name} (pasta criada)",
     "hint_select_files": "Escolha {missing} para ativar os modelos.",
     "hint_missing_parts": ("a pasta de alinhamentos", "o arquivo de árvore", "a pasta de resultados"),
@@ -423,8 +422,8 @@ TEXTS_PT: dict[str, object] = {
     "neutral_window_title": "Modelos nulos e comparações LRT",
     "neutral_header": "Modelos nulos e comparações LRT",
     "neutral_intro": (
-        "Quando ativado, o EasyPAML adiciona automaticamente o modelo nulo de cada par "
-        "-- não é preciso marcá-lo. Cada comparação usa o teste da razão de verossimilhança "
+        "Com esta opção ligada, o EasyPAML adiciona o modelo nulo de cada par por você. "
+        "Cada comparação usa o teste da razão de verossimilhança "
         "(LRT): 2ΔlnL comparado ao χ² com os graus de liberdade indicados; o p é corrigido "
         "por Benjamini-Hochberg entre os genes (q)."
     ),
@@ -438,14 +437,14 @@ TEXTS_PT: dict[str, object] = {
          "O ω₁ = 1 do M1a é imposto pelo próprio codeml (NSsites = 1)."),
         ("M7", "M8", "#ec4899", "M8 vs M7", "Seleção positiva com distribuição beta",
          "2 graus de liberdade. M7: ω segue uma beta entre 0 e 1. M8: beta + uma classe extra "
-         "com ω livre. Pode dar significativo só porque há sítios neutros (ω = 1) -- confira o "
+         "com ω livre. Pode dar significativo só porque há sítios neutros (ω = 1); confira o "
          "M8a vs M8.",
          "M7 não usa fix_omega."),
         ("M8a", "M8", "#f472b6", "M8 vs M8a", "Seleção positiva descontando sítios neutros",
          "1 grau de liberdade. M8a é o M8 com a classe extra fixa em ω = 1. Só rejeita o M8a se "
          "houver sítios com ω > 1 (Swanson et al. 2003). p por χ²₁; a mistura 50:50 aparece "
          "no LRT_results.txt só como referência.",
-         "M8a usa fix_omega = 1 e omega = 1 -- configurado automaticamente."),
+         "M8a usa fix_omega = 1 e omega = 1, ajustados automaticamente."),
         ("M0", "Branch", "#f59e0b", "Branch vs M0", "Variação de ω entre linhagens",
          "Graus de liberdade = número de grupos de ramos marcados. M0 usa um ω para todos os "
          "ramos; o modelo Branch estima um ω por grupo marcado.",
@@ -454,7 +453,7 @@ TEXTS_PT: dict[str, object] = {
          "Seleção episódica em sítios do ramo foreground (#1)",
          "1 grau de liberdade, p por χ²₁ (recomendação do manual do PAML); a mistura 50:50 "
          "χ²₀/χ²₁ aparece no LRT_results.txt só como referência.",
-         "O nulo usa fix_omega = 1 e omega = 1 -- configurado automaticamente."),
+         "O nulo usa fix_omega = 1 e omega = 1, ajustados automaticamente."),
     ],
     "model_desc": {
         "M0": "Um único ω para o gene inteiro. Linha de base e nulo do modelo Branch.",
@@ -584,7 +583,7 @@ TEXTS_PT: dict[str, object] = {
         ("Branch-site_null", "Branch-site"): "H₀: ω = 1 no foreground   ·   H₁: sítios com ω > 1 nos ramos marcados (#1)",
         ("M0", "Branch"): "H₀ M0: um ω para todos os ramos   ·   H₁ Branch: um ω por grupo de ramos marcado",
         ("M0", "M1a"): "H₀ M0: um ω para todos os sítios   ·   H₁ M1a: classes com ω < 1 e ω = 1"},
-    "summary_sig": "{test}: significativo (p = {p}, q = {q}) — {sites} sítio(s) com Pr(ω>1) ≥ 0,95",
+    "summary_sig": "{test}: significativo (p = {p}, q = {q}), {sites} sítio(s) com Pr(ω>1) ≥ 0,95",
     "summary_nonsig": "{test}: não significativo (p = {p}, q = {q})",
     "summary_posclass": "classe positiva: ω = {w}, p₁ = {p1}",
     "conclusion_supported": "Seleção positiva sustentada: {tests} significativo(s) (q < 0,05){sites}.",
@@ -699,7 +698,7 @@ TEXTS_EN: dict[str, object] = {
         "• Each number\n  receives a unique color."
     ),
 
-    "tree_labeler_legend_title": "Active Tags",
+    "tree_labeler_legend_title": "Active tags",
     "tree_labeler_no_tags":      "No active tags",
     "tree_labeler_btn_save":     "Save",
     "tree_labeler_btn_cancel":   "Cancel",
@@ -716,7 +715,7 @@ TEXTS_EN: dict[str, object] = {
     "btn_output_folder":  "Output folder",
     "label_not_selected": "Not selected",
 
-    "btn_view_results":          "View Results",
+    "btn_view_results":          "View results",
 
     "label_omega_initial":    "Initial ω (dN/dS):",
     "label_timeout":          "Time limit per model (min):",
@@ -793,14 +792,14 @@ TEXTS_EN: dict[str, object] = {
     "label_auto_prune_hint": (
         "For each gene, removes from the tree the taxa that are\n"
         "not in the alignment. Alignment sequences that are NOT\n"
-        "in the tree are EXCLUDED from the analysis -- EasyPAML\n"
+        "in the tree are EXCLUDED from the analysis; EasyPAML\n"
         "warns before running and suggests the closest name.\n"
         "Off: mismatched names make codeml fail."
     ),
 
-    "tab_site_models":  "Site Models",
-    "tab_branch_model": "Branch Model",
-    "tab_branchsite":   "Branch-Site",
+    "tab_site_models":  "Site models",
+    "tab_branch_model": "Branch model",
+    "tab_branchsite":   "Branch-site",
 
     "status_ready":   "● Ready",
     "status_running": "● Running",
@@ -820,7 +819,7 @@ TEXTS_EN: dict[str, object] = {
     "log_header_subtitle": "one message per line",
 
     "log_welcome": (
-        "EasyPAML -- selection analysis with PAML/codeml\n"
+        "EasyPAML: selection analysis with PAML/codeml\n"
         "1. Choose the alignments folder (.fasta, .fas, .phy, .phylip)\n"
         "2. Choose the tree file (.nwk, .tree, .tre, .txt)\n"
         "3. Choose (or create) the results folder\n"
@@ -838,23 +837,23 @@ TEXTS_EN: dict[str, object] = {
     "model_info_references":     "References:",
 
     # ── Section 4 — ResultsViewerWindow ─────────────────────────────────────
-    "viewer_window_title":       "EasyPAML — Analysis Panel",
-    "viewer_error_no_tsv":       "File analysis_summary.tsv not found!",
+    "viewer_window_title":       "EasyPAML · Results",
+    "viewer_error_no_tsv":       "analysis_summary.tsv not found.",
     "viewer_error_run_analysis": "Run an analysis to generate results.",
 
-    "viewer_header_title":    "EasyPAML  —  Results",
+    "viewer_header_title":    "EasyPAML  ·  Results",
     "viewer_header_subtitle": "Selection Analysis  ·  codeml",
     "viewer_btn_recompute": "Recompute summaries",
 
     "viewer_tab_lrt":                "LRT and p-values",
     "viewer_tab_omega":              "ω > 1 Global",
-    "viewer_tab_sites":              "Positive Sites",
+    "viewer_tab_sites":              "Positive sites",
     "viewer_tab_branchsite_classes": "Branch-site Classes",
-    "viewer_tab_branch":             "Branch Analysis",
+    "viewer_tab_branch":             "Branch analysis",
 
-    "stats_total_genes":        "Total Genes",
-    "stats_models_run":         "Models Run",
-    "stats_positive_selection": "Global Positive Selection",
+    "stats_total_genes":        "Genes",
+    "stats_models_run":         "Models run",
+    "stats_positive_selection": "Global positive selection",
     "stats_avg_omega":          "Average ω",
 
     "lrt_no_comparisons": "No LRT comparison available",
@@ -870,10 +869,10 @@ TEXTS_EN: dict[str, object] = {
         "p in scientific notation; q = Benjamini-Hochberg corrected p"
     ),
 
-    "pos_sel_tab_title": "Global Selection — ω > 1 across the whole gene",
+    "pos_sel_tab_title": "Global selection: ω > 1 across the whole gene",
     "pos_sel_tab_criterion": (
         "Criterion: mean ω from M2a or M8 > 1.0  AND  LRT p < 0.05  ·  "
-        "Different from site-specific selection (Positive Sites tab)"
+        "Different from site-specific selection (Positive sites tab)"
     ),
     "pos_sel_none_found":      "No positive selection signal detected",
     "pos_sel_criterion_short": "Criterion: ω > 1.0  AND  p-value < 0.05",
@@ -907,7 +906,7 @@ TEXTS_EN: dict[str, object] = {
 
     "branchsite_classes_gene_label": "Gene:",
     "branchsite_classes_not_found":  "Gene not found",
-    "branchsite_classes_header":     "Branch-site Model Classes — {gene}",
+    "branchsite_classes_header":     "Branch-site model classes: {gene}",
 
     "branchsite_classes_table_headers": [
         "Class",        # 120 px
@@ -922,7 +921,7 @@ TEXTS_EN: dict[str, object] = {
         "on the foreground branch for that site class"
     ),
 
-    "branch_no_data_title": "No Branch Model data",
+    "branch_no_data_title": "No Branch model data",
     "branch_no_data_hint":  "Run the Branch model with a labeled tree.",
     "branch_export": "Export tree…",
     "branch_groups": "Branch groups (Branch model)",
@@ -941,17 +940,17 @@ TEXTS_EN: dict[str, object] = {
     "tree_err_load":          "Failed to load the tree:\n{error}",
 
     # ── TreeLabelWindow — tag dialogs ────────────────────────────────────
-    "tag_dialog_edit_title":  "Edit Tag",
+    "tag_dialog_edit_title":  "Edit label",
     "tag_dialog_edit_prompt": "Current branch: {tag}\n\nEnter new number or 'remove':",
-    "tag_dialog_new_title":   "Tag Number",
+    "tag_dialog_new_title":   "Label number",
     "tag_dialog_new_prompt":  "Enter tag number:\n(e.g. 1 for #1, 2 for #2)",
 
     # ── App — CPU label ──────────────────────────────────────────────────
     "label_cpus_detected":    "(detected: {n} cores)",
 
     # ── App — log messages ───────────────────────────────────────────────
-    "log_no_tree_selected":   "Please choose a tree file (.nwk) first.\n",
-    "log_no_output_folder":   "Please choose a results folder first.\n",
+    "log_no_tree_selected":   "Choose a tree file (.nwk) first.\n",
+    "log_no_output_folder":   "Choose a results folder first.\n",
     
     "log_analysis_start":     "Starting the analysis…\n",
     "log_analysis_stopped":   "Analysis stopped.\n",
@@ -964,7 +963,7 @@ TEXTS_EN: dict[str, object] = {
     "lang_switch_message":  "The new language is applied when EasyPAML reopens. The folders and models you chose are kept.",
     "lang_switch_confirm":  "Reopen now?",
     "msg_wait_for_run": "Wait for the analysis to finish (or stop it) before changing the language or theme.",
-    "lang_switch_err":      "Could not restart automatically:\n{error}\n\nPlease reopen manually.",
+    "lang_switch_err":      "Could not reopen by itself:\n{error}\n\nOpen EasyPAML again.",
 
     # ── ResultsViewerWindow — inline messages ────────────────────────────
     "viewer_genes_loaded":      "{n} gene(s) loaded",
@@ -973,7 +972,7 @@ TEXTS_EN: dict[str, object] = {
     "viewer_branch_read_err":   "Error reading table: {error}",
     "viewer_branch_no_table":   "dN & dS table not found in file.",
     "viewer_branch_invalid":    "Invalid data.",
-    "viewer_lrt_parse_err":     "[Error] Error parsing comparison",
+    "viewer_lrt_parse_err":     "Could not read this comparison.",
     "viewer_sites_subtitle":    "Model: {model}  ·  Analysis: {method}  ·  {omega}",
     "viewer_sites_count":       "{n} site(s)",
 
@@ -1029,14 +1028,14 @@ TEXTS_EN: dict[str, object] = {
     "label_codonfreq": "Codon frequencies (CodonFreq):",
     "label_codonfreq_hint": (
         "codeml codon frequency model.\n"
-        "2 = F3x4 is the default used in most M7/M8 and\n"
-        "M1a/M2a studies. 7 = FMutSel is a different model\n"
-        "(more parameters) -- if you use it, say so in Methods."
+        "2 = F3x4 is EasyPAML's default. 7 = FMutSel is a\n"
+        "different model with more parameters; if you use it,\n"
+        "say so in your methods."
     ),
     "label_ncatg": "Beta categories (ncatG, M7/M8):",
     "label_found_alignments": "{n} alignment(s) found: {names}",
     "label_no_alignments": "No alignment (.fasta, .fas, .phy, .phylip) in this folder",
-    "label_per_gene_trees": "{n} of {total} gene(s) with their own tree (GENE.nwk) -- used instead of the tree file",
+    "label_per_gene_trees": "{n} of {total} gene(s) with their own tree (GENE.nwk), used instead of the tree file",
     "label_output_created": "{name} (folder created)",
     "hint_select_files": "Choose {missing} to enable the models.",
     "hint_missing_parts": ("the alignments folder", "the tree file", "the results folder"),
@@ -1094,8 +1093,8 @@ TEXTS_EN: dict[str, object] = {
     "neutral_window_title": "Null models and LRT comparisons",
     "neutral_header": "Null models and LRT comparisons",
     "neutral_intro": (
-        "When enabled, EasyPAML automatically adds the null model of each pair -- you don't "
-        "need to select it. Each comparison uses the likelihood ratio test (LRT): 2ΔlnL "
+        "With this option on, EasyPAML adds the null model of each pair for you. "
+        "Each comparison uses the likelihood ratio test (LRT): 2ΔlnL "
         "compared to χ² with the degrees of freedom shown; p is Benjamini-Hochberg corrected "
         "across genes (q)."
     ),
@@ -1109,14 +1108,14 @@ TEXTS_EN: dict[str, object] = {
          "M1a's ω₁ = 1 is imposed by codeml itself (NSsites = 1)."),
         ("M7", "M8", "#ec4899", "M8 vs M7", "Positive selection with a beta distribution",
          "2 degrees of freedom. M7: ω follows a beta between 0 and 1. M8: beta + one extra class "
-         "with free ω. It can be significant just because some sites are neutral (ω = 1) -- check "
+         "with free ω. It can be significant just because some sites are neutral (ω = 1); check "
          "M8a vs M8.",
          "M7 does not use fix_omega."),
         ("M8a", "M8", "#f472b6", "M8 vs M8a", "Positive selection beyond neutral sites",
          "1 degree of freedom. M8a is M8 with the extra class fixed at ω = 1. It only rejects M8a "
          "if there are sites with ω > 1 (Swanson et al. 2003). p from χ²₁; the 50:50 mixture is "
          "reported in LRT_results.txt as a reference only.",
-         "M8a uses fix_omega = 1 and omega = 1 -- set automatically."),
+         "M8a uses fix_omega = 1 and omega = 1, set automatically."),
         ("M0", "Branch", "#f59e0b", "Branch vs M0", "ω variation among lineages",
          "Degrees of freedom = number of labelled branch groups. M0 uses one ω for all branches; "
          "the Branch model estimates one ω per labelled group.",
@@ -1125,7 +1124,7 @@ TEXTS_EN: dict[str, object] = {
          "Episodic selection at sites of the foreground branch (#1)",
          "1 degree of freedom, p from χ²₁ (PAML manual recommendation); the 50:50 χ²₀/χ²₁ "
          "mixture is reported in LRT_results.txt as a reference only.",
-         "The null uses fix_omega = 1 and omega = 1 -- set automatically."),
+         "The null uses fix_omega = 1 and omega = 1, set automatically."),
     ],
     "model_desc": {
         "M0": "A single ω for the whole gene. Baseline and null of the Branch model.",
@@ -1255,7 +1254,7 @@ TEXTS_EN: dict[str, object] = {
         ("Branch-site_null", "Branch-site"): "H₀: ω = 1 on the foreground   ·   H₁: sites with ω > 1 on the labelled branches (#1)",
         ("M0", "Branch"): "H₀ M0: one ω for all branches   ·   H₁ Branch: one ω per labelled branch group",
         ("M0", "M1a"): "H₀ M0: one ω for all sites   ·   H₁ M1a: classes with ω < 1 and ω = 1"},
-    "summary_sig": "{test}: significant (p = {p}, q = {q}) — {sites} site(s) with Pr(ω>1) ≥ 0.95",
+    "summary_sig": "{test}: significant (p = {p}, q = {q}), {sites} site(s) with Pr(ω>1) ≥ 0.95",
     "summary_nonsig": "{test}: not significant (p = {p}, q = {q})",
     "summary_posclass": "positive class: ω = {w}, p₁ = {p1}",
     "conclusion_supported": "Positive selection supported: {tests} significant (q < 0.05){sites}.",
