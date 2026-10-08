@@ -191,13 +191,22 @@ def hover_tint(accent: str, background: str = '#17171f') -> str:
 
 
 def fit_to_screen(win, width: int, height: int, min_w: int = 1024, min_h: int = 640) -> None:
-    """Open the window at the requested size, never larger than the screen."""
+    """Open the window at the requested size, never larger than the screen.
+
+    customtkinter multiplies the width/height given to geometry() and minsize()
+    by the window scaling (e.g. 1.5 at 150 % DPI on Windows), while Tk reports
+    the screen size, and takes the +x+y position, in physical pixels. So the
+    screen is converted to customtkinter units before limiting the size."""
     win.update_idletasks()
+    try:
+        scale = float(ctk.ScalingTracker.get_window_scaling(win)) or 1.0
+    except Exception:            # not a CTk/CTkToplevel window: no scaling
+        scale = 1.0
     sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
-    w = min(width, sw - 40)
-    h = min(height, sh - 80)
-    x = max(0, (sw - w) // 2)
-    y = max(0, (sh - h) // 3)
+    w = max(1, min(width, int((sw - 40) / scale)))
+    h = max(1, min(height, int((sh - 80) / scale)))
+    x = max(0, (sw - round(w * scale)) // 2)
+    y = max(0, (sh - round(h * scale)) // 3)
     win.geometry(f"{w}x{h}+{x}+{y}")
     win.minsize(min(min_w, w), min(min_h, h))
 

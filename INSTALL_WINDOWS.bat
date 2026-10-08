@@ -138,6 +138,7 @@ echo [4/4] Creating EasyPAML.bat, easypaml-cli.bat and a desktop shortcut...
 setlocal disabledelayedexpansion
 > "EasyPAML.bat" (
     echo @echo off
+    echo setlocal
     echo REM Opens the EasyPAML window. Created by INSTALL_WINDOWS.bat.
     echo cd /d "%%~dp0"
     echo if exist ".venv\Scripts\python.exe" ^(
@@ -145,9 +146,13 @@ setlocal disabledelayedexpansion
     echo ^) else ^(
     echo     %PYTHON% src\easypaml_window.py
     echo ^)
-    echo if errorlevel 1 ^(
+    echo set "EASYPAML_RC=%%errorlevel%%"
+    echo REM "if errorlevel 1" misses negative codes ^(native crashes, e.g. -1073741819^),
+    echo REM so compare with 0 and keep the console open to show the error.
+    echo if not "%%EASYPAML_RC%%"=="0" ^(
     echo     echo.
-    echo     echo  EasyPAML could not start. Run INSTALL_WINDOWS.bat again.
+    echo     echo  EasyPAML closed with an error ^^^(exit code %%EASYPAML_RC%%^^^).
+    echo     echo  Read the messages above. If it does not start at all, run INSTALL_WINDOWS.bat again.
     echo     pause
     echo ^)
 )

@@ -27,6 +27,13 @@ import shutil
 import sys
 from pathlib import Path
 
+# Force UTF-8 output: with stdout redirected or piped (> log.txt, | more, a
+# scheduler), Windows falls back to cp1252 and print() of κ/ω raises
+# UnicodeEncodeError. Same fix as easypaml_window.py.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, 'reconfigure'):
+        _stream.reconfigure(encoding='utf-8', errors='replace')
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.backend import messages
 from src.backend.codeml_backend import CodemlBatchAnalysis, codeml_version, find_codeml

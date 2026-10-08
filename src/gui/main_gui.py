@@ -1301,8 +1301,22 @@ class App(ctk.CTk):
         self._poll_stop_count()
         self._refresh_visual_state()
         self.bind_all("<Control-q>", lambda e: self.destroy())
-        self.update_idletasks()
+        # update(), not update_idletasks(): customtkinter (CTk.withdraw/mainloop on
+        # Windows) remembers a withdraw() made before the first update()/mainloop()
+        # and, in mainloop(), withdraws the window again for the titlebar colour and
+        # never shows it. update() marks the window as existing, so mainloop() skips
+        # that step and the deiconify() below sticks.
+        self.update()
         self.deiconify()
+        self.after(300, self._ensure_visible)
+
+    def _ensure_visible(self):
+        """Safety net: the main window must never stay hidden after start-up."""
+        try:
+            if self.state() == 'withdrawn':
+                self.deiconify()
+        except Exception:
+            pass
 
     # ── Appearance derived from the state ─────────
 

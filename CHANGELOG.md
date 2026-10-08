@@ -10,6 +10,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the Python entry points are in `src/` and the requirements in `tools/`.
 - The Windows installer creates the desktop shortcut without changing the PowerShell
   execution policy.
+- Windows: the main window no longer stays hidden at start-up; windows fit the screen
+  at 125 % and 150 % display scaling; `EasyPAML.bat` keeps the console open with the
+  error when the program crashes; the window opens with Python 3.13.0 inside `.venv`
+  (CPython gh-125235); the command line prints UTF-8 when its output is redirected.
 - Branch tree: the ω of a label is written once per labelled clade, and labelled
   branches are coloured along their whole length.
 

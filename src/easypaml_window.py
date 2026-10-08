@@ -16,6 +16,18 @@ _ROOT = Path(__file__).resolve().parents[1]
 os.chdir(_ROOT)
 sys.path.insert(0, str(_ROOT))
 
+# Python 3.13.0 on Windows looks for Tcl/Tk under the venv instead of the base
+# install, so tkinter.Tk() fails inside .venv with "Can't find a usable
+# init.tcl" (CPython gh-125235, fixed in 3.13.1). Point Tcl/Tk at the base
+# install when we are in a venv and the user has not set the variables.
+if sys.platform == 'win32' and sys.prefix != sys.base_prefix:
+    _tcl_root = Path(sys.base_prefix) / 'tcl'
+    for _var, _pattern in (('TCL_LIBRARY', 'tcl8.*'), ('TK_LIBRARY', 'tk8.*')):
+        if _var not in os.environ:
+            _found = sorted(p for p in _tcl_root.glob(_pattern) if p.is_dir())
+            if _found:
+                os.environ[_var] = str(_found[-1])
+
 try:
     import tkinter  # noqa: F401
 except ImportError:
